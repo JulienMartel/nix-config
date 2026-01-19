@@ -46,7 +46,7 @@ cat ~/.ssh/id_ed25519.pub  # Add to GitHub
 ### 3. Clone Config
 
 ```bash
-git clone git@github.com:julienmartel/nix-config.git ~/.config/nix
+git clone git@github.com:JulienMartel/nix-config.git ~/.config/nix
 cd ~/.config/nix
 ```
 
