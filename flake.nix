@@ -27,8 +27,15 @@
           ./hosts/mbp/configuration.nix
           home-manager.darwinModules.home-manager
           {
+            # Define the user
+            users.users.julienmartel = {
+              name = "julienmartel";
+              home = "/Users/julienmartel";
+            };
+
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
+            home-manager.backupFileExtension = "backup";
             home-manager.users.julienmartel = import ./home/home.nix;
           }
         ];

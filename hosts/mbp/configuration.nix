@@ -1,6 +1,9 @@
 { pkgs, ... }:
 
 {
+  # Primary user for user-specific settings (required by nix-darwin)
+  system.primaryUser = "julienmartel";
+
   # System packages (CLI tools migrated from Homebrew)
   environment.systemPackages = with pkgs; [
     # Core CLI tools
@@ -82,19 +85,13 @@
   };
 
   # Enable Touch ID for sudo
-  security.pam.enableSudoTouchIdAuth = true;
+  security.pam.services.sudo_local.touchIdAuth = true;
 
-  # Nix settings
-  nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
-  };
+  # Disable nix-darwin's Nix management (using Determinate installer)
+  nix.enable = false;
 
-  # Garbage collection
-  nix.gc = {
-    automatic = true;
-    interval = { Day = 7; };
-    options = "--delete-older-than 30d";
-  };
+  # Note: nix.settings and nix.gc are managed by Determinate installer
+  # To configure garbage collection, use: sudo nix-collect-garbage -d
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
