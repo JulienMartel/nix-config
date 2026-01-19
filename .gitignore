@@ -1,0 +1,24 @@
+# Build artifacts
+result
+result-*
+
+# Secrets (NEVER commit these)
+*.key
+*.pem
+*_rsa
+*_ed25519
+*.gpg
+secrets/
+.env
+.envrc
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Backup files
+*.backup
+*.old
