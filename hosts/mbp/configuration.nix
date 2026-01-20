@@ -36,7 +36,6 @@
     taps = [
       "nikitabobko/tap"
       "FelixKratz/formulae"
-      "homebrew/cask-fonts"
     ];
 
     brews = [
