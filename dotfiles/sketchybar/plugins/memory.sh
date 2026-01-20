@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 # Get memory usage
 MEMORY_USED=$(memory_pressure | grep "System-wide memory free percentage:" | awk '{print 100-$5}' | sed 's/%//')
@@ -17,7 +17,10 @@ if [ -z "$MEMORY_USED" ]; then
     MEMORY_USED=$(echo "scale=0; ($USED_MEM * 100) / $TOTAL_MEM" | bc)
 fi
 
+# Nerd Font memory icon (nf-md-memory)
+ICON=$(printf "\U000F049D")
+
 # Update the bar item
-sketchybar --set $NAME \
-    icon="" \
+/opt/homebrew/bin/sketchybar --set $NAME \
+    icon="$ICON" \
     label="${MEMORY_USED}%"

@@ -23,6 +23,6 @@ else
 fi
 
 # Update the bar item
-sketchybar --set $NAME \
+/opt/homebrew/bin/sketchybar --set $NAME \
     icon="$ICON" \
     label="$LABEL"

@@ -126,6 +126,17 @@ run = 'move-node-to-workspace G'
 
 [[on-window-detected]]
 if.app-id = 'com.mitchellh.ghostty'
+if.window-title-regex-substring = 'quick-terminal'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+if.window-title-regex-substring = 'quick-terminal-rebuild'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+if.window-title-regex-substring = '^(?!quick-terminal).*$'
 run = 'move-node-to-workspace T'
 
 [[on-window-detected]]

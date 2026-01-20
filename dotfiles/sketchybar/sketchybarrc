@@ -34,10 +34,10 @@ sketchybar --bar \
     position=top \
     padding_left=10 \
     padding_right=10 \
-    margin=10 \
-    corner_radius=20 \
+    margin=0 \
+    corner_radius=0 \
     color=$BASE \
-    shadow=on \
+    shadow=off \
     sticky=on \
     notch_width=0
 
@@ -63,22 +63,109 @@ sketchybar --default \
 # Apple logo
 sketchybar --add item apple.logo left \
     --set apple.logo \
-        icon= \
+        icon= \
         icon.font="SF Pro:Black:16.0" \
         icon.color=$BLUE \
-        background.padding_left=8 \
-        background.padding_right=8 \
+        icon.padding_left=6 \
+        icon.padding_right=6 \
+        label.drawing=off \
+        background.padding_left=4 \
+        background.padding_right=4 \
         background.color=$MANTLE \
-        click_script="osascript -e 'tell application \"System Events\" to tell process \"ControlCenter\" to click menu bar item \"Control Center\"'"
+        popup.background.border_width=2 \
+        popup.background.corner_radius=10 \
+        popup.background.border_color=$SURFACE0 \
+        popup.background.color=$MANTLE \
+        click_script="sketchybar --set \$NAME popup.drawing=toggle"
+
+sketchybar --add item apple.prefs popup.apple.logo \
+    --set apple.prefs \
+        icon= \
+        label="Preferences" \
+        icon.padding_left=10 \
+        label.padding_right=10 \
+        background.height=30 \
+        background.padding_left=0 \
+        background.padding_right=0 \
+        background.color=0x00000000 \
+        background.drawing=off \
+        click_script="open -a 'System Settings'; sketchybar --set apple.logo popup.drawing=off"
+
+sketchybar --add item apple.activity popup.apple.logo \
+    --set apple.activity \
+        icon= \
+        label="Activity" \
+        icon.padding_left=10 \
+        label.padding_right=10 \
+        background.height=30 \
+        background.padding_left=0 \
+        background.padding_right=0 \
+        background.color=0x00000000 \
+        background.drawing=off \
+        click_script="open -a 'Activity Monitor'; sketchybar --set apple.logo popup.drawing=off"
+
+sketchybar --add item apple.lock popup.apple.logo \
+    --set apple.lock \
+        icon= \
+        label="Lock Screen" \
+        icon.padding_left=10 \
+        label.padding_right=10 \
+        background.height=30 \
+        background.padding_left=0 \
+        background.padding_right=0 \
+        background.color=0x00000000 \
+        background.drawing=off \
+        click_script="osascript -e 'tell application \"System Events\" to keystroke \"q\" using {control down, command down}'; sketchybar --set apple.logo popup.drawing=off"
+
+sketchybar --add item apple.nix_config popup.apple.logo \
+    --set apple.nix_config \
+        icon= \
+        label="Nix Config" \
+        icon.padding_left=10 \
+        label.padding_right=10 \
+        background.height=30 \
+        background.padding_left=0 \
+        background.padding_right=0 \
+        background.color=0x00000000 \
+        background.drawing=off \
+        click_script="/Users/julienmartel/.config/nix/dotfiles/sketchybar/plugins/nix_open.sh; sketchybar --set apple.logo popup.drawing=off"
+
+sketchybar --add item apple.rebuild popup.apple.logo \
+    --set apple.rebuild \
+        icon=󰑓 \
+        label="Rebuild System" \
+        icon.padding_left=10 \
+        label.padding_right=10 \
+        background.height=30 \
+        background.padding_left=0 \
+        background.padding_right=0 \
+        background.color=0x00000000 \
+        background.drawing=off \
+        click_script="/Users/julienmartel/.config/nix/dotfiles/sketchybar/plugins/launch_rebuild.sh"
+
+sketchybar --add item apple.reload popup.apple.logo \
+    --set apple.reload \
+        icon= \
+        label="Reload SketchyBar" \
+        icon.padding_left=10 \
+        label.padding_right=10 \
+        background.height=30 \
+        background.padding_left=0 \
+        background.padding_right=0 \
+        background.color=0x00000000 \
+        background.drawing=off \
+        click_script="sketchybar --reload; sketchybar --set apple.logo popup.drawing=off"
 
 # Spaces - All AeroSpace workspaces
+sketchybar --add event aerospace_workspace_change
 WORKSPACES=("1" "2" "3" "4" "C" "T" "N" "S" "B" "G" "L" "F" "M")
 
 for workspace in "${WORKSPACES[@]}"
 do
-    sketchybar --add space space.$workspace left \
+    sketchybar --add item space.$workspace left \
         --set space.$workspace \
             icon="$workspace" \
+            icon.drawing=on \
             icon.padding_left=10 \
             icon.padding_right=10 \
             icon.highlight_color=$YELLOW \
@@ -98,12 +185,16 @@ sketchybar --add item front_app left \
         icon.drawing=off \
         background.color=$LAVENDER \
         label.color=$BASE \
-        label.font="SF Pro:Bold:13.0" \
+        label.font="Hack Nerd Font:Bold:14.0" \
+        label.padding_left=8 \
+        label.padding_right=8 \
         script="$HOME/.config/sketchybar/plugins/front_app.sh" \
     --subscribe front_app front_app_switched
 
-# Clock (moved to left to avoid notch)
-sketchybar --add item clock left \
+##### RIGHT SIDE #####
+
+# Clock (moved to far right)
+sketchybar --add item clock right \
     --set clock \
         update_freq=10 \
         icon= \
@@ -112,9 +203,7 @@ sketchybar --add item clock left \
         background.padding_left=8 \
         background.padding_right=8 \
         script="$HOME/.config/sketchybar/plugins/clock.sh" \
-        click_script="open -a 'Calendar'"
-
-##### RIGHT SIDE #####
+        click_script="open -a 'Notion Calendar'"
 
 # Media
 sketchybar --add item media right \
@@ -129,46 +218,6 @@ sketchybar --add item media right \
         script="$HOME/.config/sketchybar/plugins/media.sh" \
     --subscribe media media_change
 
-# Volume
-sketchybar --add item volume right \
-    --set volume \
-        icon= \
-        icon.color=$MAUVE \
-        background.color=$SURFACE0 \
-        script="$HOME/.config/sketchybar/plugins/volume.sh" \
-        click_script="open -a 'System Settings' 'x-apple.systempreferences:com.apple.preference.sound'" \
-    --subscribe volume volume_change
-
-# WiFi
-sketchybar --add item wifi right \
-    --set wifi \
-        icon=󰖩 \
-        icon.color=$TEAL \
-        background.color=$SURFACE0 \
-        script="$HOME/.config/sketchybar/plugins/wifi.sh" \
-        click_script="open -a 'System Settings' 'x-apple.systempreferences:com.apple.wifi-settings-extension'" \
-        update_freq=10
-
-# CPU
-sketchybar --add item cpu right \
-    --set cpu \
-        icon= \
-        icon.color=$PEACH \
-        background.color=$SURFACE0 \
-        update_freq=5 \
-        script="$HOME/.config/sketchybar/plugins/cpu.sh" \
-        click_script="open -a 'Activity Monitor'"
-
-# Memory
-sketchybar --add item memory right \
-    --set memory \
-        icon= \
-        icon.color=$YELLOW \
-        background.color=$SURFACE0 \
-        update_freq=5 \
-        script="$HOME/.config/sketchybar/plugins/memory.sh" \
-        click_script="open -a 'Activity Monitor'"
-
 # Battery
 sketchybar --add item battery right \
     --set battery \
@@ -178,6 +227,37 @@ sketchybar --add item battery right \
         script="$HOME/.config/sketchybar/plugins/battery.sh" \
         click_script="open -a 'System Settings' 'x-apple.systempreferences:com.apple.preference.battery'" \
     --subscribe battery system_woke power_source_change
+
+# WiFi
+sketchybar --add item wifi right \
+    --set wifi \
+        icon=󰖩 \
+        label.drawing=off \
+        icon.color=$TEAL \
+        background.color=$SURFACE0 \
+        icon.padding_left=10 \
+        icon.padding_right=10 \
+        script="$HOME/.config/sketchybar/plugins/wifi.sh" \
+        click_script="open -a 'System Settings' 'x-apple.systempreferences:com.apple.wifi-settings-extension'" \
+        update_freq=10
+
+# Elgato Light
+sketchybar --add item elgato right \
+    --set elgato \
+        update_freq=5 \
+        script="/Users/julienmartel/.config/nix/dotfiles/sketchybar/plugins/elgato.sh" \
+        background.color=$SURFACE0 \
+        icon.padding_left=10 \
+        icon.padding_right=10 \
+        click_script="/Users/julienmartel/.config/nix/dotfiles/sketchybar/plugins/elgato.sh" \
+    --subscribe elgato mouse.clicked
+
+# Harvest
+sketchybar --add item harvest right \
+    --set harvest \
+        update_freq=3 \
+        script="$HOME/.config/sketchybar/plugins/harvest.sh" \
+    --subscribe harvest mouse.clicked harvest_update system_woke
 
 ##### Finalizing Setup #####
 

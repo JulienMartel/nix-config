@@ -34,7 +34,7 @@ else
 fi
 
 # Update the bar item
-sketchybar --set $NAME \
+/opt/homebrew/bin/sketchybar --set $NAME \
     icon="$ICON" \
     icon.color=$COLOR \
     label="${PERCENTAGE}%"
