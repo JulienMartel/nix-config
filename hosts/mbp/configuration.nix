@@ -39,7 +39,7 @@
     ];
 
     brews = [
-      "sketchybar"
+      "FelixKratz/formulae/sketchybar"
     ];
 
     casks = [
