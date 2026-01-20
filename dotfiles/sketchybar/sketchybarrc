@@ -44,11 +44,11 @@ sketchybar --bar \
 # Default item settings
 sketchybar --default \
     updates=when_shown \
-    icon.font="JetBrainsMono Nerd Font:Bold:16.0" \
+    icon.font="Hack Nerd Font:Bold:17.0" \
     icon.color=$TEXT \
     icon.padding_left=8 \
     icon.padding_right=4 \
-    label.font="SF Pro:Semibold:14.0" \
+    label.font="Hack Nerd Font:Bold:14.0" \
     label.color=$TEXT \
     label.padding_left=4 \
     label.padding_right=8 \

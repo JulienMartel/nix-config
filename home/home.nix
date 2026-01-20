@@ -7,8 +7,6 @@
   # User packages
   home.packages = with pkgs; [
     fnm
-    nerd-fonts.jetbrains-mono
-    nerd-fonts.fira-code
   ];
 
   # Zsh configuration

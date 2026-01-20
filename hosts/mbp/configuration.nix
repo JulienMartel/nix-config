@@ -36,6 +36,7 @@
     taps = [
       "nikitabobko/tap"
       "FelixKratz/formulae"
+      "homebrew/cask-fonts"
     ];
 
     brews = [
@@ -44,6 +45,8 @@
 
     casks = [
       "aerospace"
+      "font-hack-nerd-font"
+      "font-jetbrains-mono-nerd-font"
       "ghostty"
       "jordanbaird-ice"
       "legcord"
