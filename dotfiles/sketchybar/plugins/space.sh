@@ -9,10 +9,10 @@ TEXT=0xffcdd6f4
 # Get current workspace from AeroSpace
 CURRENT_WORKSPACE=$(aerospace list-workspaces --focused)
 
-# Extract workspace number from item name (space.1 -> 1)
-WORKSPACE_NUM="${NAME#space.}"
+# Extract workspace ID from item name (space.1 -> 1, space.C -> C)
+WORKSPACE_ID="${NAME#space.}"
 
-if [ "$WORKSPACE_NUM" = "$CURRENT_WORKSPACE" ]; then
+if [ "$WORKSPACE_ID" = "$CURRENT_WORKSPACE" ]; then
     sketchybar --set $NAME \
         background.color=$MAUVE \
         icon.color=$BASE \

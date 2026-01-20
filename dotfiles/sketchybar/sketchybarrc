@@ -71,15 +71,14 @@ sketchybar --add item apple.logo left \
         background.color=$MANTLE \
         click_script="osascript -e 'tell application \"System Events\" to tell process \"ControlCenter\" to click menu bar item \"Control Center\"'"
 
-# Spaces
-SPACE_ICONS=("1" "2" "3" "4" "5" "6" "7" "8" "9" "10")
-for i in "${!SPACE_ICONS[@]}"
+# Spaces - All AeroSpace workspaces
+WORKSPACES=("1" "2" "3" "4" "C" "T" "N" "S" "B" "G" "L" "F" "M")
+
+for workspace in "${WORKSPACES[@]}"
 do
-    sid=$(($i+1))
-    sketchybar --add space space.$sid left \
-        --set space.$sid \
-            associated_space=$sid \
-            icon=${SPACE_ICONS[i]} \
+    sketchybar --add space space.$workspace left \
+        --set space.$workspace \
+            icon="$workspace" \
             icon.padding_left=10 \
             icon.padding_right=10 \
             icon.highlight_color=$YELLOW \
@@ -89,8 +88,8 @@ do
             background.height=28 \
             label.drawing=off \
             script="$HOME/.config/sketchybar/plugins/space.sh" \
-            click_script="yabai -m space --focus $sid 2>/dev/null || aerospace workspace $sid" \
-        --subscribe space.$sid aerospace_workspace_change
+            click_script="aerospace workspace $workspace" \
+        --subscribe space.$workspace aerospace_workspace_change
 done
 
 # Front app name
