@@ -73,12 +73,13 @@
       ShowStatusBar = true;
     };
 
-    # Keyboard
+    # Keyboard and Menu Bar
     NSGlobalDomain = {
       ApplePressAndHoldEnabled = false;  # Key repeat instead of character picker
       KeyRepeat = 2;
       InitialKeyRepeat = 15;
       AppleShowAllExtensions = true;
+      _HIHideMenuBar = true;  # Hide default menu bar (using SketchyBar instead)
     };
 
     # Trackpad
