@@ -36,6 +36,9 @@
         # Environment variables (early init)
         export CLICOLOR=1
         export GPG_TTY=$(tty)
+
+        # Homebrew (Apple Silicon)
+        eval "$(/opt/homebrew/bin/brew shellenv)"
       '')
       ''
         # Custom completions
