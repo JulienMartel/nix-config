@@ -42,6 +42,7 @@
       "ghostty"
       "jordanbaird-ice"
       "legcord"
+      "raycast"
       "stats"
     ];
 
