@@ -9,15 +9,15 @@ TEXT=0xffcdd6f4
 # Get current workspace from AeroSpace
 CURRENT_WORKSPACE=$(aerospace list-workspaces --focused)
 
-# Get all workspaces with windows (non-empty workspaces)
-WORKSPACES_WITH_WINDOWS=$(aerospace list-workspaces --all)
+# Get all non-empty workspaces (workspaces with windows)
+WORKSPACES_WITH_WINDOWS=$(aerospace list-workspaces --monitor all --empty no)
 
 # Extract workspace ID from item name (space.1 -> 1, space.C -> C)
 WORKSPACE_ID="${NAME#space.}"
 
-# Check if this workspace has windows or is focused
-if echo "$WORKSPACES_WITH_WINDOWS" | grep -q "^${WORKSPACE_ID}$"; then
-    # Workspace has windows - show it
+# Check if this workspace has windows or is the focused workspace
+if echo "$WORKSPACES_WITH_WINDOWS" | grep -q "^${WORKSPACE_ID}$" || [ "$WORKSPACE_ID" = "$CURRENT_WORKSPACE" ]; then
+    # Workspace has windows or is focused - show it
     if [ "$WORKSPACE_ID" = "$CURRENT_WORKSPACE" ]; then
         # Active workspace - highlight it
         sketchybar --set $NAME \
@@ -34,6 +34,6 @@ if echo "$WORKSPACES_WITH_WINDOWS" | grep -q "^${WORKSPACE_ID}$"; then
             drawing=on
     fi
 else
-    # Workspace is empty - hide it
+    # Workspace is empty and not focused - hide it
     sketchybar --set $NAME drawing=off
 fi
