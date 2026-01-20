@@ -99,6 +99,11 @@
   # Note: nix.settings and nix.gc are managed by Determinate installer
   # To configure garbage collection, use: sudo nix-collect-garbage -d
 
+  # Apply system settings immediately without logout
+  system.activationScripts.postUserActivation.text = ''
+    /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
+  '';
+
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
