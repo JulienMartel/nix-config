@@ -179,6 +179,7 @@
 
   # Dotfiles - SketchyBar configuration
   home.file.".config/sketchybar/sketchybarrc".source = ../dotfiles/sketchybar/sketchybarrc;
+  home.file.".config/sketchybar/aerospace-notify.sh".source = ../dotfiles/sketchybar/aerospace-notify.sh;
   home.file.".config/sketchybar/plugins" = {
     source = ../dotfiles/sketchybar/plugins;
     recursive = true;

@@ -2,7 +2,7 @@ after-login-command = []
 
 after-startup-command = []
 
-exec-on-workspace-change = ['/opt/homebrew/bin/sketchybar --trigger aerospace_workspace_change']
+exec-on-workspace-change = ['~/.config/sketchybar/aerospace-notify.sh']
 
 start-at-login = true
 
