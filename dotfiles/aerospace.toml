@@ -2,7 +2,7 @@ after-login-command = []
 
 after-startup-command = []
 
-exec-on-workspace-change = ['~/.config/sketchybar/aerospace-notify.sh']
+exec-on-workspace-change = ['/Users/julienmartel/.config/sketchybar/aerospace-notify.sh']
 
 start-at-login = true
 
