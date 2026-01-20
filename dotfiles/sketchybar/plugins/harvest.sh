@@ -34,7 +34,7 @@ if [ "$SENDER" = "mouse.clicked" ]; then
     # STOPPING
     
     # Get Project Name from current entry to preserve it in label
-    PROJECT_NAME=$(echo "$CURRENT_ENTRY" | jq -r '.time_entries[0].project.name')
+    PROJECT_NAME=$(echo "$CURRENT_ENTRY" | jq -r '.time_entries[0].client.name')
 
     # 1. Optimistic UI Update: Set to IDLE but keep Project Name
     sketchybar --set $NAME \
@@ -59,7 +59,7 @@ if [ "$SENDER" = "mouse.clicked" ]; then
     # 1. Fetch Last Entry (needed for ID and Project Name)
     LAST_ENTRY=$(curl -s "${HEADERS[@]}" "$HARVEST_API_URL/time_entries?per_page=1")
     ENTRY_ID=$(echo "$LAST_ENTRY" | jq -r '.time_entries[0].id')
-    PROJECT_NAME=$(echo "$LAST_ENTRY" | jq -r '.time_entries[0].project.name')
+    PROJECT_NAME=$(echo "$LAST_ENTRY" | jq -r '.time_entries[0].client.name')
     
     if [ "$ENTRY_ID" != "null" ]; then
        # 2. Optimistic UI Update: Set to RUNNING
@@ -92,7 +92,7 @@ RUNNING_ENTRY=$(curl -s "${HEADERS[@]}" "$HARVEST_API_URL/time_entries?is_runnin
 RUNNING_COUNT=$(echo "$RUNNING_ENTRY" | jq -r '.time_entries | length')
 
 if [ "$RUNNING_COUNT" -gt "0" ]; then
-  PROJECT=$(echo "$RUNNING_ENTRY" | jq -r '.time_entries[0].project.name')
+  PROJECT=$(echo "$RUNNING_ENTRY" | jq -r '.time_entries[0].client.name')
   
   sketchybar --set $NAME \
     icon="󰔟" \
@@ -104,7 +104,7 @@ if [ "$RUNNING_COUNT" -gt "0" ]; then
 else
   # 2. If no timer is running, get the latest used timer for the "Resume" label
   LATEST_ENTRY=$(curl -s "${HEADERS[@]}" "$HARVEST_API_URL/time_entries?per_page=1")
-  PROJECT=$(echo "$LATEST_ENTRY" | jq -r '.time_entries[0].project.name')
+  PROJECT=$(echo "$LATEST_ENTRY" | jq -r '.time_entries[0].client.name')
 
   # Check if we have a project name to display
   if [ "$PROJECT" != "null" ] && [ -n "$PROJECT" ]; then
