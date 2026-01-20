@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # Get current date and time
-TIME=$(date '+%a %b %d  %I:%M %p')
+DATE=$(date '+%a %b %d')
+TIME=$(date '+%I:%M %p')
 
 # Update the bar item
-sketchybar --set $NAME label="$TIME"
+sketchybar --set $NAME \
+    icon="" \
+    label="$DATE  $TIME"

@@ -18,4 +18,6 @@ if [ -z "$MEMORY_USED" ]; then
 fi
 
 # Update the bar item
-sketchybar --set $NAME label="${MEMORY_USED}%"
+sketchybar --set $NAME \
+    icon="" \
+    label="${MEMORY_USED}%"
