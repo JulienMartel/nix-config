@@ -89,7 +89,8 @@ do
             background.height=28 \
             label.drawing=off \
             script="$HOME/.config/sketchybar/plugins/space.sh" \
-            click_script="yabai -m space --focus $sid 2>/dev/null || aerospace workspace $sid"
+            click_script="yabai -m space --focus $sid 2>/dev/null || aerospace workspace $sid" \
+        --subscribe space.$sid aerospace_workspace_change
 done
 
 # Front app name
