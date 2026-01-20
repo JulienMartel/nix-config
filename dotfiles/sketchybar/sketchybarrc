@@ -1,0 +1,183 @@
+#!/bin/bash
+
+# Catppuccin Latte Color Palette
+export BASE=0xffeff1f5
+export MANTLE=0xffe6e9ef
+export CRUST=0xffdce0e8
+export TEXT=0xff4c4f69
+export SUBTEXT0=0xff6c6f85
+export SUBTEXT1=0xff5c5f77
+export SURFACE0=0xffccd0da
+export SURFACE1=0xffbcc0cc
+export SURFACE2=0xffacb0be
+export OVERLAY0=0xff9ca0b0
+export OVERLAY1=0xff8c8fa1
+export ROSEWATER=0xffdc8a78
+export FLAMINGO=0xffdd7878
+export PINK=0xffea76cb
+export MAUVE=0xff8839ef
+export RED=0xffd20f39
+export MAROON=0xffe64553
+export PEACH=0xfffe640b
+export YELLOW=0xffdf8e1d
+export GREEN=0xff40a02b
+export TEAL=0xff179299
+export SKY=0xff04a5e5
+export SAPPHIRE=0xff209fb5
+export BLUE=0xff1e66f5
+export LAVENDER=0xff7287fd
+
+# General bar appearance
+sketchybar --bar \
+    height=40 \
+    blur_radius=30 \
+    position=top \
+    padding_left=10 \
+    padding_right=10 \
+    margin=10 \
+    corner_radius=20 \
+    color=$BASE \
+    shadow=on \
+    sticky=on \
+    notch_width=0
+
+# Default item settings
+sketchybar --default \
+    updates=when_shown \
+    icon.font="SF Pro:Semibold:15.0" \
+    icon.color=$TEXT \
+    icon.padding_left=8 \
+    icon.padding_right=4 \
+    label.font="SF Pro:Medium:13.0" \
+    label.color=$TEXT \
+    label.padding_left=4 \
+    label.padding_right=8 \
+    background.color=$SURFACE0 \
+    background.corner_radius=12 \
+    background.height=28 \
+    background.padding_left=4 \
+    background.padding_right=4
+
+##### LEFT SIDE #####
+
+# Apple logo
+sketchybar --add item apple.logo left \
+    --set apple.logo \
+        icon= \
+        icon.font="SF Pro:Black:16.0" \
+        icon.color=$BLUE \
+        background.padding_left=8 \
+        background.padding_right=8 \
+        background.color=$MANTLE \
+        click_script="osascript -e 'tell application \"System Events\" to tell process \"ControlCenter\" to click menu bar item \"Control Center\"'"
+
+# Spaces
+SPACE_ICONS=("1" "2" "3" "4" "5" "6" "7" "8" "9" "10")
+for i in "${!SPACE_ICONS[@]}"
+do
+    sid=$(($i+1))
+    sketchybar --add space space.$sid left \
+        --set space.$sid \
+            associated_space=$sid \
+            icon=${SPACE_ICONS[i]} \
+            icon.padding_left=10 \
+            icon.padding_right=10 \
+            icon.highlight_color=$YELLOW \
+            background.color=$SURFACE0 \
+            background.drawing=on \
+            background.corner_radius=12 \
+            background.height=28 \
+            label.drawing=off \
+            script="$HOME/.config/sketchybar/plugins/space.sh" \
+            click_script="yabai -m space --focus $sid 2>/dev/null || aerospace workspace $sid"
+done
+
+# Front app name
+sketchybar --add item front_app left \
+    --set front_app \
+        icon.drawing=off \
+        background.color=$LAVENDER \
+        label.color=$BASE \
+        label.font="SF Pro:Bold:13.0" \
+        script="$HOME/.config/sketchybar/plugins/front_app.sh" \
+    --subscribe front_app front_app_switched
+
+##### CENTER #####
+
+# Clock
+sketchybar --add item clock center \
+    --set clock \
+        update_freq=10 \
+        icon= \
+        icon.color=$PINK \
+        background.color=$MANTLE \
+        background.padding_left=8 \
+        background.padding_right=8 \
+        script="$HOME/.config/sketchybar/plugins/clock.sh"
+
+##### RIGHT SIDE #####
+
+# Media
+sketchybar --add item media right \
+    --set media \
+        icon= \
+        icon.color=$PINK \
+        background.color=$SURFACE0 \
+        background.padding_left=8 \
+        background.padding_right=8 \
+        label.max_chars=25 \
+        scroll_texts=on \
+        script="$HOME/.config/sketchybar/plugins/media.sh" \
+    --subscribe media media_change
+
+# Volume
+sketchybar --add item volume right \
+    --set volume \
+        icon= \
+        icon.color=$MAUVE \
+        background.color=$SURFACE0 \
+        script="$HOME/.config/sketchybar/plugins/volume.sh" \
+    --subscribe volume volume_change
+
+# WiFi
+sketchybar --add item wifi right \
+    --set wifi \
+        icon=󰖩 \
+        icon.color=$TEAL \
+        background.color=$SURFACE0 \
+        script="$HOME/.config/sketchybar/plugins/wifi.sh" \
+        update_freq=10
+
+# CPU
+sketchybar --add item cpu right \
+    --set cpu \
+        icon= \
+        icon.color=$PEACH \
+        background.color=$SURFACE0 \
+        update_freq=5 \
+        script="$HOME/.config/sketchybar/plugins/cpu.sh"
+
+# Memory
+sketchybar --add item memory right \
+    --set memory \
+        icon= \
+        icon.color=$YELLOW \
+        background.color=$SURFACE0 \
+        update_freq=5 \
+        script="$HOME/.config/sketchybar/plugins/memory.sh"
+
+# Battery
+sketchybar --add item battery right \
+    --set battery \
+        icon.color=$GREEN \
+        background.color=$SURFACE0 \
+        update_freq=30 \
+        script="$HOME/.config/sketchybar/plugins/battery.sh" \
+    --subscribe battery system_woke power_source_change
+
+##### Finalizing Setup #####
+
+# Force all scripts to run at startup
+sketchybar --update
+
+echo "sketchybar configuration loaded.."

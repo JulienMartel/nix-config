@@ -174,6 +174,13 @@
   # Dotfiles - AeroSpace configuration
   home.file.".config/aerospace/aerospace.toml".source = ../dotfiles/aerospace.toml;
 
+  # Dotfiles - SketchyBar configuration
+  home.file.".config/sketchybar/sketchybarrc".source = ../dotfiles/sketchybar/sketchybarrc;
+  home.file.".config/sketchybar/plugins" = {
+    source = ../dotfiles/sketchybar/plugins;
+    recursive = true;
+  };
+
   # Let Home Manager manage itself
   programs.home-manager.enable = true;
 

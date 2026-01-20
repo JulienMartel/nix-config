@@ -35,6 +35,7 @@
 
     taps = [
       "nikitabobko/tap"
+      "FelixKratz/formulae"
     ];
 
     casks = [
@@ -42,6 +43,7 @@
       "ghostty"
       "jordanbaird-ice"
       "legcord"
+      "sketchybar"
       "stats"
     ];
 
