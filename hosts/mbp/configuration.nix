@@ -38,12 +38,15 @@
       "FelixKratz/formulae"
     ];
 
+    brews = [
+      "sketchybar"
+    ];
+
     casks = [
       "aerospace"
       "ghostty"
       "jordanbaird-ice"
       "legcord"
-      "sketchybar"
       "stats"
     ];
 
