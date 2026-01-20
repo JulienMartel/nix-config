@@ -36,6 +36,9 @@
         # Environment variables (early init)
         export CLICOLOR=1
         export GPG_TTY=$(tty)
+
+        # Homebrew (Apple Silicon)
+        eval "$(/opt/homebrew/bin/brew shellenv)"
       '')
       ''
         # Custom completions
@@ -173,6 +176,14 @@
 
   # Dotfiles - AeroSpace configuration
   home.file.".config/aerospace/aerospace.toml".source = ../dotfiles/aerospace.toml;
+
+  # Dotfiles - SketchyBar configuration
+  home.file.".config/sketchybar/sketchybarrc".source = ../dotfiles/sketchybar/sketchybarrc;
+  home.file.".config/sketchybar/aerospace-notify.sh".source = ../dotfiles/sketchybar/aerospace-notify.sh;
+  home.file.".config/sketchybar/plugins" = {
+    source = ../dotfiles/sketchybar/plugins;
+    recursive = true;
+  };
 
   # Let Home Manager manage itself
   programs.home-manager.enable = true;
