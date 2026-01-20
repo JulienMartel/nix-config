@@ -102,10 +102,8 @@ sketchybar --add item front_app left \
         script="$HOME/.config/sketchybar/plugins/front_app.sh" \
     --subscribe front_app front_app_switched
 
-##### CENTER #####
-
-# Clock
-sketchybar --add item clock center \
+# Clock (moved to left to avoid notch)
+sketchybar --add item clock left \
     --set clock \
         update_freq=10 \
         icon= \
