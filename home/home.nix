@@ -7,6 +7,7 @@
   # User packages
   home.packages = with pkgs; [
     fnm
+    (nerdfonts.override { fonts = [ "JetBrainsMono" "FiraCode" ]; })
   ];
 
   # Zsh configuration

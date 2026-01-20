@@ -44,11 +44,11 @@ sketchybar --bar \
 # Default item settings
 sketchybar --default \
     updates=when_shown \
-    icon.font="SF Pro:Semibold:15.0" \
+    icon.font="JetBrainsMono Nerd Font:Bold:16.0" \
     icon.color=$TEXT \
     icon.padding_left=8 \
     icon.padding_right=4 \
-    label.font="SF Pro:Medium:13.0" \
+    label.font="SF Pro:Semibold:14.0" \
     label.color=$TEXT \
     label.padding_left=4 \
     label.padding_right=8 \
@@ -114,7 +114,8 @@ sketchybar --add item clock center \
         background.color=$MANTLE \
         background.padding_left=8 \
         background.padding_right=8 \
-        script="$HOME/.config/sketchybar/plugins/clock.sh"
+        script="$HOME/.config/sketchybar/plugins/clock.sh" \
+        click_script="open -a 'Calendar'"
 
 ##### RIGHT SIDE #####
 
@@ -138,6 +139,7 @@ sketchybar --add item volume right \
         icon.color=$MAUVE \
         background.color=$SURFACE0 \
         script="$HOME/.config/sketchybar/plugins/volume.sh" \
+        click_script="open -a 'System Settings' 'x-apple.systempreferences:com.apple.preference.sound'" \
     --subscribe volume volume_change
 
 # WiFi
@@ -147,6 +149,7 @@ sketchybar --add item wifi right \
         icon.color=$TEAL \
         background.color=$SURFACE0 \
         script="$HOME/.config/sketchybar/plugins/wifi.sh" \
+        click_script="open -a 'System Settings' 'x-apple.systempreferences:com.apple.wifi-settings-extension'" \
         update_freq=10
 
 # CPU
@@ -156,7 +159,8 @@ sketchybar --add item cpu right \
         icon.color=$PEACH \
         background.color=$SURFACE0 \
         update_freq=5 \
-        script="$HOME/.config/sketchybar/plugins/cpu.sh"
+        script="$HOME/.config/sketchybar/plugins/cpu.sh" \
+        click_script="open -a 'Activity Monitor'"
 
 # Memory
 sketchybar --add item memory right \
@@ -165,7 +169,8 @@ sketchybar --add item memory right \
         icon.color=$YELLOW \
         background.color=$SURFACE0 \
         update_freq=5 \
-        script="$HOME/.config/sketchybar/plugins/memory.sh"
+        script="$HOME/.config/sketchybar/plugins/memory.sh" \
+        click_script="open -a 'Activity Monitor'"
 
 # Battery
 sketchybar --add item battery right \
@@ -174,6 +179,7 @@ sketchybar --add item battery right \
         background.color=$SURFACE0 \
         update_freq=30 \
         script="$HOME/.config/sketchybar/plugins/battery.sh" \
+        click_script="open -a 'System Settings' 'x-apple.systempreferences:com.apple.preference.battery'" \
     --subscribe battery system_woke power_source_change
 
 ##### Finalizing Setup #####

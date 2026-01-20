@@ -6,19 +6,23 @@ MUTED=$(osascript -e 'output muted of (get volume settings)')
 
 # Determine icon
 if [ "$MUTED" = "true" ]; then
-    ICON="婢"
-    VOLUME="Muted"
+    ICON="󰖁"
+    LABEL="Muted"
 elif [ "$VOLUME" -gt 66 ]; then
-    ICON=""
+    ICON="󰕾"
+    LABEL="${VOLUME}%"
 elif [ "$VOLUME" -gt 33 ]; then
-    ICON="奔"
+    ICON="󰖀"
+    LABEL="${VOLUME}%"
 elif [ "$VOLUME" -gt 0 ]; then
-    ICON=""
+    ICON="󰕿"
+    LABEL="${VOLUME}%"
 else
-    ICON="婢"
+    ICON="󰖁"
+    LABEL="0%"
 fi
 
 # Update the bar item
 sketchybar --set $NAME \
     icon="$ICON" \
-    label="${VOLUME}%"
+    label="$LABEL"
