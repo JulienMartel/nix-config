@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Colors
-GREEN=0xff40a02b
-YELLOW=0xffdf8e1d
-RED=0xffd20f39
+# Catppuccin Mocha Colors
+GREEN=0xffa6e3a1
+YELLOW=0xfff9e2af
+RED=0xfff38ba8
 
 # Get battery info
 BATTERY_INFO=$(pmset -g batt)

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Colors
-MAUVE=0xff8839ef
-SURFACE0=0xffccd0da
-BASE=0xffeff1f5
-TEXT=0xff4c4f69
+# Catppuccin Mocha Colors
+MAUVE=0xffcba6f7
+SURFACE0=0xff313244
+BASE=0xff1e1e2e
+TEXT=0xffcdd6f4
 
 # Get current workspace from AeroSpace
 CURRENT_WORKSPACE=$(aerospace list-workspaces --focused)
