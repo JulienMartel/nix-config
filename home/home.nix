@@ -154,7 +154,7 @@
     options = {
       side-by-side = false;
       line-numbers = true;
-      syntax-theme = "catpuccin-latte";
+      syntax-theme = "catppuccin-mocha";
     };
   };
 
