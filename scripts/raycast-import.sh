@@ -21,17 +21,17 @@ fi
 
 echo "Converting JSON to .rayconfig format..."
 
-# Compress the JSON back to rayconfig format
-gzip --keep --stdout "$INPUT_FILE" > "$OUTPUT_FILE"
+# Compress the JSON back to rayconfig format (using portable flags)
+gzip -c "$INPUT_FILE" > "$OUTPUT_FILE"
 
 echo "Created: $OUTPUT_FILE"
 echo ""
 echo "Opening Raycast import dialog..."
 echo "Select the file: $OUTPUT_FILE"
 echo ""
+echo "After importing, you can delete the .rayconfig file:"
+echo "  rm \"$OUTPUT_FILE\""
+echo ""
 
 # Open Raycast import via deeplink
 open "raycast://extensions/raycast/raycast/import-settings-data"
-
-echo "After importing, you can delete the .rayconfig file:"
-echo "  rm \"$OUTPUT_FILE\""

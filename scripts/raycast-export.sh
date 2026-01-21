@@ -40,20 +40,18 @@ echo "Decompressing to JSON..."
 
 mkdir -p "$CONFIG_DIR"
 
-# gzip with --suffix strips .rayconfig and produces the decompressed file
+# Decompress using gunzip (portable across macOS/Linux)
 TEMP_DIR=$(mktemp -d)
-TEMP_FILE="$TEMP_DIR/raycast.rayconfig"
-cp "$RAYCONFIG_PATH" "$TEMP_FILE"
+trap "rm -rf '$TEMP_DIR'" EXIT
 
-if gzip --decompress --suffix .rayconfig "$TEMP_FILE" 2>/dev/null; then
-    mv "$TEMP_DIR/raycast" "$OUTPUT_FILE"
-    rm -rf "$TEMP_DIR"
+if gunzip -c "$RAYCONFIG_PATH" > "$TEMP_DIR/raycast.json" 2>/dev/null; then
+    mkdir -p "$CONFIG_DIR"
+    mv "$TEMP_DIR/raycast.json" "$OUTPUT_FILE"
     echo "Success! Config saved to: $OUTPUT_FILE"
     echo ""
     echo "Don't forget to commit the changes:"
     echo "  cd ~/.config/nix && git add -A && git commit -m 'Update Raycast config'"
 else
-    rm -rf "$TEMP_DIR"
     echo ""
     echo "Error: Could not decompress file."
     echo "This usually means the export was password-protected."
