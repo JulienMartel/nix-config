@@ -7,6 +7,7 @@
   # User packages
   home.packages = with pkgs; [
     fnm
+    nixfmt-rfc-style
   ];
 
   # Zsh configuration
