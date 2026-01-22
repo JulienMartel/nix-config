@@ -139,7 +139,7 @@ Zsh is configured with:
 ## Git Configuration
 
 - GPG commit signing enabled
-- Delta pager with catpuccin-latte theme
+- Delta pager with catppuccin-mocha theme
 - Auto-setup remote for pushes
 
 ## Raycast Configuration

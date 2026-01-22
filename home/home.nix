@@ -53,6 +53,9 @@
         # Environment variables (early init)
         export CLICOLOR=1
         export GPG_TTY=$(tty)
+
+        # Homebrew (Apple Silicon)
+        eval "$(/opt/homebrew/bin/brew shellenv)"
       '')
       ''
         # Custom completions
@@ -132,7 +135,7 @@
     options = {
       side-by-side = false;
       line-numbers = true;
-      syntax-theme = "catpuccin-latte";
+      syntax-theme = "catppuccin-mocha";
     };
   };
 

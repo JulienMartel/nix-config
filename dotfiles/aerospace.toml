@@ -2,7 +2,9 @@ after-login-command = []
 
 after-startup-command = []
 
-exec-on-workspace-change = []
+exec-on-workspace-change = [
+    '/Users/julienmartel/.config/sketchybar/aerospace-notify.sh',
+]
 
 start-at-login = true
 
@@ -90,6 +92,8 @@ alt-shift-l = 'move-node-to-workspace L'
 alt-shift-f = 'move-node-to-workspace F'
 # Music
 alt-shift-m = 'move-node-to-workspace M'
+# AI
+alt-shift-a = 'move-node-to-workspace AI'
 
 alt-f = 'fullscreen'
 
@@ -122,6 +126,17 @@ run = 'move-node-to-workspace G'
 
 [[on-window-detected]]
 if.app-id = 'com.mitchellh.ghostty'
+if.window-title-regex-substring = 'quick-terminal'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+if.window-title-regex-substring = 'quick-terminal-rebuild'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+if.window-title-regex-substring = '^(?!quick-terminal).*$'
 run = 'move-node-to-workspace T'
 
 [[on-window-detected]]
