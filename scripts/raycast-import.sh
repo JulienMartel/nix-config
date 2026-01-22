@@ -1,13 +1,13 @@
 #!/bin/bash
 # Raycast Config Import Helper
-# Imports Raycast settings from the stored JSON config
+# Imports Raycast settings from stored config
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$SCRIPT_DIR/../dotfiles/raycast"
-INPUT_FILE="$CONFIG_DIR/raycast-config.json"
-OUTPUT_FILE="$CONFIG_DIR/raycast-import.rayconfig"
+INPUT_FILE="$CONFIG_DIR/raycast.rayconfig"
+PASSWORD_FILE="$CONFIG_DIR/.raycast-password"
 
 echo "Raycast Config Import"
 echo "====================="
@@ -19,19 +19,21 @@ if [[ ! -f "$INPUT_FILE" ]]; then
     exit 1
 fi
 
-echo "Converting JSON to .rayconfig format..."
+if [[ -f "$PASSWORD_FILE" ]]; then
+    PASSWORD=$(cat "$PASSWORD_FILE")
+    echo "When Raycast asks for the password, use:"
+    echo ""
+    echo "    $PASSWORD"
+    echo ""
+else
+    echo "Warning: No password file found at $PASSWORD_FILE"
+    echo ""
+fi
 
-# Compress the JSON back to rayconfig format (using portable flags)
-gzip -c "$INPUT_FILE" > "$OUTPUT_FILE"
-
-echo "Created: $OUTPUT_FILE"
+echo "Select this file when prompted:"
+echo "    $INPUT_FILE"
 echo ""
-echo "Opening Raycast import dialog..."
-echo "Select the file: $OUTPUT_FILE"
-echo ""
-echo "After importing, you can delete the .rayconfig file:"
-echo "  rm \"$OUTPUT_FILE\""
-echo ""
+read -p "Press Enter to open Raycast import dialog..."
 
 # Open Raycast import via deeplink
 open "raycast://extensions/raycast/raycast/import-settings-data"

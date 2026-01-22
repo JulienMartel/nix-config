@@ -1,22 +1,23 @@
 #!/bin/bash
 # Raycast Config Export Helper
-# Exports Raycast settings to JSON for version control
+# Stores Raycast export for version control
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$SCRIPT_DIR/../dotfiles/raycast"
-OUTPUT_FILE="$CONFIG_DIR/raycast-config.json"
+OUTPUT_FILE="$CONFIG_DIR/raycast.rayconfig"
+PASSWORD_FILE="$CONFIG_DIR/.raycast-password"
+PASSWORD="raycast2026"
 
 echo "Raycast Config Export"
 echo "====================="
 echo ""
-echo "This will open Raycast's export dialog."
+echo "When Raycast asks for a password, use:"
 echo ""
-echo "IMPORTANT: When exporting, do NOT set a password."
-echo "           (Leave password fields empty)"
+echo "    $PASSWORD"
 echo ""
-echo "Save the .rayconfig file somewhere accessible (e.g., Downloads)."
+echo "(This password is saved in $PASSWORD_FILE)"
 echo ""
 read -p "Press Enter to open Raycast export dialog..."
 
@@ -34,27 +35,17 @@ if [[ ! -f "$RAYCONFIG_PATH" ]]; then
     exit 1
 fi
 
-# Decompress the rayconfig (it's gzip compressed when no password is set)
-echo ""
-echo "Decompressing to JSON..."
-
 mkdir -p "$CONFIG_DIR"
 
-# Decompress using gunzip (portable across macOS/Linux)
-TEMP_DIR=$(mktemp -d)
-trap "rm -rf '$TEMP_DIR'" EXIT
+# Save the password
+echo "$PASSWORD" > "$PASSWORD_FILE"
+chmod 600 "$PASSWORD_FILE"
 
-if gunzip -c "$RAYCONFIG_PATH" > "$TEMP_DIR/raycast.json" 2>/dev/null; then
-    mkdir -p "$CONFIG_DIR"
-    mv "$TEMP_DIR/raycast.json" "$OUTPUT_FILE"
-    echo "Success! Config saved to: $OUTPUT_FILE"
-    echo ""
-    echo "Don't forget to commit the changes:"
-    echo "  cd ~/.config/nix && git add -A && git commit -m 'Update Raycast config'"
-else
-    echo ""
-    echo "Error: Could not decompress file."
-    echo "This usually means the export was password-protected."
-    echo "Please re-export WITHOUT a password."
-    exit 1
-fi
+# Copy the rayconfig file
+cp "$RAYCONFIG_PATH" "$OUTPUT_FILE"
+
+echo ""
+echo "Success! Config saved to: $OUTPUT_FILE"
+echo ""
+echo "Don't forget to commit the changes:"
+echo "  cd ~/.config/nix && git add -A && git commit -m 'Update Raycast config'"
