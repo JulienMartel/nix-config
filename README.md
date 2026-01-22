@@ -20,8 +20,12 @@ Declarative macOS system configuration using nix-darwin and home-manager.
 │       └── configuration.nix  # System-level config (packages, Homebrew, macOS settings)
 ├── home/
 │   └── home.nix              # User-level config (dotfiles, shell, programs)
-└── dotfiles/                  # Additional configuration files
-    └── aerospace.toml
+├── dotfiles/                  # Additional configuration files
+│   ├── aerospace.toml
+│   └── raycast/              # Raycast config (exported JSON)
+└── scripts/                   # Helper scripts
+    ├── raycast-export.sh     # Export Raycast settings
+    └── raycast-import.sh     # Import Raycast settings on new machine
 ```
 
 ## Quick Start (New Machine)
@@ -117,7 +121,7 @@ These must be transferred manually or regenerated on new machines.
 - lazygit, lsd, neofetch, tree, ttyd, biome
 
 ### GUI Apps (Homebrew casks via nix-darwin)
-- aerospace, ghostty, jordanbaird-ice, legcord, stats
+- aerospace, ghostty, jordanbaird-ice, legcord, raycast, stats
 
 ### User Packages (home-manager)
 - fnm (Node version manager)
@@ -137,3 +141,27 @@ Zsh is configured with:
 - GPG commit signing enabled
 - Delta pager with catppuccin-mocha theme
 - Auto-setup remote for pushes
+
+## Raycast Configuration
+
+Raycast settings (extensions, hotkeys, aliases, snippets) are stored in `dotfiles/raycast/`.
+
+### Export (save current settings)
+
+```bash
+./scripts/raycast-export.sh
+```
+
+This opens Raycast's export dialog via deeplink. **Export WITHOUT a password** so the config can be stored as readable JSON.
+
+### Import (on new machine)
+
+```bash
+./scripts/raycast-import.sh
+```
+
+This converts the JSON back to `.rayconfig` format and opens Raycast's import dialog.
+
+### Alternative: Raycast Cloud Sync
+
+If you have Raycast Pro ($8/mo), you can skip the manual export/import - just sign in and enable Cloud Sync in Settings > Cloud Sync.

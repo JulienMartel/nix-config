@@ -1,0 +1,17 @@
+theme = dark:Catppuccin Mocha,light:Catppuccin Latte
+
+font-size = 20
+
+macos-titlebar-style = hidden
+macos-option-as-alt = true
+
+quit-after-last-window-closed = true
+
+#zellij overwrites
+keybind = cmd+t=unbind
+
+macos-icon-frame = chrome
+macos-icon-ghost-color = 333333
+macos-icon-screen-color = 404040
+
+macos-icon = custom-style

@@ -1,18 +1,23 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, username, ... }:
 
 {
-  # Note: home.username and home.homeDirectory are set automatically
-  # by nix-darwin's home-manager module
-
   # User packages
   home.packages = with pkgs; [
+    antigravity
+    claude-code
     fnm
+    nixfmt-rfc-style
+    gemini-cli-bin
+    iina
+    orbstack
   ];
 
   # Zsh configuration
   programs.zsh = {
     enable = true;
     enableCompletion = true;
+    autosuggestion.enable = true;
+    syntaxHighlighting.enable = true;
 
     shellAliases = {
       cat = "bat --style=header,grid --theme=ansi --tabs=2";
@@ -30,7 +35,19 @@
 
     historySubstringSearch.enable = true;
 
-    # Use initContent with lib.mkBefore for early initialization
+    oh-my-zsh = {
+      enable = true;
+      plugins = [ "git" "sudo" "command-not-found" ];
+    };
+
+    plugins = [
+      {
+        name = "fzf-tab";
+        src = pkgs.zsh-fzf-tab;
+        file = "share/fzf-tab/fzf-tab.plugin.zsh";
+      }
+    ];
+
     initContent = lib.mkMerge [
       (lib.mkBefore ''
         # Environment variables (early init)
@@ -56,39 +73,6 @@
         export PATH="$BUN_INSTALL/bin:$PATH"
         [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
-        # Zinit installation and setup
-        if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
-            print -P "%F{33} %F{220}Installing %F{33}ZDHARMA-CONTINUUM%F{220} Initiative Plugin Manager (%F{33}zdharma-continuum/zinit%F{220})…%f"
-            command mkdir -p "$HOME/.local/share/zinit" && command chmod g-rwX "$HOME/.local/share/zinit"
-            command git clone https://github.com/zdharma-continuum/zinit "$HOME/.local/share/zinit/zinit.git" && \
-                print -P "%F{33} %F{34}Installation successful.%f%b" || \
-                print -P "%F{160} The clone has failed.%f%b"
-        fi
-        source "$HOME/.local/share/zinit/zinit.git/zinit.zsh"
-        autoload -Uz _zinit
-        (( ''${+_comps} )) && _comps[zinit]=_zinit
-
-        # Zinit annexes
-        zinit light-mode for \
-            zdharma-continuum/zinit-annex-as-monitor \
-            zdharma-continuum/zinit-annex-bin-gem-node \
-            zdharma-continuum/zinit-annex-patch-dl \
-            zdharma-continuum/zinit-annex-rust
-
-        # Zinit plugins
-        zinit light zsh-users/zsh-syntax-highlighting
-        zinit light zsh-users/zsh-completions
-        zinit light zsh-users/zsh-autosuggestions
-        zinit light Aloxaf/fzf-tab
-
-        # Oh-My-Zsh snippets
-        zinit snippet OMZP::git
-        zinit snippet OMZP::sudo
-        zinit snippet OMZP::command-not-found
-
-        # Load completions
-        autoload -Uz compinit && compinit
-
         # Key bindings (emacs mode)
         bindkey -e
 
@@ -110,10 +94,7 @@
         [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 
         # opencode
-        export PATH=/Users/julienmartel/.opencode/bin:$PATH
-
-        # Antigravity
-        export PATH="/Users/julienmartel/.antigravity/antigravity/bin:$PATH"
+        export PATH="$HOME/.opencode/bin:$PATH"
       ''
     ];
   };
@@ -140,9 +121,9 @@
       user.name = "Julien Martel";
       user.email = "julienbmartel@gmail.com";
       color.ui = "auto";
-      http.cookiefile = "/Users/julienmartel/.gitcookies";
+      http.cookiefile = "${config.home.homeDirectory}/.gitcookies";
       push.autoSetupRemote = true;
-      core.attributesfile = "/Users/julienmartel/.gitattributes_global";
+      core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
       tag.gpgSign = true;
     };
   };
@@ -174,6 +155,20 @@
     enableZshIntegration = true;
   };
 
+  # Zellij configuration
+  programs.zellij = {
+    enable = true;
+    settings = {
+      pane_frames = false;
+      serialize_pane_viewport = true;
+      theme = "catppuccin-mocha";
+      default_layout = "default";
+      scroll_buffer_size = 50000;
+      show_release_notes = false;
+      show_startup_tips = false;
+    };
+  };
+
   # Dotfiles - AeroSpace configuration
   home.file.".config/aerospace/aerospace.toml".source = ../dotfiles/aerospace.toml;
 
@@ -182,6 +177,15 @@
   home.file.".config/sketchybar/aerospace-notify.sh".source = ../dotfiles/sketchybar/aerospace-notify.sh;
   home.file.".config/sketchybar/plugins" = {
     source = ../dotfiles/sketchybar/plugins;
+    recursive = true;
+  };
+
+  # Dotfiles - Ghostty configuration
+  home.file."Library/Application Support/com.mitchellh.ghostty/config".source = ../dotfiles/ghostty/config;
+
+  # Dotfiles - Zellij layouts (config managed by programs.zellij)
+  home.file.".config/zellij/layouts" = {
+    source = ../dotfiles/zellij/layouts;
     recursive = true;
   };
 

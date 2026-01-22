@@ -1,0 +1,51 @@
+layout {
+    pane
+
+    swap_tiled_layout name="spiral" {
+        tab max_panes=1 {
+            pane
+        }
+        tab max_panes=2 {
+            pane split_direction="vertical" {
+                pane
+                pane
+            }
+        }
+        tab max_panes=3 {
+            pane split_direction="vertical" {
+                pane size="60%"
+                pane {
+                    pane
+                    pane
+                }
+            }
+        }
+        tab max_panes=4 {
+            pane split_direction="vertical" {
+                pane size="60%"
+                pane {
+                    pane size="60%"
+                    pane split_direction="vertical" {
+                        pane
+                        pane
+                    }
+                }
+            }
+        }
+        tab {
+            pane split_direction="vertical" {
+                pane size="60%"
+                pane {
+                    pane size="60%"
+                    pane split_direction="vertical" {
+                        pane size="60%"
+                        pane {
+                            pane
+                            pane
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
