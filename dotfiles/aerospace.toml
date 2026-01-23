@@ -25,7 +25,7 @@ inner.horizontal = [{ monitor."Built-in Retina Display" = 10 }, 20]
 inner.vertical = [{ monitor."Built-in Retina Display" = 10 }, 20]
 outer.left = [{ monitor."Built-in Retina Display" = 10 }, 20]
 outer.bottom = [{ monitor."Built-in Retina Display" = 10 }, 20]
-outer.top = [{ monitor."Built-in Retina Display" = 10 }, 20]
+outer.top = [{ monitor."Built-in Retina Display" = 10 }, 40]
 outer.right = [{ monitor."Built-in Retina Display" = 10 }, 20]
 
 [mode.main.binding]
