@@ -1,12 +1,17 @@
 { config, pkgs, lib, username, ... }:
 
 {
+  # Environment variables
+  home.sessionVariables = {
+    HOMEBREW_NO_ENV_HINTS = "1";
+  };
+
   # User packages
   home.packages = with pkgs; [
     antigravity
     claude-code
     fnm
-    nixfmt-rfc-style
+    nixfmt
     gemini-cli-bin
     iina
     orbstack
@@ -162,7 +167,8 @@
       pane_frames = false;
       serialize_pane_viewport = true;
       theme = "catppuccin-mocha";
-      default_layout = "default";
+      # Using built-in default layout which has bars
+      # default_layout = "custom";
       scroll_buffer_size = 50000;
       show_release_notes = false;
       show_startup_tips = false;
@@ -188,6 +194,16 @@
     source = ../dotfiles/zellij/layouts;
     recursive = true;
   };
+
+  # Ice menu bar manager settings
+  home.activation.iceSettings = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    /usr/bin/defaults write com.jordanbaird.Ice AutoRehide -bool true
+    /usr/bin/defaults write com.jordanbaird.Ice RehideInterval -int 15
+    /usr/bin/defaults write com.jordanbaird.Ice ShowOnClick -bool true
+    /usr/bin/defaults write com.jordanbaird.Ice ShowOnScroll -bool true
+    /usr/bin/defaults write com.jordanbaird.Ice ShowSectionDividers -bool false
+    /usr/bin/defaults write com.jordanbaird.Ice HideApplicationMenus -bool true
+  '';
 
   # Let Home Manager manage itself
   programs.home-manager.enable = true;

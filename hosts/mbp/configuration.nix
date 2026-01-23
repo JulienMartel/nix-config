@@ -58,6 +58,7 @@
       "legcord"
       "raycast"
       "loom"
+      "zen"
     ];
 
     # Note: gcloud-cli requires special handling if needed
@@ -99,17 +100,6 @@
       TrackpadThreeFingerDrag = true;
     };
   };
-
-  # Ice menu bar manager settings
-  system.activationScripts.postUserActivation.text = ''
-    # Ice settings
-    defaults write com.jordanbaird.Ice AutoRehide -bool true
-    defaults write com.jordanbaird.Ice RehideInterval -int 15
-    defaults write com.jordanbaird.Ice ShowOnClick -bool true
-    defaults write com.jordanbaird.Ice ShowOnScroll -bool true
-    defaults write com.jordanbaird.Ice ShowSectionDividers -bool false
-    defaults write com.jordanbaird.Ice HideApplicationMenus -bool true
-  '';
 
   # Enable Touch ID for sudo
   security.pam.services.sudo_local.touchIdAuth = true;

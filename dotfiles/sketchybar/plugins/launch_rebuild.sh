@@ -45,4 +45,14 @@ open -n -a Ghostty --args \
   --window-position-y=$POS_Y \
   -e bash -c "$SCRIPT_PATH"
 
+# Wait for window to spawn, then focus it
+sleep 0.3
+osascript -e 'tell application "Ghostty" to activate'
+
+# Move to current workspace and ensure floating via aerospace
+aerospace list-windows --all | grep "$WINDOW_TITLE" | awk '{print $1}' | while read wid; do
+  aerospace move-node-to-workspace --window-id "$wid" --focus-follows-window $(aerospace list-workspaces --focused) 2>/dev/null
+  aerospace layout --window-id "$wid" floating 2>/dev/null
+done
+
 sketchybar --set apple.logo popup.drawing=off

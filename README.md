@@ -99,6 +99,39 @@ darwin-rebuild --rollback
 nix-collect-garbage -d
 ```
 
+## Updating Packages
+
+This setup uses **Nix Flakes** with `nixpkgs-unstable`. Packages are pinned to specific commits in `flake.lock`, meaning updates are **manual and intentional**.
+
+### How It Works
+
+- `flake.lock` pins all inputs (nixpkgs, nix-darwin, home-manager) to exact commits
+- Running `darwin-rebuild switch` uses those pinned versions
+- You stay on the same package versions until you explicitly update
+
+### To Get Latest Versions
+
+```bash
+nix flake update                        # Update flake.lock to latest commits
+darwin-rebuild switch --flake .#mbp     # Apply the changes
+```
+
+Or as a one-liner:
+
+```bash
+nix flake update && darwin-rebuild switch --flake .#mbp
+```
+
+### Why Manual Updates?
+
+- **Reproducible**: Same versions across time and machines
+- **Stable**: No surprise breakages from upstream changes
+- **Reversible**: Easy rollback with `darwin-rebuild --rollback`
+
+### Update Frequency
+
+Since you're on `nixpkgs-unstable`, you'll get the newest packages when you update. Run `nix flake update` as often as you'd like (weekly/monthly is common).
+
 ## Secrets Management
 
 **NEVER commit:**
