@@ -100,6 +100,31 @@
     };
   };
 
+  # LaunchAgents for AeroSpace and SketchyBar
+  launchd.user.agents = {
+    aerospace = {
+      serviceConfig = {
+        ProgramArguments = [ "/Applications/AeroSpace.app/Contents/MacOS/AeroSpace" ];
+        KeepAlive = true;
+        RunAtLoad = true;
+        ProcessType = "Interactive";
+        StandardOutPath = "/tmp/aerospace.log";
+        StandardErrorPath = "/tmp/aerospace.error.log";
+      };
+    };
+
+    sketchybar = {
+      serviceConfig = {
+        ProgramArguments = [ "/opt/homebrew/opt/sketchybar/bin/sketchybar" ];
+        KeepAlive = true;
+        RunAtLoad = true;
+        ProcessType = "Interactive";
+        StandardOutPath = "/tmp/sketchybar.log";
+        StandardErrorPath = "/tmp/sketchybar.error.log";
+      };
+    };
+  };
+
   # Ice menu bar manager settings
   system.activationScripts.postUserActivation.text = ''
     # Ice settings
