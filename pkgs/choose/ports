@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Get listening ports with process info, format nicely
+get_ports() {
+    lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | while read -r line; do
+        pid=$(echo "$line" | awk '{print $2}')
+        port=$(echo "$line" | awk '{print $9}' | sed 's/.*://')
+        cmd=$(echo "$line" | awk '{print $1}')
+
+        # Try to get a better name from the process
+        full_cmd=$(ps -p "$pid" -o args= 2>/dev/null | head -1)
+
+        # Extract meaningful name
+        if [[ "$full_cmd" == *"node"* ]]; then
+            # For node, try to get the script or package name
+            name=$(echo "$full_cmd" | grep -oE '[^ ]+\.js|node_modules/[^/]+' | head -1 | sed 's|node_modules/||')
+            [[ -z "$name" ]] && name="node"
+        elif [[ "$full_cmd" == *"python"* ]]; then
+            name=$(echo "$full_cmd" | grep -oE '[^ ]+\.py' | head -1)
+            [[ -z "$name" ]] && name="python"
+        elif [[ "$full_cmd" == *"ruby"* ]]; then
+            name=$(echo "$full_cmd" | grep -oE '[^ ]+\.rb' | head -1)
+            [[ -z "$name" ]] && name="ruby"
+        elif [[ "$cmd" == "com.docke"* ]] || [[ "$full_cmd" == *"docker"* ]]; then
+            name="docker"
+        elif [[ "$cmd" == "nginx"* ]]; then
+            name="nginx"
+        elif [[ "$cmd" == "postgres"* ]] || [[ "$cmd" == "postmaste"* ]]; then
+            name="postgres"
+        elif [[ "$cmd" == "redis"* ]]; then
+            name="redis"
+        elif [[ "$cmd" == "mysql"* ]]; then
+            name="mysql"
+        elif [[ "$cmd" == "mongod"* ]]; then
+            name="mongodb"
+        else
+            # Fallback to command name, cleaned up
+            name=$(basename "$(echo "$full_cmd" | awk '{print $1}')" 2>/dev/null)
+            [[ -z "$name" ]] && name="$cmd"
+        fi
+
+        printf ":%s  %-20s  (pid %s)\n" "$port" "$name" "$pid"
+    done | sort -t: -k2 -n | uniq
+}
+
+# Get the list
+ports=$(get_ports)
+
+if [[ -z "$ports" ]]; then
+    osascript -e 'display notification "No listening ports found" with title "ports"'
+    exit 0
+fi
+
+# Show picker
+selected=$(echo "$ports" | choose)
+
+if [[ -n "$selected" ]]; then
+    # Extract PID from selection
+    pid=$(echo "$selected" | grep -oE 'pid [0-9]+' | grep -oE '[0-9]+')
+
+    if [[ -n "$pid" ]]; then
+        kill -9 "$pid" 2>/dev/null && \
+            osascript -e "display notification \"Killed process $pid\" with title \"ports\""
+    fi
+fi

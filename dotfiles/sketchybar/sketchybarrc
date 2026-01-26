@@ -205,6 +205,34 @@ sketchybar --add item clock right \
         script="$HOME/.config/sketchybar/plugins/clock.sh" \
         click_script="open -a 'Notion Calendar'"
 
+# Weather
+sketchybar --add item weather right \
+    --set weather \
+        update_freq=600 \
+        icon="󰖐" \
+        icon.color=$SKY \
+        background.color=$SURFACE0 \
+        popup.background.border_width=2 \
+        popup.background.corner_radius=10 \
+        popup.background.border_color=$SURFACE0 \
+        popup.background.color=$MANTLE \
+        script="/Users/julienmartel/.config/nix/dotfiles/sketchybar/plugins/weather.sh" \
+        click_script="sketchybar --set \$NAME popup.drawing=toggle" \
+    --subscribe weather system_woke
+
+# Weather forecast popup items
+for i in 1 2 3; do
+    sketchybar --add item weather.forecast.$i popup.weather \
+        --set weather.forecast.$i \
+            icon.padding_left=10 \
+            label.padding_right=10 \
+            background.height=30 \
+            background.padding_left=0 \
+            background.padding_right=0 \
+            background.color=0x00000000 \
+            background.drawing=off
+done
+
 # Media
 sketchybar --add item media right \
     --set media \
