@@ -4,6 +4,7 @@ after-startup-command = []
 
 exec-on-workspace-change = [
     '/Users/julienmartel/.config/sketchybar/aerospace-notify.sh',
+    '/Users/julienmartel/.config/aerospace/cap-follow.sh',
 ]
 
 start-at-login = true
@@ -168,4 +169,8 @@ run = 'move-node-to-workspace M'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.Passwords'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.FaceTime'
 run = 'layout floating'

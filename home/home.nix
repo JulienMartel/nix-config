@@ -1,14 +1,24 @@
-{ config, pkgs, lib, username, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  username,
+  ...
+}:
 
 {
-  # Environment variables
+  # Static environment variables (dynamic ones that need shell evaluation
+  # like $(tty) or $(cat ...) live in programs.zsh.initContent below)
   home.sessionVariables = {
+    CLICOLOR = "1";
     HOMEBREW_NO_ENV_HINTS = "1";
   };
 
   # User packages
   home.packages = with pkgs; [
     antigravity
+    choose
+    choose-commands
     claude-code
     fnm
     nixfmt
@@ -25,7 +35,7 @@
     syntaxHighlighting.enable = true;
 
     shellAliases = {
-      cat = "bat --style=header,grid --theme=ansi --tabs=2";
+      cat = "bat --style=header,grid --tabs=2";
       ls = "lsd";
       lg = "lazygit";
     };
@@ -42,7 +52,11 @@
 
     oh-my-zsh = {
       enable = true;
-      plugins = [ "git" "sudo" "command-not-found" ];
+      plugins = [
+        "git"
+        "sudo"
+        "command-not-found"
+      ];
     };
 
     plugins = [
@@ -55,9 +69,9 @@
 
     initContent = lib.mkMerge [
       (lib.mkBefore ''
-        # Environment variables (early init)
-        export CLICOLOR=1
+        # Dynamic env vars (need shell evaluation, can't use home.sessionVariables)
         export GPG_TTY=$(tty)
+        export GEMINI_API_KEY="$(cat ~/.secrets/google-api-key)"
 
         # Homebrew (Apple Silicon)
         eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -148,11 +162,14 @@
   programs.bat = {
     enable = true;
     config = {
-      theme = "ansi";
       style = "header,grid";
       tabs = "2";
     };
   };
+
+  # Catppuccin theming (new module API)
+  catppuccin.bat.enable = true;
+  catppuccin.flavor = "mocha";
 
   # FZF configuration
   programs.fzf = {
@@ -177,17 +194,23 @@
 
   # Dotfiles - AeroSpace configuration
   home.file.".config/aerospace/aerospace.toml".source = ../dotfiles/aerospace.toml;
+  home.file.".config/aerospace/cap-follow.sh" = {
+    source = ../dotfiles/aerospace/cap-follow.sh;
+    executable = true;
+  };
 
   # Dotfiles - SketchyBar configuration
   home.file.".config/sketchybar/sketchybarrc".source = ../dotfiles/sketchybar/sketchybarrc;
-  home.file.".config/sketchybar/aerospace-notify.sh".source = ../dotfiles/sketchybar/aerospace-notify.sh;
+  home.file.".config/sketchybar/aerospace-notify.sh".source =
+    ../dotfiles/sketchybar/aerospace-notify.sh;
   home.file.".config/sketchybar/plugins" = {
     source = ../dotfiles/sketchybar/plugins;
     recursive = true;
   };
 
   # Dotfiles - Ghostty configuration
-  home.file."Library/Application Support/com.mitchellh.ghostty/config".source = ../dotfiles/ghostty/config;
+  home.file."Library/Application Support/com.mitchellh.ghostty/config".source =
+    ../dotfiles/ghostty/config;
 
   # Dotfiles - Zellij layouts (config managed by programs.zellij)
   home.file.".config/zellij/layouts" = {
@@ -196,7 +219,7 @@
   };
 
   # Ice menu bar manager settings
-  home.activation.iceSettings = lib.hm.dag.entryAfter ["writeBoundary"] ''
+  home.activation.iceSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     /usr/bin/defaults write com.jordanbaird.Ice AutoRehide -bool true
     /usr/bin/defaults write com.jordanbaird.Ice RehideInterval -int 15
     /usr/bin/defaults write com.jordanbaird.Ice ShowOnClick -bool true

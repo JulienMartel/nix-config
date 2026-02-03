@@ -76,7 +76,7 @@ sketchybar --add item apple.logo left \
         popup.background.corner_radius=10 \
         popup.background.border_color=$SURFACE0 \
         popup.background.color=$MANTLE \
-        click_script="sketchybar --set \$NAME popup.drawing=toggle"
+        click_script="/Users/julienmartel/.config/nix/dotfiles/sketchybar/plugins/launch_palette.sh"
 
 sketchybar --add item apple.prefs popup.apple.logo \
     --set apple.prefs \
@@ -206,6 +206,7 @@ sketchybar --add item clock right \
         click_script="open -a 'Notion Calendar'"
 
 # Weather
+# Left-click: toggle popup | Right-click: open Weather app
 sketchybar --add item weather right \
     --set weather \
         update_freq=600 \
@@ -217,20 +218,75 @@ sketchybar --add item weather right \
         popup.background.border_color=$SURFACE0 \
         popup.background.color=$MANTLE \
         script="/Users/julienmartel/.config/nix/dotfiles/sketchybar/plugins/weather.sh" \
-        click_script="sketchybar --set \$NAME popup.drawing=toggle" \
-    --subscribe weather system_woke
+        click_script="if [ \"\$BUTTON\" = \"right\" ]; then open -a Weather; else sketchybar --set \$NAME popup.drawing=toggle; fi" \
+    --subscribe weather system_woke mouse.clicked
 
-# Weather forecast popup items
+# Weather popup styling helper
+WEATHER_POPUP_ITEM=(
+    icon.padding_left=10
+    label.padding_right=10
+    background.height=30
+    background.padding_left=0
+    background.padding_right=0
+    background.color=0x00000000
+    background.drawing=off
+    icon.font="Hack Nerd Font:Bold:16.0"
+    label.font="Hack Nerd Font:Regular:14.0"
+)
+
+# Weather popup - Location & Condition
+sketchybar --add item weather.location popup.weather \
+    --set weather.location "${WEATHER_POPUP_ITEM[@]}" \
+        icon.color=$BLUE label.color=$TEXT
+
+sketchybar --add item weather.condition popup.weather \
+    --set weather.condition "${WEATHER_POPUP_ITEM[@]}" \
+        icon.color=$SKY label.color=$SUBTEXT0
+
+# Weather popup - Temperatures
+sketchybar --add item weather.temp popup.weather \
+    --set weather.temp "${WEATHER_POPUP_ITEM[@]}" \
+        icon.color=$PEACH label.color=$TEXT
+
+sketchybar --add item weather.highlow popup.weather \
+    --set weather.highlow "${WEATHER_POPUP_ITEM[@]}" \
+        icon.color=$RED label.color=$SUBTEXT0
+
+# Weather popup - Sun times
+sketchybar --add item weather.sun popup.weather \
+    --set weather.sun "${WEATHER_POPUP_ITEM[@]}" \
+        icon.color=$YELLOW label.color=$TEXT
+
+# Weather popup - Wind & Humidity
+sketchybar --add item weather.wind popup.weather \
+    --set weather.wind "${WEATHER_POPUP_ITEM[@]}" \
+        icon.color=$TEAL label.color=$TEXT
+
+sketchybar --add item weather.humidity popup.weather \
+    --set weather.humidity "${WEATHER_POPUP_ITEM[@]}" \
+        icon.color=$SAPPHIRE label.color=$TEXT
+
+# Weather popup - UV & Precipitation
+sketchybar --add item weather.uv popup.weather \
+    --set weather.uv "${WEATHER_POPUP_ITEM[@]}" \
+        icon.color=$YELLOW label.color=$TEXT
+
+sketchybar --add item weather.precip popup.weather \
+    --set weather.precip "${WEATHER_POPUP_ITEM[@]}" \
+        icon.color=$BLUE label.color=$TEXT
+
+# Weather popup - Hourly forecast (next 4 hours)
+for i in 0 1 2 3; do
+    sketchybar --add item weather.hour.$i popup.weather \
+        --set weather.hour.$i "${WEATHER_POPUP_ITEM[@]}" \
+            icon.color=$LAVENDER label.color=$SUBTEXT0
+done
+
+# Weather popup - 3-day forecast
 for i in 1 2 3; do
     sketchybar --add item weather.forecast.$i popup.weather \
-        --set weather.forecast.$i \
-            icon.padding_left=10 \
-            label.padding_right=10 \
-            background.height=30 \
-            background.padding_left=0 \
-            background.padding_right=0 \
-            background.color=0x00000000 \
-            background.drawing=off
+        --set weather.forecast.$i "${WEATHER_POPUP_ITEM[@]}" \
+            icon.color=$MAUVE label.color=$TEXT
 done
 
 # Media

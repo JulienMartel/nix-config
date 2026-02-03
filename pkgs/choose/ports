@@ -1,8 +1,11 @@
 #!/bin/bash
 
-# Get listening ports with process info, format nicely
+# Apps to ignore (common background processes)
+IGNORE_PATTERN="ControlCe|rapportd|Raycast|figma_age|Linear|Elgato|Cursor|Spotify|Slack|Discord|Notion|1Password|Dropbox|Google|Adobe|Microsoft|ZoomOpener|com\.apple|sharingd|AirPlay|WiFiAgent|SystemUIServer|loginwindow|UserEvent|identityservicesd|CommCenter|GEOExtension"
+
+# Get listening ports with process info, format as tab-separated: title\tsubtitle\ticon
 get_ports() {
-    lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | while read -r line; do
+    lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | tail -n +2 | grep -vE "$IGNORE_PATTERN" | while read -r line; do
         pid=$(echo "$line" | awk '{print $2}')
         port=$(echo "$line" | awk '{print $9}' | sed 's/.*://')
         cmd=$(echo "$line" | awk '{print $1}')
@@ -10,36 +13,52 @@ get_ports() {
         # Try to get a better name from the process
         full_cmd=$(ps -p "$pid" -o args= 2>/dev/null | head -1)
 
-        # Extract meaningful name
+        # Extract meaningful name and pick an icon
+        icon="network"
         if [[ "$full_cmd" == *"node"* ]]; then
             # For node, try to get the script or package name
-            name=$(echo "$full_cmd" | grep -oE '[^ ]+\.js|node_modules/[^/]+' | head -1 | sed 's|node_modules/||')
+            if [[ "$full_cmd" == *"node_modules/.bin/"* ]]; then
+                name=$(echo "$full_cmd" | grep -oE 'node_modules/\.bin/[^ ]+' | sed 's|node_modules/\.bin/||')
+            else
+                name=$(echo "$full_cmd" | grep -oE '[^ ]+\.js|node_modules/[^/]+' | head -1 | sed 's|node_modules/||')
+            fi
             [[ -z "$name" ]] && name="node"
+            icon="chevron.left.forwardslash.chevron.right"
         elif [[ "$full_cmd" == *"python"* ]]; then
             name=$(echo "$full_cmd" | grep -oE '[^ ]+\.py' | head -1)
             [[ -z "$name" ]] && name="python"
+            icon="chevron.left.forwardslash.chevron.right"
         elif [[ "$full_cmd" == *"ruby"* ]]; then
             name=$(echo "$full_cmd" | grep -oE '[^ ]+\.rb' | head -1)
             [[ -z "$name" ]] && name="ruby"
+            icon="chevron.left.forwardslash.chevron.right"
         elif [[ "$cmd" == "com.docke"* ]] || [[ "$full_cmd" == *"docker"* ]]; then
             name="docker"
+            icon="shippingbox"
         elif [[ "$cmd" == "nginx"* ]]; then
             name="nginx"
+            icon="server.rack"
         elif [[ "$cmd" == "postgres"* ]] || [[ "$cmd" == "postmaste"* ]]; then
             name="postgres"
+            icon="cylinder"
         elif [[ "$cmd" == "redis"* ]]; then
             name="redis"
+            icon="cylinder"
         elif [[ "$cmd" == "mysql"* ]]; then
             name="mysql"
+            icon="cylinder"
         elif [[ "$cmd" == "mongod"* ]]; then
             name="mongodb"
+            icon="cylinder"
         else
             # Fallback to command name, cleaned up
             name=$(basename "$(echo "$full_cmd" | awk '{print $1}')" 2>/dev/null)
             [[ -z "$name" ]] && name="$cmd"
         fi
 
-        printf ":%s  %-20s  (pid %s)\n" "$port" "$name" "$pid"
+        # Format: title<TAB>subtitle<TAB>icon
+        # Title: ":port name", Subtitle: "pid XXXX"
+        printf ":%-5s %s\t%s\t%s\n" "$port" "$name" "pid $pid" "$icon"
     done | sort -t: -k2 -n | uniq
 }
 
@@ -55,8 +74,8 @@ fi
 selected=$(echo "$ports" | choose)
 
 if [[ -n "$selected" ]]; then
-    # Extract PID from selection
-    pid=$(echo "$selected" | grep -oE 'pid [0-9]+' | grep -oE '[0-9]+')
+    # Extract PID from the subtitle (second tab-separated field)
+    pid=$(echo "$selected" | cut -f2 | grep -oE '[0-9]+')
 
     if [[ -n "$pid" ]]; then
         kill -9 "$pid" 2>/dev/null && \

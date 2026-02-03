@@ -37,31 +37,33 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 ```
 
-### 2. Set Up SSH Keys (for private repo)
+### 2. Clone Config
 
-Transfer existing keys or generate new ones:
+```bash
+git clone https://github.com/JulienMartel/nix-config.git ~/.config/nix
+cd ~/.config/nix
+```
+
+**Optional:** Set up SSH keys for pushing changes:
 
 ```bash
 # Generate new SSH key
 ssh-keygen -t ed25519 -C "julienbmartel@gmail.com"
 cat ~/.ssh/id_ed25519.pub  # Add to GitHub
-```
 
-### 3. Clone Config
-
-```bash
-git clone git@github.com:JulienMartel/nix-config.git ~/.config/nix
+# Update remote to use SSH
 cd ~/.config/nix
+git remote set-url origin git@github.com:JulienMartel/nix-config.git
 ```
 
-### 4. Build & Activate
+### 3. Build & Activate
 
 ```bash
 nix build .#darwinConfigurations.mbp.system
 ./result/sw/bin/darwin-rebuild switch --flake .#mbp
 ```
 
-### 5. Restart Terminal
+### 4. Restart Terminal
 
 Open a new terminal to load the updated shell configuration.
 
