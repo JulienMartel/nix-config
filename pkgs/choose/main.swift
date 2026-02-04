@@ -192,9 +192,10 @@ struct ContentView: View {
 
     var filtered: [ChooseItem] {
         if query.isEmpty { return items }
+        let searchTerms = query.lowercased().split(separator: " ").map(String.init)
         return items.filter { item in
-            item.title.localizedCaseInsensitiveContains(query) ||
-            (item.subtitle?.localizedCaseInsensitiveContains(query) ?? false)
+            let searchable = (item.title + " " + (item.subtitle ?? "")).lowercased()
+            return searchTerms.allSatisfy { searchable.contains($0) }
         }
     }
 
@@ -243,13 +244,17 @@ struct ContentView: View {
                                 mauve: mauve
                             )
                             .frame(height: itemHeight)
-                            .id(i)
+                            .id(item.id)
                             .onTapGesture { selectedIndex = i; select(action: "enter") }
                         }
                     }
                 }
                 .frame(height: listHeight)
-                .onChange(of: selectedIndex) { proxy.scrollTo(selectedIndex) }
+                .onChange(of: selectedIndex) {
+                    if selectedIndex < filtered.count {
+                        proxy.scrollTo(filtered[selectedIndex].id)
+                    }
+                }
             }
 
             // Action bar (only if selected item has actions)

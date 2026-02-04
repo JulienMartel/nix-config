@@ -47,7 +47,6 @@
       "FelixKratz/formulae/sketchybar"
       "ical-buddy"
       "gogcli"
-      "tailscale"
       "mas" # Mac App Store CLI
     ];
 
@@ -76,6 +75,7 @@
       "Harvest" = 506189836;
       "Dropover" = 1355679052;
       "Things" = 904280696;
+      "Xcode" = 497799835;
     };
   };
 
