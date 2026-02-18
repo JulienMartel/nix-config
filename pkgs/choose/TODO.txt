@@ -1,0 +1,56 @@
+Future: Migrate to SQLite for smarter ranking
+=========================================
+
+SQLite is built into macOS (no deps needed). Swift can use it directly via
+the C API. Sub-millisecond for this item count but opens the door to much
+richer ranking signals.
+
+Schema sketch:
+  items(key TEXT PRIMARY KEY, title TEXT, subtitle TEXT)
+  usage(key TEXT, query TEXT, timestamp INTEGER, action TEXT)
+
+Ranking ideas (layerable, each one adds signal):
+
+1. Per-query associations
+   - Track which query led to which selection
+   - Typing "set" and picking "Settings" 12 times means "set" -> "Settings"
+     should be near-instant
+   - Store (query, item_key, count) tuples
+   - Prefix matching: typing "se" checks scores for "s", "se" prefixes
+
+2. Time-of-day / day-of-week patterns
+   - "Slack" gets opened every morning, "Netflix" in the evening
+   - Weight items higher during their typical usage windows
+   - Bucket into ~4 time blocks (morning/afternoon/evening/night)
+
+3. Contextual signals
+   - Which app was focused when choose was invoked
+   - Could store (frontmost_app, item_key, count)
+   - "If I'm in Xcode and open choose, I probably want Simulator"
+
+4. Sequence patterns
+   - "After opening A, I usually open B within 5 minutes"
+   - Store previous selection and timestamp, boost likely follow-ups
+
+5. Decay functions
+   - Current: simple exponential decay on last_used
+   - Better: half-life model where each use adds to a decaying score
+   - score = sum(e^(-lambda * age_of_each_use)) rather than just latest
+
+6. FTS5 fuzzy search
+   - SQLite FTS5 with trigram tokenizer for typo-tolerant matching
+   - BM25 ranking combined with frecency score
+   - Would replace the current substring filter entirely
+
+7. Substring highlight / match quality score
+   - Contiguous matches score higher than scattered
+   - Beginning-of-word matches score higher than mid-word
+   - Shorter items with same match quality rank higher (tighter match)
+
+8. Adaptive result count
+   - If top result has overwhelming score, auto-select or shrink list
+   - If scores are flat, show more results
+
+9. "Pinned" / manual boost
+   - Let items declare a boost factor in their input format
+   - Or store user-pinned items that always appear first for empty query

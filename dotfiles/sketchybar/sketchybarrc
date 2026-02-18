@@ -179,6 +179,15 @@ do
         --subscribe space.$workspace aerospace_workspace_change
 done
 
+# Aerospace workspace watcher - polls + listens for app changes to catch missed updates
+sketchybar --add item aerospace_watcher left \
+    --set aerospace_watcher \
+        drawing=off \
+        updates=on \
+        update_freq=2 \
+        script="$HOME/.config/sketchybar/plugins/aerospace_watcher.sh" \
+    --subscribe aerospace_watcher front_app_switched space_change
+
 # Front app name
 sketchybar --add item front_app left \
     --set front_app \

@@ -57,6 +57,12 @@ let
       icon = "shippingbox";
       script = ./commands/brew-services.sh;
     };
+    apps = {
+      name = "Applications";
+      description = "Launch an application";
+      icon = "square.grid.2x2";
+      script = ./commands/apps.sh;
+    };
   };
 
   # Generate registry file content (tab-separated: name\tdescription\ticon\tid)

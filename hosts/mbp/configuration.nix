@@ -52,6 +52,7 @@
 
     casks = [
       "aerospace"
+      "beeper"
       "cursor"
       "elgato-control-center"
       "font-hack-nerd-font"
@@ -112,6 +113,41 @@
       Clicking = true;
       TrackpadRightClick = true;
       TrackpadThreeFingerDrag = true;
+    };
+  };
+
+  # Choose daemon - persistent background process for instant command palette
+  launchd.user.agents.choose = {
+    serviceConfig = {
+      ProgramArguments = [
+        "${pkgs.choose}/Applications/Choose.app/Contents/MacOS/choose"
+        "--daemon"
+      ];
+      KeepAlive = true;
+      RunAtLoad = true;
+      ProcessType = "Interactive";
+      StandardOutPath = "/tmp/choose.out.log";
+      StandardErrorPath = "/tmp/choose.err.log";
+      EnvironmentVariables = {
+        LANG = "en_US.UTF-8";
+        HOME = "/Users/${username}";
+      };
+    };
+  };
+
+  # SketchyBar - launch via nix-darwin instead of brew services
+  launchd.user.agents.sketchybar = {
+    serviceConfig = {
+      ProgramArguments = [ "/opt/homebrew/opt/sketchybar/bin/sketchybar" ];
+      KeepAlive = true;
+      RunAtLoad = true;
+      ProcessType = "Interactive";
+      StandardOutPath = "/tmp/sketchybar.out.log";
+      StandardErrorPath = "/tmp/sketchybar.err.log";
+      EnvironmentVariables = {
+        LANG = "en_US.UTF-8";
+        PATH = "/run/current-system/sw/bin:/etc/profiles/per-user/${username}/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin";
+      };
     };
   };
 

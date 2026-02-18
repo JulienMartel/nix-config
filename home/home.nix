@@ -169,6 +169,7 @@
 
   # Catppuccin theming (new module API)
   catppuccin.bat.enable = true;
+  catppuccin.starship.enable = true;
   catppuccin.flavor = "mocha";
 
   # FZF configuration
