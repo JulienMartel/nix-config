@@ -25,6 +25,7 @@ struct ChooseItem: Identifiable {
     let subtitle: String?
     let icon: String?
     let actions: [ItemAction]
+    let searchable: String
 
     static func parse(_ line: String, globalIcon: String?) -> ChooseItem {
         let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
@@ -52,7 +53,8 @@ struct ChooseItem: Identifiable {
             actions.append(ItemAction(key: "enter", label: "Select"))
         }
 
-        return ChooseItem(raw: line, title: title, subtitle: subtitle, icon: icon, actions: actions)
+        let searchable = (title + " " + (subtitle ?? "")).lowercased()
+        return ChooseItem(raw: line, title: title, subtitle: subtitle, icon: icon, actions: actions, searchable: searchable)
     }
 
     func action(for key: String) -> ItemAction? {
@@ -112,17 +114,21 @@ class Frecency {
 
 class DaemonState: ObservableObject {
     @Published var items: [ChooseItem] = []
+    @Published var itemsSorted: [ChooseItem] = []
     @Published var placeholderText: String = "Search..."
     @Published var globalIcon: String? = nil
     @Published var isVisible: Bool = false
     @Published var requestID = UUID()
 
     let frecency = Frecency()
+    private var frecencyScores: [UUID: Double] = [:]
     var onResult: ((String) -> Void)?
     weak var textField: NSTextField?
 
     func reset() {
         items = []
+        itemsSorted = []
+        frecencyScores = [:]
         placeholderText = "Search..."
         globalIcon = nil
         requestID = UUID()
@@ -132,6 +138,14 @@ class DaemonState: ObservableObject {
         globalIcon = icon
         placeholderText = placeholder ?? (lines.isEmpty ? "Input..." : "Search...")
         items = lines.map { ChooseItem.parse($0, globalIcon: globalIcon) }
+        frecencyScores = Dictionary(uniqueKeysWithValues: items.map { ($0.id, frecency.score(for: $0.title)) })
+        itemsSorted = items.sorted { a, b in
+            (frecencyScores[a.id] ?? 0) > (frecencyScores[b.id] ?? 0)
+        }
+    }
+
+    func frecencyScore(for item: ChooseItem) -> Double {
+        return frecencyScores[item.id] ?? 0
     }
 }
 
@@ -516,18 +530,17 @@ struct ContentView: View {
     let actionBarHeight: CGFloat = 40
 
     var filtered: [ChooseItem] {
-        let matched: [ChooseItem]
-        if query.isEmpty {
-            matched = state.items
-        } else {
-            let searchTerms = query.lowercased().split(separator: " ").map(String.init)
-            matched = state.items.filter { item in
-                let searchable = (item.title + " " + (item.subtitle ?? "")).lowercased()
-                return searchTerms.allSatisfy { searchable.contains($0) }
-            }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return state.itemsSorted
+        }
+
+        let searchTerms = trimmed.lowercased().split(separator: " ").map(String.init)
+        let matched = state.items.filter { item in
+            return searchTerms.allSatisfy { item.searchable.contains($0) }
         }
         return matched.sorted { a, b in
-            state.frecency.score(for: a.title) > state.frecency.score(for: b.title)
+            state.frecencyScore(for: a) > state.frecencyScore(for: b)
         }
     }
 
@@ -658,7 +671,7 @@ struct ItemRow: View {
     var body: some View {
         HStack(spacing: 10) {
             if let path = appIconPath {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: path))
+                Image(nsImage: AppIconCache.shared.icon(for: path))
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 22, height: 22)
@@ -685,6 +698,20 @@ struct ItemRow: View {
         .padding(.vertical, 6)
         .background(isSelected ? mauve : Color.clear)
         .contentShape(Rectangle())
+    }
+}
+
+// MARK: - App Icon Cache
+
+final class AppIconCache {
+    static let shared = AppIconCache()
+    private let cache = NSCache<NSString, NSImage>()
+
+    func icon(for path: String) -> NSImage {
+        if let cached = cache.object(forKey: path as NSString) { return cached }
+        let icon = NSWorkspace.shared.icon(forFile: path)
+        cache.setObject(icon, forKey: path as NSString)
+        return icon
     }
 }
 

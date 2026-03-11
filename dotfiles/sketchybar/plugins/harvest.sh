@@ -40,7 +40,7 @@ format_duration() {
 if [ "$SENDER" = "mouse.clicked" ]; then
   # Right-click or modifier: Open Harvest app
   if [ "$BUTTON" = "right" ] || [ "$MODIFIER" = "shift" ] || [ "$MODIFIER" = "cmd" ]; then
-    open -a "Harvest"
+    open -a "Swather"
     exit 0
   fi
 
@@ -69,10 +69,10 @@ if [ "$SENDER" = "mouse.clicked" ]; then
     fi
 
   else
-    # START/RESTART the last timer
-    LAST_ENTRY=$(curl -s "${HEADERS[@]}" "$HARVEST_API_URL/time_entries?per_page=1&_=$TIMESTAMP")
-    ENTRY_ID=$(echo "$LAST_ENTRY" | jq -r '.time_entries[0].id')
-    PROJECT_NAME=$(echo "$LAST_ENTRY" | jq -r '.time_entries[0].client.name // .time_entries[0].project.name // "Timer"')
+    # START/RESTART the most recently used timer (sort by updated_at desc, skip running)
+    LAST_ENTRIES=$(curl -s "${HEADERS[@]}" "$HARVEST_API_URL/time_entries?per_page=10&_=$TIMESTAMP")
+    ENTRY_ID=$(echo "$LAST_ENTRIES" | jq -r '[.time_entries[] | select(.is_running == false)] | sort_by(.updated_at) | reverse | .[0].id')
+    PROJECT_NAME=$(echo "$LAST_ENTRIES" | jq -r '[.time_entries[] | select(.is_running == false)] | sort_by(.updated_at) | reverse | .[0] | .client.name // .project.name // "Timer"')
 
     if [ "$ENTRY_ID" != "null" ] && [ -n "$ENTRY_ID" ]; then
       # Optimistic UI update
@@ -132,10 +132,11 @@ if [ "$RUNNING_COUNT" -gt "0" ]; then
     label="$LABEL" \
     drawing=on
 else
-  # Timer is STOPPED - show last entry for quick resume
-  LATEST_ENTRY=$(curl -s "${HEADERS[@]}" "$HARVEST_API_URL/time_entries?per_page=1&_=$TIMESTAMP")
-  CLIENT=$(echo "$LATEST_ENTRY" | jq -r '.time_entries[0].client.name // empty')
-  PROJECT=$(echo "$LATEST_ENTRY" | jq -r '.time_entries[0].project.name // empty')
+  # Timer is STOPPED - show most recently used entry for quick resume
+  LATEST_ENTRIES=$(curl -s "${HEADERS[@]}" "$HARVEST_API_URL/time_entries?per_page=10&_=$TIMESTAMP")
+  LATEST_ENTRY=$(echo "$LATEST_ENTRIES" | jq '[.time_entries[] | select(.is_running == false)] | sort_by(.updated_at) | reverse | .[0]')
+  CLIENT=$(echo "$LATEST_ENTRY" | jq -r '.client.name // empty')
+  PROJECT=$(echo "$LATEST_ENTRY" | jq -r '.project.name // empty')
 
   if [ -n "$CLIENT" ] && [ "$CLIENT" != "null" ]; then
     LABEL="$CLIENT"

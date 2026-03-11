@@ -24,6 +24,7 @@
     nixfmt
     gemini-cli-bin
     iina
+    mdcat
     orbstack
   ];
 

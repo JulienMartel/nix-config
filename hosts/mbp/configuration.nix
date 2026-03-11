@@ -52,7 +52,6 @@
 
     casks = [
       "aerospace"
-      "beeper"
       "cursor"
       "elgato-control-center"
       "font-hack-nerd-font"
