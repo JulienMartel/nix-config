@@ -95,6 +95,8 @@ alt-shift-f = 'move-node-to-workspace F'
 alt-shift-m = 'move-node-to-workspace M'
 # AI
 alt-shift-a = 'move-node-to-workspace AI'
+# Swather
+alt-shift-h = 'move-node-to-workspace H'
 
 alt-f = 'fullscreen'
 
@@ -166,6 +168,10 @@ run = 'move-node-to-workspace F'
 [[on-window-detected]]
 if.app-id = 'com.apple.Music'
 run = 'move-node-to-workspace M'
+
+[[on-window-detected]]
+if.app-id = 'com.swather.app'
+run = 'move-node-to-workspace H'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.Passwords'
