@@ -15,6 +15,11 @@
     };
 
     catppuccin.url = "github:catppuccin/nix";
+
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -24,6 +29,7 @@
       nix-darwin,
       home-manager,
       catppuccin,
+      nix-index-database,
     }:
     let
       username = "julienmartel";
@@ -67,6 +73,7 @@
             home-manager.extraSpecialArgs = { inherit username; };
             home-manager.sharedModules = [
               catppuccin.homeModules.catppuccin
+              nix-index-database.homeModules.nix-index
             ];
             home-manager.users.${username} = import ./home/home.nix;
           }

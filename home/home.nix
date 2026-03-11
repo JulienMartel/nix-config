@@ -230,6 +230,13 @@
     /usr/bin/defaults write com.jordanbaird.Ice HideApplicationMenus -bool true
   '';
 
+  # nix-index + comma (run any nix package with ", cmd")
+  programs.nix-index = {
+    enable = true;
+    enableZshIntegration = true;
+  };
+  programs.nix-index-database.comma.enable = true;
+
   # Let Home Manager manage itself
   programs.home-manager.enable = true;
 
