@@ -134,6 +134,24 @@
     };
   };
 
+  # AeroSpace - launch via nix-darwin instead of relying on macOS Login Items
+  launchd.user.agents.aerospace = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/Applications/AeroSpace.app/Contents/MacOS/AeroSpace"
+      ];
+      KeepAlive = true;
+      RunAtLoad = true;
+      ProcessType = "Interactive";
+      StandardOutPath = "/tmp/aerospace.out.log";
+      StandardErrorPath = "/tmp/aerospace.err.log";
+      EnvironmentVariables = {
+        LANG = "en_US.UTF-8";
+        PATH = "/run/current-system/sw/bin:/etc/profiles/per-user/${username}/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin";
+      };
+    };
+  };
+
   # SketchyBar - launch via nix-darwin instead of brew services
   launchd.user.agents.sketchybar = {
     serviceConfig = {
