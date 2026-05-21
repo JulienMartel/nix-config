@@ -186,8 +186,7 @@
       pane_frames = false;
       serialize_pane_viewport = true;
       theme = "catppuccin-mocha";
-      # Using built-in default layout which has bars
-      # default_layout = "custom";
+      default_layout = "custom";
       scroll_buffer_size = 50000;
       show_release_notes = false;
       show_startup_tips = false;
@@ -198,6 +197,14 @@
   home.file.".config/aerospace/aerospace.toml".source = ../dotfiles/aerospace.toml;
   home.file.".config/aerospace/cap-follow.sh" = {
     source = ../dotfiles/aerospace/cap-follow.sh;
+    executable = true;
+  };
+  home.file.".config/aerospace/resort-windows.sh" = {
+    source = ../dotfiles/aerospace/resort-windows.sh;
+    executable = true;
+  };
+  home.file.".config/aerospace/on-wake.sh" = {
+    source = ../dotfiles/aerospace/on-wake.sh;
     executable = true;
   };
 
@@ -218,6 +225,10 @@
   home.file.".config/zellij/layouts" = {
     source = ../dotfiles/zellij/layouts;
     recursive = true;
+  };
+  home.file.".config/zellij/launch.sh" = {
+    source = ../dotfiles/zellij/launch.sh;
+    executable = true;
   };
 
   # Ice menu bar manager settings

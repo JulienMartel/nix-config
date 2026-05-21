@@ -2,6 +2,11 @@ theme = dark:Catppuccin Mocha,light:Catppuccin Latte
 
 font-size = 20
 
+# Auto-attach to (or create) the "main" zellij session on launch.
+# Skipped for quick-terminal, for nested ghostty (already inside zellij),
+# and when NO_ZELLIJ=1 is set. Falls back to plain zsh if zellij errors.
+command = /Users/julienmartel/.config/zellij/launch.sh
+
 macos-titlebar-style = hidden
 macos-option-as-alt = true
 

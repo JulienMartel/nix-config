@@ -152,6 +152,25 @@
     };
   };
 
+  # sleepwatcher - on wake, re-sort AeroSpace windows back to their assigned
+  # workspaces (macOS otherwise dumps them all on the current workspace).
+  launchd.user.agents.sleepwatcher = {
+    serviceConfig = {
+      ProgramArguments = [
+        "${pkgs.sleepwatcher}/bin/sleepwatcher"
+        "-w"
+        "/Users/${username}/.config/aerospace/on-wake.sh"
+      ];
+      KeepAlive = true;
+      RunAtLoad = true;
+      StandardOutPath = "/tmp/sleepwatcher.out.log";
+      StandardErrorPath = "/tmp/sleepwatcher.err.log";
+      EnvironmentVariables = {
+        PATH = "/run/current-system/sw/bin:/etc/profiles/per-user/${username}/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin";
+      };
+    };
+  };
+
   # SketchyBar - launch via nix-darwin instead of brew services
   launchd.user.agents.sketchybar = {
     serviceConfig = {

@@ -1,15 +1,23 @@
+// Custom layout = built-in tab-bar + 1-line status-bar + spiral swap layout.
+// Need to wire up the bars explicitly here because zellij only injects them
+// automatically when using the built-in default layout, not a custom one.
+// status-bar normally renders two rows (hotkeys + tips); we constrain it to
+// size=1 so only the hotkey-hints row shows. The bar updates in place when
+// entering chord modes (e.g. Ctrl-t shows tab-mode hints).
 layout {
     default_tab_template {
         pane size=1 borderless=true {
             plugin location="zellij:tab-bar"
         }
         children
-        pane size=2 borderless=true {
+        pane size=1 borderless=true {
             plugin location="zellij:status-bar"
         }
     }
 
-    pane
+    tab {
+        pane
+    }
 
     swap_tiled_layout name="spiral" {
         tab max_panes=1 {
