@@ -1,5 +1,35 @@
 { pkgs, username, ... }:
 
+let
+  # Wrap a GUI agent's launch so that:
+  #   1. The launcher itself does NOT live in /nix/store. Determinate Nix
+  #      mounts /nix from a separate APFS volume, and at cold boot the
+  #      user-domain launchd evaluates plists before that volume is
+  #      reliably available -- the kernel reports "Missing executable"
+  #      and the job is parked with last exit = 78 (EX_CONFIG). We embed
+  #      the script inline so it lives in the plist itself (on the boot
+  #      volume in ~/Library/LaunchAgents).
+  #   2. We wait until the GUI session is actually ready before exec'ing.
+  #      Aqua-session limit alone isn't enough; AeroSpace's Carbon hotkey
+  #      registration silently no-ops if the event manager isn't up.
+  withGUIWait = target: [
+    "/bin/bash"
+    "-c"
+    ''
+      until /usr/bin/pgrep -x Dock >/dev/null 2>&1; do sleep 1; done
+      until /usr/bin/pgrep -x Finder >/dev/null 2>&1; do sleep 1; done
+      until /usr/bin/pgrep -x SystemUIServer >/dev/null 2>&1; do sleep 1; done
+      deadline=$(( $(date +%s) + 60 ))
+      until /usr/bin/osascript -e 'tell application "System Events" to count processes' >/dev/null 2>&1; do
+        [ "$(date +%s)" -gt "$deadline" ] && break
+        sleep 1
+      done
+      sleep 5
+      exec "$0"
+    ''
+    target
+  ];
+in
 {
   # Primary user for user-specific settings (required by nix-darwin)
   system.primaryUser = username;
@@ -137,9 +167,7 @@
   # AeroSpace - launch via nix-darwin instead of relying on macOS Login Items
   launchd.user.agents.aerospace = {
     serviceConfig = {
-      ProgramArguments = [
-        "/Applications/AeroSpace.app/Contents/MacOS/AeroSpace"
-      ];
+      ProgramArguments = withGUIWait "/Applications/AeroSpace.app/Contents/MacOS/AeroSpace";
       KeepAlive = true;
       RunAtLoad = true;
       ProcessType = "Interactive";
@@ -174,7 +202,7 @@
   # SketchyBar - launch via nix-darwin instead of brew services
   launchd.user.agents.sketchybar = {
     serviceConfig = {
-      ProgramArguments = [ "/opt/homebrew/opt/sketchybar/bin/sketchybar" ];
+      ProgramArguments = withGUIWait "/opt/homebrew/opt/sketchybar/bin/sketchybar";
       KeepAlive = true;
       RunAtLoad = true;
       ProcessType = "Interactive";
