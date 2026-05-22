@@ -16,7 +16,7 @@
 
   # User packages
   home.packages = with pkgs; [
-    antigravity
+    bun
     choose
     choose-commands
     claude-code
@@ -81,17 +81,9 @@
         # Custom completions
         fpath=(~/.zsh-completions $fpath)
 
-        # Cargo
-        [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-
         # fnm (Node version manager)
         export PATH="$HOME/.fnm:$PATH"
         eval "$(fnm env --use-on-cd --shell zsh)"
-
-        # Bun
-        export BUN_INSTALL="$HOME/.bun"
-        export PATH="$BUN_INSTALL/bin:$PATH"
-        [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
         # Key bindings (emacs mode)
         bindkey -e
@@ -109,12 +101,6 @@
         zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
         zstyle ':completion:*' list-colors "''${(s.:.)LS_COLORS}"
         zstyle ':completion:*' menu no
-
-        # uv (Python package manager)
-        [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
-
-        # opencode
-        export PATH="$HOME/.opencode/bin:$PATH"
       ''
     ];
   };

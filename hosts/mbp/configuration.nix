@@ -49,7 +49,7 @@ in
     jq
     lazygit
     lsd
-    neofetch
+    fastfetch
     tree
     ttyd
 
@@ -82,20 +82,30 @@ in
 
     casks = [
       "aerospace"
+      "cap"
+      "claude"
       "cursor"
       "elgato-control-center"
+      "figma"
       "font-hack-nerd-font"
       "font-jetbrains-mono-nerd-font"
+      "framer"
+      "gcloud-cli"
       "ghostty"
+      "google-chrome"
+      "hammerspoon"
       "insomnia"
-      "notion-calendar"
       "legcord"
+      "linear"
+      "loom"
+      "notion-calendar"
       "obsidian"
       "pear-devs/pear/pear-desktop"
+      "protonvpn"
+      "qfinder-pro"
       "raycast"
-      "loom"
+      "tailscale-app"
       "zen"
-      "google-cloud-sdk"
     ];
 
     # Mac App Store apps (use `mas search <app>` to find IDs)
