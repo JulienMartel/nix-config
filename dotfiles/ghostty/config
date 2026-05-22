@@ -1,6 +1,6 @@
 theme = dark:Catppuccin Mocha,light:Catppuccin Latte
 
-font-size = 20
+font-size = 19
 
 # Auto-attach to (or create) the "main" zellij session on launch.
 # Skipped for quick-terminal, for nested ghostty (already inside zellij),
@@ -11,6 +11,7 @@ macos-titlebar-style = hidden
 macos-option-as-alt = true
 
 quit-after-last-window-closed = true
+window-save-state = never
 
 #zellij overwrites
 keybind = cmd+t=unbind
