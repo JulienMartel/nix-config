@@ -156,7 +156,7 @@ These must be transferred manually or regenerated on new machines.
 - lazygit, lsd, neofetch, tree, ttyd, biome
 
 ### GUI Apps (Homebrew casks via nix-darwin)
-- aerospace, ghostty, jordanbaird-ice, legcord, raycast, stats
+- aerospace, ghostty, legcord, raycast, stats
 
 ### User Packages (home-manager)
 - fnm (Node version manager)

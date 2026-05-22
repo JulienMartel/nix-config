@@ -88,7 +88,6 @@ in
       "font-jetbrains-mono-nerd-font"
       "ghostty"
       "insomnia"
-      "jordanbaird-ice"
       "notion-calendar"
       "legcord"
       "obsidian"

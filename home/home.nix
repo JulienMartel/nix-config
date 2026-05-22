@@ -231,16 +231,6 @@
     executable = true;
   };
 
-  # Ice menu bar manager settings
-  home.activation.iceSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    /usr/bin/defaults write com.jordanbaird.Ice AutoRehide -bool true
-    /usr/bin/defaults write com.jordanbaird.Ice RehideInterval -int 15
-    /usr/bin/defaults write com.jordanbaird.Ice ShowOnClick -bool true
-    /usr/bin/defaults write com.jordanbaird.Ice ShowOnScroll -bool true
-    /usr/bin/defaults write com.jordanbaird.Ice ShowSectionDividers -bool false
-    /usr/bin/defaults write com.jordanbaird.Ice HideApplicationMenus -bool true
-  '';
-
   # nix-index + comma (run any nix package with ", cmd")
   programs.nix-index = {
     enable = true;
