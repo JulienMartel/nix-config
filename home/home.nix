@@ -165,19 +165,8 @@
     enableZshIntegration = true;
   };
 
-  # Zellij configuration
-  programs.zellij = {
-    enable = true;
-    settings = {
-      pane_frames = false;
-      serialize_pane_viewport = true;
-      theme = "catppuccin-mocha";
-      default_layout = "custom";
-      scroll_buffer_size = 50000;
-      show_release_notes = false;
-      show_startup_tips = false;
-    };
-  };
+  # Zellij configuration (config.kdl managed as a dotfile below for full KDL control)
+  programs.zellij.enable = true;
 
   # Dotfiles - AeroSpace configuration
   home.file.".config/aerospace/aerospace.toml".source = ../dotfiles/aerospace.toml;
@@ -207,7 +196,8 @@
   home.file."Library/Application Support/com.mitchellh.ghostty/config".source =
     ../dotfiles/ghostty/config;
 
-  # Dotfiles - Zellij layouts (config managed by programs.zellij)
+  # Dotfiles - Zellij config, layouts, and launch script
+  home.file.".config/zellij/config.kdl".source = ../dotfiles/zellij/config.kdl;
   home.file.".config/zellij/layouts" = {
     source = ../dotfiles/zellij/layouts;
     recursive = true;

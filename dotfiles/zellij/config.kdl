@@ -1,0 +1,13 @@
+default_layout "custom"
+pane_frames false
+scroll_buffer_size 50000
+serialize_pane_viewport true
+show_release_notes false
+show_startup_tips false
+theme "catppuccin-mocha"
+
+keybinds {
+    shared {
+        bind "Ctrl Alt c" { Run "claude" "--dangerously-skip-permissions"; }
+    }
+}
