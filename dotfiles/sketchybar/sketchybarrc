@@ -158,7 +158,7 @@ sketchybar --add item apple.reload popup.apple.logo \
 
 # Spaces - All AeroSpace workspaces
 sketchybar --add event aerospace_workspace_change
-WORKSPACES=("1" "2" "3" "4" "C" "T" "N" "S" "B" "G" "L" "F" "M")
+WORKSPACES=("1" "2" "3" "4" "C" "T" "N" "S" "B" "G" "L" "F" "M" "K" "D")
 
 for workspace in "${WORKSPACES[@]}"
 do

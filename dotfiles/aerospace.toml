@@ -97,6 +97,10 @@ alt-shift-m = 'move-node-to-workspace M'
 alt-shift-a = 'move-node-to-workspace AI'
 # Swather
 alt-shift-h = 'move-node-to-workspace H'
+# Claude
+alt-shift-k = 'move-node-to-workspace K'
+# Notion Calendar
+alt-shift-d = 'move-node-to-workspace D'
 
 alt-f = 'fullscreen'
 
@@ -182,8 +186,12 @@ if.app-id = 'com.swather.app'
 run = 'move-node-to-workspace H'
 
 [[on-window-detected]]
-if.app-id = 'com.apple.Passwords'
-run = 'layout floating'
+if.app-id = 'com.anthropic.claudefordesktop'
+run = 'move-node-to-workspace K'
+
+[[on-window-detected]]
+if.app-id = 'com.cron.electron'
+run = 'move-node-to-workspace D'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.FaceTime'
