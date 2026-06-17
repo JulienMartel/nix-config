@@ -93,7 +93,6 @@ in
       "gcloud-cli"
       "ghostty"
       "google-chrome"
-      "hammerspoon"
       "insomnia"
       "legcord"
       "linear"
@@ -111,7 +110,6 @@ in
     # Mac App Store apps (use `mas search <app>` to find IDs)
     masApps = {
       "Slack" = 803453959;
-      "Harvest" = 506189836;
       "Dropover" = 1355679052;
       "Things" = 904280696;
       "Xcode" = 497799835;
