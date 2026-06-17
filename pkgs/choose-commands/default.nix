@@ -27,6 +27,12 @@ let
       icon = "arrow.clockwise";
       script = ./commands/reload-bar.sh;
     };
+    reload-aerospace = {
+      name = "Reload AeroSpace";
+      description = "Reload AeroSpace configuration";
+      icon = "rectangle.3.group";
+      script = ./commands/reload-aerospace.sh;
+    };
     nix-config = {
       name = "Nix Config";
       description = "Open in editor";
