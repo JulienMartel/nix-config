@@ -222,14 +222,34 @@ in
     };
   };
 
+  # Periodic Nix GC. Determinate's daemon only GCs reactively when disk is
+  # tight (min-free/max-free) -- on a large SSD that effectively never fires,
+  # so generations accumulate forever. Run our own weekly cleanup instead.
+  launchd.daemons.nix-gc = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/nix/var/nix/profiles/default/bin/nix-collect-garbage"
+        "--delete-older-than"
+        "30d"
+      ];
+      StartCalendarInterval = [
+        {
+          Weekday = 0; # Sunday
+          Hour = 3;
+          Minute = 0;
+        }
+      ];
+      StandardOutPath = "/var/log/nix-gc.out.log";
+      StandardErrorPath = "/var/log/nix-gc.err.log";
+    };
+  };
+
   # Enable Touch ID for sudo
   security.pam.services.sudo_local.touchIdAuth = true;
 
-  # Disable nix-darwin's Nix management (using Determinate installer)
+  # nix.settings and the daemon itself are managed by the Determinate installer
+  # (see /etc/nix/nix.custom.conf), so nix-darwin's nix module is disabled.
   nix.enable = false;
-
-  # Note: nix.settings and nix.gc are managed by Determinate installer
-  # To configure garbage collection, use: sudo nix-collect-garbage -d
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
