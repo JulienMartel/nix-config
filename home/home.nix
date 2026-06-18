@@ -76,6 +76,9 @@
 
         # Homebrew (Apple Silicon)
         eval "$(/opt/homebrew/bin/brew shellenv)"
+
+        # OrbStack: docker/orbctl PATH + completions
+        source ~/.orbstack/shell/init.zsh 2>/dev/null || :
       '')
       ''
         # Custom completions
