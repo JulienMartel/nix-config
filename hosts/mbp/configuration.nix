@@ -118,6 +118,18 @@ in
     # masApps is intentionally omitted so `onActivation.upgrade` never invokes mas.
   };
 
+  # With `onActivation.upgrade`, brew loads each cask to check for updates, which
+  # triggers Homebrew's tap-trust check on our third-party taps (nikitabobko,
+  # FelixKratz, pear-devs). That check is flaky under the sudo-driven activation
+  # (the per-user trust store at ~/.homebrew/trust.json gets bypassed/invalidated),
+  # making `darwin-rebuild switch` fail with "Refusing to load cask ... from
+  # untrusted tap". We curate these taps ourselves, so disable the requirement
+  # globally via a brew.env file that `bin/brew` reads on every invocation. /etc is
+  # set up before the Homebrew bundle step, so this applies on the same rebuild.
+  environment.etc."homebrew/brew.env".text = ''
+    HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+  '';
+
   # macOS system settings
   system.defaults = {
     # Dock
