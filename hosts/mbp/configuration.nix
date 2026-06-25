@@ -152,6 +152,10 @@ in
       TrackpadRightClick = true;
       TrackpadThreeFingerDrag = true;
     };
+
+    # Auto-update App Store apps (keeps App Store-only apps like Things,
+    # Dropover, and Xcode current now that masApps is no longer managed).
+    CustomUserPreferences."com.apple.commerce".AutoUpdate = true;
   };
 
   # Choose daemon - persistent background process for instant command palette
