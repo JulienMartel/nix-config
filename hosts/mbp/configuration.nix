@@ -64,6 +64,7 @@ in
     # Automatically remove unlisted packages
     onActivation = {
       autoUpdate = true;
+      upgrade = true;
       cleanup = "zap";
     };
 
@@ -103,17 +104,18 @@ in
       "protonvpn"
       "qfinder-pro"
       "raycast"
+      "slack"
       "tailscale-app"
       "zen"
     ];
 
-    # Mac App Store apps (use `mas search <app>` to find IDs)
-    masApps = {
-      "Slack" = 803453959;
-      "Dropover" = 1355679052;
-      "Things" = 904280696;
-      "Xcode" = 497799835;
-    };
+    # App Store-only apps (no Homebrew cask exists, and `mas` can't reliably
+    # install/upgrade on modern macOS — it hangs). Install these manually from
+    # the App Store and enable App Store automatic updates to keep them current:
+    #   - Dropover  (1355679052)
+    #   - Things    (904280696)
+    #   - Xcode     (497799835)
+    # masApps is intentionally omitted so `onActivation.upgrade` never invokes mas.
   };
 
   # macOS system settings
