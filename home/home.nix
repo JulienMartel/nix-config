@@ -144,9 +144,19 @@
     options = {
       side-by-side = false;
       line-numbers = true;
-      syntax-theme = "catppuccin-mocha";
+      # Syntax theme comes from catppuccin.delta below (driven by catppuccin.flavor).
     };
   };
+
+  # Lazygit (the `lg` alias) - managed here so catppuccin can theme it.
+  programs.lazygit.enable = true;
+
+  # lsd (the `ls` alias) - managed here so catppuccin can theme it. Zsh
+  # integration is off so it only installs + themes; the `ls` alias stays
+  # the manual one in shellAliases above. Flip this on for bonus ll/la/lt
+  # aliases (and drop the manual `ls` alias to avoid a conflict).
+  programs.lsd.enable = true;
+  programs.lsd.enableZshIntegration = false;
 
   # Bat configuration
   programs.bat = {
@@ -157,10 +167,24 @@
     };
   };
 
-  # Catppuccin theming (new module API)
+  # Catppuccin theming. `catppuccin.flavor` is the single source of truth -
+  # every integration below follows it, so changing the flavor here re-themes
+  # all of them at once. (Raw dotfiles nix can't inject into - ghostty/config
+  # and zellij/config.kdl - name the flavor manually; keep those in sync.)
+  # NOTE: this master switch is required - every catppuccin.<prog> integration
+  # below gates on it. Without it the per-program enables silently no-op.
+  catppuccin.enable = true;
+  catppuccin.flavor = "mocha";
   catppuccin.bat.enable = true;
   catppuccin.starship.enable = true;
-  catppuccin.flavor = "mocha";
+  catppuccin.delta.enable = true;
+  catppuccin.fzf.enable = true;
+  catppuccin.lazygit.enable = true;
+  catppuccin.lsd.enable = true;
+  # Zellij is managed as a raw dotfile (dotfiles/zellij/config.kdl, which already
+  # names the catppuccin-mocha built-in theme). Disable the module integration so
+  # it doesn't collide with / clobber that file.
+  catppuccin.zellij.enable = false;
 
   # FZF configuration
   programs.fzf = {
