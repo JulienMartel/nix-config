@@ -171,8 +171,12 @@
   # every integration below follows it, so changing the flavor here re-themes
   # all of them at once. (Raw dotfiles nix can't inject into - ghostty/config
   # and zellij/config.kdl - name the flavor manually; keep those in sync.)
-  # NOTE: this master switch is required - every catppuccin.<prog> integration
-  # below gates on it. Without it the per-program enables silently no-op.
+  # NOTE: under the new catppuccin/nix model `autoEnable` is what auto-enrolls
+  # every port, and `enable` is the global on/off toggle. We keep both true to
+  # preserve auto-theming; the explicit per-program enables below are now
+  # redundant but kept as documentation of which ports we rely on. zellij stays
+  # opted out via its own enable = false.
+  catppuccin.autoEnable = true;
   catppuccin.enable = true;
   catppuccin.flavor = "mocha";
   catppuccin.bat.enable = true;
