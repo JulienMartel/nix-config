@@ -66,19 +66,26 @@ get_ports() {
 ports=$(get_ports)
 
 if [[ -z "$ports" ]]; then
-    osascript -e 'display notification "No listening ports found" with title "ports"'
+    # Still show the picker for visual feedback — osascript notifications are
+    # unreliable (macOS often drops them silently), so a notification alone
+    # makes this look like nothing happened.
+    printf 'No listening ports found\t(nothing to kill)\txmark.circle\n' | choose
     exit 0
 fi
 
-# Show picker
+# Show picker. choose emits its selection as: action<TAB>title<TAB>subtitle<TAB>icon
 selected=$(echo "$ports" | choose)
 
 if [[ -n "$selected" ]]; then
-    # Extract PID from the subtitle (second tab-separated field)
-    pid=$(echo "$selected" | cut -f2 | grep -oE '[0-9]+')
+    # PID lives in the subtitle ("pid NNNN"), which is field 3 of choose's
+    # output (field 1 is the action, field 2 the title/":port name").
+    pid=$(echo "$selected" | cut -f3 | grep -oE '[0-9]+')
 
     if [[ -n "$pid" ]]; then
-        kill -9 "$pid" 2>/dev/null && \
+        if kill -9 "$pid" 2>/dev/null; then
             osascript -e "display notification \"Killed process $pid\" with title \"ports\""
+        else
+            osascript -e "display notification \"Failed to kill $pid\" with title \"ports\""
+        fi
     fi
 fi
