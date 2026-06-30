@@ -200,21 +200,8 @@ sketchybar --add item front_app left \
         script="$HOME/.config/sketchybar/plugins/front_app.sh" \
     --subscribe front_app front_app_switched
 
-# Leader-mode indicator — hidden until AeroSpace enters `launch` mode (caps/F18).
-# Toggled directly via `sketchybar --set mode_indicator drawing=on|off` from the
-# AeroSpace bindings and launch.sh.
-sketchybar --add item mode_indicator left \
-    --set mode_indicator \
-        drawing=off \
-        icon=󰌌 \
-        icon.color=$BASE \
-        icon.padding_left=10 \
-        label="LAUNCH" \
-        label.color=$BASE \
-        label.padding_right=10 \
-        background.color=$MAUVE \
-        background.corner_radius=12 \
-        background.height=28
+# Leader-mode ("launch") feedback is handled by plugins/launch_mode.sh, which
+# dims the whole bar and glows the Apple logo mauve — no dedicated pill.
 
 ##### RIGHT SIDE #####
 

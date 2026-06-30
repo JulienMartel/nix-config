@@ -256,6 +256,18 @@
     };
   };
 
+  # Free up cmd+space for the choose palette (AeroSpace binds it) by disabling
+  # macOS Spotlight's "Show Spotlight search" shortcut (symbolic hotkey 64).
+  # Uses -dict-add so only key 64 is touched — other custom hotkeys in
+  # AppleSymbolicHotKeys are left intact. Runs as the user (correct prefs domain).
+  # Takes effect on next login (symbolic-hotkey changes need a fresh loginwindow);
+  # already disabled on the current machine, so this is for fresh-machine parity.
+  home.activation.disableSpotlightCmdSpace = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    $DRY_RUN_CMD /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys \
+      -dict-add 64 '{ enabled = 0; value = { parameters = ( 32, 49, 1048576 ); type = "standard"; }; }'
+    $DRY_RUN_CMD /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u || true
+  '';
+
   # nix-index + comma (run any nix package with ", cmd")
   programs.nix-index = {
     enable = true;

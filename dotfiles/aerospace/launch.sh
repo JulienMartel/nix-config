@@ -12,9 +12,9 @@
 app="$1"
 ws="$2"
 
-# Clear the leader-mode indicator immediately (this script only runs as a
-# launch-mode action, so the indicator is always showing when we get here).
-/opt/homebrew/bin/sketchybar --set mode_indicator drawing=off 2>/dev/null
+# Undim the bar immediately. Safe no-op when invoked outside launch mode (e.g.
+# the hyper-chord fallback bindings) — disarm bails when nothing is armed.
+/Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off 2>/dev/null
 
 [ -n "$ws" ] && aerospace workspace "$ws"
 open -a "$app"

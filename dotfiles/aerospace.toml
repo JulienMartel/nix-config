@@ -104,8 +104,9 @@ alt-shift-d = 'move-node-to-workspace D'
 
 # App launchers — hyper (caps lock, = cmd-alt-ctrl-shift) + letter.
 # launch.sh switches to the assigned workspace first, then opens/focuses the
-# app (no workspace arg = open/focus in the current workspace). Replaces the
-# old Raycast app-open hotkeys; caps->hyper remap still lives in Raycast.
+# app (no workspace arg = open/focus in the current workspace). These physical
+# cmd-alt-ctrl-shift chords are a fallback for when useNativeHyper is off; the
+# caps-tap leader below is the usual path.
 cmd-alt-ctrl-shift-c = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Cursor" C'
 cmd-alt-ctrl-shift-t = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Ghostty" T'
 cmd-alt-ctrl-shift-s = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Slack" S'
@@ -122,11 +123,14 @@ cmd-alt-ctrl-shift-r = 'exec-and-forget /Users/julienmartel/.config/aerospace/la
 # Unassigned — opens/focuses in the current workspace (no workspace switch).
 cmd-alt-ctrl-shift-p = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Passwords"'
 
-# Option B leader: Caps Lock is remapped to F18 (see configuration.nix
-# useNativeHyper). Tap caps -> enter `launch` mode -> letter -> open app. This
-# is the Raycast-free path; the hyper chords above stay as a fallback for when
-# useNativeHyper is flipped off.
-f18 = ['mode launch', 'exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=on']
+# Leader: Caps Lock is remapped to F18 (see configuration.nix useNativeHyper).
+# Tap caps -> enter `launch` mode -> letter -> open app. The hyper chords above
+# stay as a fallback for when useNativeHyper is flipped off.
+f18 = ['mode launch', 'exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh on']
+
+# cmd+space opens the command palette directly (macOS Spotlight's cmd+space is
+# disabled in Keyboard settings). A direct alternative to the caps -> space leader.
+cmd-space = 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose-palette'
 
 alt-f = 'fullscreen'
 
@@ -158,12 +162,11 @@ shift-down = ['volume set 0', 'mode main']
 # hyper chords above, then drops back to main. esc / any unbound key + esc to
 # bail out without launching anything.
 [mode.launch.binding]
-esc = ['exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=off', 'mode main']
-# Non-launch actions that used to be Raycast hyper shortcuts, routed through the
-# leader so they survive caps->F18. space = palette; v = clipboard history; e = emoji picker.
-space = ['exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose-palette', 'mode main']
-v = ['exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose --clipboard', 'mode main']
-e = ['exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose --emoji', 'mode main']
+esc = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'mode main']
+# Non-launch leader actions. v = clipboard history; e = emoji picker.
+# (palette is on cmd+space now, so the old space->palette leader is gone.)
+v = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose --clipboard', 'mode main']
+e = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose --emoji', 'mode main']
 c = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Cursor" C', 'mode main']
 t = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Ghostty" T', 'mode main']
 s = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Slack" S', 'mode main']
