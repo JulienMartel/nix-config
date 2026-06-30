@@ -3,6 +3,12 @@ import AppKit
 
 // MARK: - Data Types
 
+enum ItemKind {
+    case plain     // generic item from stdin (utility menus): client interprets it
+    case command   // launcher command: selecting returns its id to the client
+    case app       // launcher app: the daemon launches it natively
+}
+
 struct ItemAction {
     let key: String      // "enter", "cmd", "opt", "ctrl"
     let label: String
@@ -25,11 +31,14 @@ struct ChooseItem: Identifiable {
     let subtitle: String?
     let icon: String?
     let actions: [ItemAction]
-    let searchable: String
+    let kind: ItemKind
+    let payload: String       // cmd id (command) / bundle path (app) / raw (plain)
+    let frecencyKey: String   // stable key for usage history
+    let baseBoost: Double     // recency boost for freshly-installed apps
 
-    static func parse(_ line: String, globalIcon: String?) -> ChooseItem {
+    // Generic stdin line: title \t subtitle \t icon \t actions
+    static func parsePlain(_ line: String, globalIcon: String?) -> ChooseItem {
         let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
-
         let title = parts.count > 0 ? parts[0] : line
         let subtitle = parts.count > 1 && !parts[1].isEmpty ? parts[1] : nil
         let icon = (parts.count > 2 && !parts[2].isEmpty ? parts[2] : nil) ?? globalIcon
@@ -42,33 +51,157 @@ struct ChooseItem: Identifiable {
                     actions.append(ItemAction(key: "enter", label: part))
                 } else if part.contains(":") {
                     let kv = part.split(separator: ":", maxSplits: 1).map(String.init)
-                    if kv.count == 2 {
-                        actions.append(ItemAction(key: kv[0], label: kv[1]))
-                    }
+                    if kv.count == 2 { actions.append(ItemAction(key: kv[0], label: kv[1])) }
                 }
             }
         }
+        if actions.isEmpty { actions.append(ItemAction(key: "enter", label: "Select")) }
 
-        if actions.isEmpty {
-            actions.append(ItemAction(key: "enter", label: "Select"))
-        }
-
-        let searchable = (title + " " + (subtitle ?? "")).lowercased()
-        return ChooseItem(raw: line, title: title, subtitle: subtitle, icon: icon, actions: actions, searchable: searchable)
+        return ChooseItem(raw: line, title: title, subtitle: subtitle, icon: icon,
+                          actions: actions, kind: .plain, payload: line,
+                          frecencyKey: title, baseBoost: 0)
     }
 
-    func action(for key: String) -> ItemAction? {
-        return actions.first { $0.key == key }
+    // Launcher command registry line: name \t description \t icon \t id
+    static func parseCommand(_ line: String) -> ChooseItem {
+        let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
+        let title = parts.count > 0 ? parts[0] : line
+        let subtitle = parts.count > 1 && !parts[1].isEmpty ? parts[1] : nil
+        let icon = parts.count > 2 && !parts[2].isEmpty ? parts[2] : "sparkles"
+        let id = parts.count > 3 ? parts[3] : title
+        return ChooseItem(raw: line, title: title, subtitle: subtitle, icon: icon,
+                          actions: [ItemAction(key: "enter", label: "Run")],
+                          kind: .command, payload: id,
+                          frecencyKey: "cmd:\(id)", baseBoost: 0)
+    }
+
+    static func app(name: String, path: String, boost: Double) -> ChooseItem {
+        return ChooseItem(raw: path, title: name, subtitle: "Application",
+                          icon: "app:\(path)",
+                          actions: [ItemAction(key: "enter", label: "Open"),
+                                    ItemAction(key: "cmd", label: "Reveal in Finder")],
+                          kind: .app, payload: path,
+                          frecencyKey: "app:\(path)", baseBoost: boost)
+    }
+
+    func action(for key: String) -> ItemAction? { actions.first { $0.key == key } }
+}
+
+// MARK: - Fuzzy Matching
+
+enum Fuzzy {
+    // Subsequence match with quality scoring. Returns nil if `query` is not a
+    // subsequence of `target`. Higher = tighter / earlier / word-boundary match.
+    static func score(_ query: [Character], _ target: String) -> Double? {
+        let t = Array(target)
+        guard !query.isEmpty else { return 0 }
+        var qi = 0
+        var score = 0.0
+        var prevMatch = -2
+        var firstIdx = -1
+
+        for (ti, ch) in t.enumerated() {
+            guard qi < query.count, ch == query[qi] else { continue }
+            if firstIdx < 0 { firstIdx = ti }
+            var s = 1.0
+            if ti == prevMatch + 1 { s += 2.5 }                    // consecutive run
+            if ti == 0 { s += 2.0 }                                // very start
+            else {
+                let p = t[ti - 1]
+                if p == " " || p == "-" || p == "_" || p == "." { s += 1.5 } // word boundary
+            }
+            score += s
+            prevMatch = ti
+            qi += 1
+        }
+        guard qi == query.count else { return nil }
+
+        // Reward tight targets and front-loaded matches.
+        let coverage = Double(query.count) / Double(max(t.count, 1))
+        let frontBonus = firstIdx == 0 ? 1.5 : 0
+        return score + coverage * 2.0 + frontBonus
+    }
+}
+
+// MARK: - App Scanner
+
+final class AppScanner {
+    static let shared = AppScanner()
+
+    private struct Meta { let name: String; let ctime: Double }
+    private var cache: [String: Meta] = [:]          // path -> metadata
+    private let lock = NSLock()
+
+    private let searchDirs: [URL] = {
+        var dirs = [
+            URL(fileURLWithPath: "/Applications"),
+            URL(fileURLWithPath: "/System/Applications"),
+            URL(fileURLWithPath: "/System/Applications/Utilities"),
+        ]
+        dirs.append(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications"))
+        return dirs
+    }()
+
+    // Boost freshly-installed apps so they surface at the top, decaying over a week.
+    private func boost(forAge age: Double) -> Double {
+        let week = 7.0 * 86400
+        guard age >= 0, age < week else { return 0 }
+        let halfLife = 2.0 * 86400
+        return 1000.0 * exp(-log(2.0) / halfLife * age)
+    }
+
+    func apps() -> [ChooseItem] {
+        let fm = FileManager.default
+        let now = Date().timeIntervalSince1970
+        var seen = Set<String>()
+        var result: [ChooseItem] = []
+
+        lock.lock(); defer { lock.unlock() }
+
+        for dir in searchDirs {
+            let keys: [URLResourceKey] = [.isDirectoryKey, .creationDateKey]
+            guard let en = fm.enumerator(at: dir, includingPropertiesForKeys: keys,
+                                         options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { continue }
+            while let url = en.nextObject() as? URL {
+                guard url.pathExtension == "app" else { continue }
+                let path = url.path
+                if seen.contains(path) { continue }
+                seen.insert(path)
+
+                let ctime = (try? url.resourceValues(forKeys: [.creationDateKey]))?
+                    .creationDate?.timeIntervalSince1970 ?? 0
+
+                let name: String
+                if let m = cache[path], m.ctime == ctime {
+                    name = m.name
+                } else {
+                    name = displayName(for: url)
+                    cache[path] = Meta(name: name, ctime: ctime)
+                }
+                result.append(.app(name: name, path: path, boost: boost(forAge: now - ctime)))
+            }
+        }
+        return result
+    }
+
+    private func displayName(for url: URL) -> String {
+        if let info = Bundle(url: url)?.infoDictionary {
+            if let n = info["CFBundleDisplayName"] as? String, !n.isEmpty { return n }
+            if let n = info["CFBundleName"] as? String, !n.isEmpty { return n }
+        }
+        return url.deletingPathExtension().lastPathComponent
+    }
+
+    // Warm the cache off the main thread at startup.
+    func warm() {
+        DispatchQueue.global(qos: .utility).async { _ = self.apps() }
     }
 }
 
 // MARK: - Frecency
 
-class Frecency {
-    struct Entry: Codable {
-        var count: Int
-        var lastUsed: Double
-    }
+final class Frecency {
+    struct Entry: Codable { var count: Int; var lastUsed: Double }
 
     private var data: [String: Entry] = [:]
     private let path: URL
@@ -85,8 +218,7 @@ class Frecency {
 
     private func load() {
         guard let raw = try? Data(contentsOf: path),
-              let decoded = try? JSONDecoder().decode([String: Entry].self, from: raw)
-        else { return }
+              let decoded = try? JSONDecoder().decode([String: Entry].self, from: raw) else { return }
         data = decoded
     }
 
@@ -110,19 +242,35 @@ class Frecency {
     }
 }
 
-// MARK: - DaemonState (replaces AppState)
+// MARK: - Commit
 
-class DaemonState: ObservableObject {
+enum Disposition { case hideNow, linger }
+
+struct Commit {
+    let clientString: String?               // sent back to the connected client (nil → "")
+    let disposition: Disposition
+    let appLaunch: (path: String, reveal: Bool)?
+}
+
+// MARK: - State
+
+final class DaemonState: ObservableObject {
     @Published var items: [ChooseItem] = []
-    @Published var itemsSorted: [ChooseItem] = []
+    @Published var itemsSorted: [ChooseItem] = []   // empty-query order
     @Published var placeholderText: String = "Search..."
     @Published var globalIcon: String? = nil
     @Published var isVisible: Bool = false
     @Published var requestID = UUID()
+    @Published var metrics: LayoutMetrics = .standard
+
+    var isLauncher = false
+    var maxEmpty = Int.max
 
     let frecency = Frecency()
     private var frecencyScores: [UUID: Double] = [:]
-    var onResult: ((String) -> Void)?
+
+    var onCommit: ((Commit) -> Void)?
+    var onResize: (() -> Void)?       // content height changed; window should refit
     weak var textField: NSTextField?
 
     func reset() {
@@ -131,21 +279,71 @@ class DaemonState: ObservableObject {
         frecencyScores = [:]
         placeholderText = "Search..."
         globalIcon = nil
+        isLauncher = false
+        maxEmpty = Int.max
         requestID = UUID()
     }
 
-    func loadItems(lines: [String], placeholder: String?, icon: String?) {
+    func load(lines: [String], placeholder: String?, icon: String?, launcher: Bool, maxEmpty: Int?) {
         globalIcon = icon
-        placeholderText = placeholder ?? (lines.isEmpty ? "Input..." : "Search...")
-        items = lines.map { ChooseItem.parse($0, globalIcon: globalIcon) }
-        frecencyScores = Dictionary(uniqueKeysWithValues: items.map { ($0.id, frecency.score(for: $0.title)) })
-        itemsSorted = items.sorted { a, b in
-            (frecencyScores[a.id] ?? 0) > (frecencyScores[b.id] ?? 0)
+        isLauncher = launcher
+        self.maxEmpty = maxEmpty ?? (launcher ? 7 : Int.max)
+
+        var built: [ChooseItem] = []
+        if launcher {
+            built.append(contentsOf: lines.filter { !$0.isEmpty }.map { ChooseItem.parseCommand($0) })
+            built.append(contentsOf: AppScanner.shared.apps())
+            placeholderText = placeholder ?? "Search apps & actions..."
+        } else {
+            built = lines.map { ChooseItem.parsePlain($0, globalIcon: icon) }
+            placeholderText = placeholder ?? (lines.isEmpty ? "Input..." : "Search...")
+        }
+        items = built
+        frecencyScores = Dictionary(uniqueKeysWithValues: built.map { ($0.id, frecency.score(for: $0.frecencyKey)) })
+
+        itemsSorted = built.sorted { a, b in
+            (frecencyScores[a.id] ?? 0) + a.baseBoost > (frecencyScores[b.id] ?? 0) + b.baseBoost
         }
     }
 
-    func frecencyScore(for item: ChooseItem) -> Double {
-        return frecencyScores[item.id] ?? 0
+    private func frecency(for item: ChooseItem) -> Double { frecencyScores[item.id] ?? 0 }
+
+    // Combined relevance for a typed query. nil → no match.
+    func matchScore(_ item: ChooseItem, query: [Character]) -> Double? {
+        let title = Fuzzy.score(query, item.title.lowercased())
+        let sub = item.subtitle.flatMap { Fuzzy.score(query, $0.lowercased()) }
+        let candidates = [title, sub.map { $0 * 0.5 }].compactMap { $0 }
+        guard let best = candidates.max() else { return nil }
+        let frec = frecency(for: item)
+        let normFrec = frec / (frec + 5)                 // 0..1
+        let boost = item.baseBoost > 0 ? 0.8 : 0
+        return best + normFrec * 1.5 + boost
+    }
+
+    func commit(_ item: ChooseItem, action: String) {
+        frecency.record(item.frecencyKey)
+        onCommit?(buildCommit(item, action: action))
+    }
+
+    func commitText(_ text: String) {
+        onCommit?(Commit(clientString: "enter\t\(text)", disposition: .linger, appLaunch: nil))
+    }
+
+    func cancel() {
+        onCommit?(Commit(clientString: "", disposition: .hideNow, appLaunch: nil))
+    }
+
+    private func buildCommit(_ item: ChooseItem, action: String) -> Commit {
+        switch item.kind {
+        case .app:
+            return Commit(clientString: "", disposition: .hideNow,
+                          appLaunch: (item.payload, action == "cmd"))
+        case .command:
+            return Commit(clientString: "run\t\(item.payload)", disposition: .linger, appLaunch: nil)
+        case .plain:
+            let a = item.action(for: action) != nil ? action : "enter"
+            return Commit(clientString: "\(a)\t\(item.raw)", disposition: .linger, appLaunch: nil)
+        }
     }
 }
 
@@ -155,6 +353,238 @@ enum SocketConfig {
     static let dir = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".local/share/choose").path
     static let path = dir + "/choose.sock"
+}
+
+// MARK: - Settings & Layout
+
+// Layout dimensions for a given window mode. The window resizes to `width` and
+// the list/header shrink with the other fields, so "compact" reads as a tighter
+// Raycast-style launcher.
+struct LayoutMetrics {
+    let width: CGFloat
+    let rowHeight: CGFloat
+    let maxVisibleItems: Int
+    let headerHeight: CGFloat
+    let searchIconSize: CGFloat
+    let searchFontSize: CGFloat
+    let topInsetFraction: CGFloat   // distance from top of screen, as a fraction of height
+
+    static let standard = LayoutMetrics(
+        width: 720, rowHeight: 46, maxVisibleItems: 8, headerHeight: 60,
+        searchIconSize: 18, searchFontSize: 20, topInsetFraction: 0.16)
+
+    static let compact = LayoutMetrics(
+        width: 600, rowHeight: 42, maxVisibleItems: 6, headerHeight: 52,
+        searchIconSize: 16, searchFontSize: 18, topInsetFraction: 0.20)
+}
+
+// User settings, read from ~/.config/choose/config.json. Parsed leniently via
+// JSONSerialization so unknown/extra keys (added by future versions) never break
+// an older binary, and any missing/malformed value falls back to a default.
+struct Settings {
+    enum WindowMode: String { case standard = "default", compact }
+
+    var windowMode: WindowMode = .standard
+
+    var metrics: LayoutMetrics {
+        switch windowMode {
+        case .standard: return .standard
+        case .compact: return .compact
+        }
+    }
+
+    static var configPath: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".config/choose/config.json")
+    }
+
+    // Cheap enough (tiny file) to re-read per invocation, so edits take effect
+    // on the next open without restarting the daemon.
+    static func load() -> Settings {
+        var s = Settings()
+        guard let data = try? Data(contentsOf: configPath),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return s }
+        if let wm = obj["windowMode"] as? String, let mode = WindowMode(rawValue: wm) {
+            s.windowMode = mode
+        }
+        return s
+    }
+}
+
+// MARK: - Window
+
+class ChooseWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
+// MARK: - ChooseUI (window controller shared by daemon + direct mode)
+
+final class ChooseUI {
+    let window: ChooseWindow
+    let hosting: NSHostingView<ContentView>
+    let state: DaemonState
+
+    private var lingerItem: DispatchWorkItem?
+    var resultSink: ((String) -> Void)?
+
+    init(state: DaemonState) {
+        self.state = state
+        self.hosting = NSHostingView(rootView: ContentView(state: state))
+
+        window = ChooseWindow(
+            contentRect: NSRect(x: 0, y: 0, width: LayoutMetrics.standard.width, height: 400),
+            styleMask: [.borderless, .fullSizeContentView],
+            backing: .buffered, defer: false
+        )
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isMovableByWindowBackground = false
+        window.level = .floating
+        window.hasShadow = true
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+
+        let blur = NSVisualEffectView()
+        blur.material = .hudWindow
+        blur.blendingMode = .behindWindow
+        blur.state = .active
+        blur.wantsLayer = true
+        blur.layer?.cornerRadius = 16
+        blur.layer?.masksToBounds = true
+        blur.layer?.borderWidth = 1
+        blur.layer?.borderColor = NSColor.white.withAlphaComponent(0.08).cgColor
+        hosting.autoresizingMask = [.width, .height]
+        blur.addSubview(hosting)
+        window.contentView = blur
+
+        state.onCommit = { [weak self] commit in self?.handleCommit(commit) }
+        state.onResize = { [weak self] in
+            // Defer one runloop tick so SwiftUI has committed the new layout
+            // before we measure its fitting height.
+            DispatchQueue.main.async { self?.resizeToFit() }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            guard let self = self, self.state.isVisible else { return }
+            self.state.cancel()
+        }
+    }
+
+    // MARK: Presentation
+
+    func present() {
+        cancelLinger()
+        let fresh = !window.isVisible
+        let size = hosting.fittingSize
+        let target = NSSize(width: state.metrics.width, height: size.height)
+
+        if fresh {
+            window.setContentSize(target)
+            positionFresh(size: target)
+        } else {
+            // Keep the top edge anchored so the list grows/shrinks downward.
+            let oldTop = window.frame.maxY
+            window.setContentSize(target)
+            var f = window.frame
+            f.origin.y = oldTop - f.height
+            if let vf = (window.screen ?? NSScreen.main)?.visibleFrame {
+                f.origin.x = vf.midX - f.width / 2
+            }
+            window.setFrame(f, display: true)
+        }
+        hosting.frame = window.contentView?.bounds ?? .zero
+        window.alphaValue = 1
+        state.isVisible = true
+
+        window.makeKeyAndOrderFront(nil)
+        if fresh { NSApp.activate(ignoringOtherApps: true) }
+        if let tf = state.textField { window.makeFirstResponder(tf) }
+
+        // Correct the height once SwiftUI has laid out the freshly-loaded items
+        // (fittingSize above can lag the @Published change by a tick).
+        DispatchQueue.main.async { [weak self] in self?.resizeToFit() }
+    }
+
+    // Match the window height to the SwiftUI content, anchoring the top edge so
+    // the list grows/shrinks downward as the query filters it.
+    func resizeToFit() {
+        guard window.isVisible else { return }
+        let h = hosting.fittingSize.height
+        guard h > 1, abs(h - window.frame.height) > 0.5 else { return }
+        let oldTop = window.frame.maxY
+        var f = window.frame
+        f.size.height = h
+        f.size.width = state.metrics.width
+        f.origin.y = oldTop - h
+        window.setFrame(f, display: true)
+        hosting.frame = window.contentView?.bounds ?? .zero
+    }
+
+    private func positionFresh(size: NSSize) {
+        guard let vf = (NSScreen.main ?? window.screen)?.visibleFrame else { window.center(); return }
+        let x = vf.midX - size.width / 2
+        let topInset = vf.height * state.metrics.topInsetFraction
+        let y = vf.maxY - topInset - size.height
+        window.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    // MARK: Commit handling
+
+    private func handleCommit(_ commit: Commit) {
+        state.isVisible = false
+
+        if let app = commit.appLaunch {
+            let url = URL(fileURLWithPath: app.path)
+            if app.reveal {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            } else {
+                let cfg = NSWorkspace.OpenConfiguration()
+                cfg.activates = true
+                NSWorkspace.shared.openApplication(at: url, configuration: cfg)
+            }
+        }
+
+        resultSink?(commit.clientString ?? "")
+
+        switch commit.disposition {
+        case .hideNow: hideNow()
+        case .linger: startLinger()
+        }
+    }
+
+    // MARK: Hide / linger
+
+    func hideNow() {
+        cancelLinger()
+        window.orderOut(nil)
+    }
+
+    private func startLinger() {
+        cancelLinger()
+        let work = DispatchWorkItem { [weak self] in self?.fadeOut() }
+        lingerItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: work)
+    }
+
+    private func cancelLinger() {
+        lingerItem?.cancel()
+        lingerItem = nil
+    }
+
+    private func fadeOut() {
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.12
+            window.animator().alphaValue = 0
+        }, completionHandler: { [weak self] in
+            self?.window.orderOut(nil)
+            self?.window.alphaValue = 1
+        })
+    }
 }
 
 // MARK: - Entry Point
@@ -170,29 +600,13 @@ enum Main {
     }
 }
 
-// MARK: - Window Setup (shared between daemon and direct mode)
+// MARK: - Argument / Config Parsing
 
-class ChooseWindow: NSWindow {
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { true }
-}
-
-func makeWindow() -> ChooseWindow {
-    let window = ChooseWindow(
-        contentRect: NSRect(x: 0, y: 0, width: 700, height: 400),
-        styleMask: [.borderless, .fullSizeContentView],
-        backing: .buffered,
-        defer: false
-    )
-    window.titlebarAppearsTransparent = true
-    window.titleVisibility = .hidden
-    window.isMovableByWindowBackground = true
-    window.backgroundColor = NSColor(Color(hex: "1e1e2e"))
-    window.level = .floating
-    window.hasShadow = true
-    window.isOpaque = false
-    window.center()
-    return window
+struct Invocation {
+    var placeholder: String?
+    var icon: String?
+    var launcher = false
+    var maxEmpty: Int?
 }
 
 // MARK: - Daemon Mode
@@ -203,58 +617,32 @@ enum DaemonMode {
         app.setActivationPolicy(.accessory)
 
         let state = DaemonState()
+        let ui = ChooseUI(state: state)
+        ui.window.orderOut(nil)
 
-        let contentView = ContentView(state: state)
-        let hostingView = NSHostingView(rootView: contentView)
+        AppScanner.shared.warm()
 
-        let window = makeWindow()
-        window.contentView = hostingView
-        window.orderOut(nil)
-
-        // Resign key = dismiss
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.didResignKeyNotification,
-            object: window,
-            queue: .main
-        ) { _ in
-            if state.isVisible {
-                state.onResult?("")
-            }
-        }
-
-        // Clean up socket on termination signals
         let cleanupAndExit: @convention(c) (Int32) -> Void = { _ in
-            unlink(SocketConfig.path)
-            _exit(0)
+            unlink(SocketConfig.path); _exit(0)
         }
         signal(SIGTERM, cleanupAndExit)
         signal(SIGINT, cleanupAndExit)
 
-        // Start socket server on background queue
         DispatchQueue.global(qos: .userInitiated).async {
-            startSocketServer(state: state, window: window)
+            startSocketServer(state: state, ui: ui)
         }
 
         NSLog("choose daemon started, listening on \(SocketConfig.path)")
         app.run()
     }
 
-    static func startSocketServer(state: DaemonState, window: NSWindow) {
-        // Clean up stale socket
+    static func startSocketServer(state: DaemonState, ui: ChooseUI) {
         unlink(SocketConfig.path)
-
-        // Ensure directory exists
-        try? FileManager.default.createDirectory(
-            atPath: SocketConfig.dir,
-            withIntermediateDirectories: true,
-            attributes: nil
-        )
+        try? FileManager.default.createDirectory(atPath: SocketConfig.dir,
+                                                 withIntermediateDirectories: true)
 
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-        guard fd >= 0 else {
-            NSLog("choose daemon: failed to create socket")
-            return
-        }
+        guard fd >= 0 else { NSLog("choose daemon: failed to create socket"); return }
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
@@ -263,39 +651,25 @@ enum DaemonMode {
                 _ = memcpy(ptr, cstr, min(strlen(cstr) + 1, MemoryLayout.size(ofValue: ptr.pointee)))
             }
         }
-
         let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
         guard withUnsafePointer(to: &addr, { ptr in
             ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, addrLen) }
-        }) == 0 else {
-            NSLog("choose daemon: failed to bind socket")
-            close(fd)
-            return
-        }
+        }) == 0 else { NSLog("choose daemon: failed to bind socket"); close(fd); return }
 
-        guard listen(fd, 5) == 0 else {
-            NSLog("choose daemon: failed to listen")
-            close(fd)
-            return
-        }
+        guard listen(fd, 5) == 0 else { NSLog("choose daemon: failed to listen"); close(fd); return }
 
-        // Accept loop
         while true {
             var clientAddr = sockaddr_un()
             var clientLen = socklen_t(MemoryLayout<sockaddr_un>.size)
             let clientFD = withUnsafeMutablePointer(to: &clientAddr) { ptr in
-                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                    accept(fd, $0, &clientLen)
-                }
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { accept(fd, $0, &clientLen) }
             }
             guard clientFD >= 0 else { continue }
-
-            handleClient(clientFD: clientFD, state: state, window: window)
+            handleClient(clientFD: clientFD, state: state, ui: ui)
         }
     }
 
-    static func handleClient(clientFD: Int32, state: DaemonState, window: NSWindow) {
-        // Read all data from client
+    static func handleClient(clientFD: Int32, state: DaemonState, ui: ChooseUI) {
         var data = Data()
         var buf = [UInt8](repeating: 0, count: 65536)
         while true {
@@ -303,68 +677,42 @@ enum DaemonMode {
             if n <= 0 { break }
             data.append(contentsOf: buf[0..<n])
         }
-
         guard let payload = String(data: data, encoding: .utf8), !payload.isEmpty else {
-            close(clientFD)
-            return
+            close(clientFD); return
         }
 
         var lines = payload.components(separatedBy: "\n")
-        // Remove trailing empty line from final \n
         if lines.last == "" { lines.removeLast() }
 
-        // Parse CONFIG line
-        var placeholder: String? = nil
-        var icon: String? = nil
-        var itemLines: [String] = []
-
+        var inv = Invocation()
+        var itemLines: [String] = lines
         if let first = lines.first, first.hasPrefix("CONFIG\t") {
-            let configParts = first.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
-            if configParts.count > 1 && !configParts[1].isEmpty { placeholder = configParts[1] }
-            if configParts.count > 2 && !configParts[2].isEmpty { icon = configParts[2] }
+            let p = first.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
+            if p.count > 1 && !p[1].isEmpty { inv.placeholder = p[1] }
+            if p.count > 2 && !p[2].isEmpty { inv.icon = p[2] }
+            if p.count > 3 && p[3] == "launcher" { inv.launcher = true }
+            if p.count > 4, let m = Int(p[4]) { inv.maxEmpty = m }
             itemLines = Array(lines.dropFirst())
-        } else {
-            itemLines = lines
         }
 
         let semaphore = DispatchSemaphore(value: 0)
         var result = ""
+        let metrics = Settings.load().metrics   // re-read per request so edits apply live
 
         DispatchQueue.main.async {
             state.reset()
-            state.loadItems(lines: itemLines, placeholder: placeholder, icon: icon)
-            state.onResult = { r in
-                result = r
-                state.isVisible = false
-                window.orderOut(nil)
-                semaphore.signal()
-            }
-            state.isVisible = true
-
-            // Let SwiftUI lay out with new items, then size and show
-            DispatchQueue.main.async {
-                if let hostingView = window.contentView as? NSHostingView<ContentView> {
-                    let size = hostingView.fittingSize
-                    window.setContentSize(size)
-                }
-                window.center()
-                window.makeKeyAndOrderFront(nil)
-                NSApp.activate(ignoringOtherApps: true)
-
-                if let tf = state.textField {
-                    window.makeFirstResponder(tf)
-                }
-            }
+            state.metrics = metrics
+            state.load(lines: itemLines, placeholder: inv.placeholder, icon: inv.icon,
+                       launcher: inv.launcher, maxEmpty: inv.maxEmpty)
+            ui.resultSink = { r in result = r; semaphore.signal() }
+            ui.present()
         }
 
         semaphore.wait()
 
-        // Send result back to client
         if !result.isEmpty {
             let resultData = (result + "\n").data(using: .utf8)!
-            resultData.withUnsafeBytes { ptr in
-                _ = write(clientFD, ptr.baseAddress!, resultData.count)
-            }
+            resultData.withUnsafeBytes { ptr in _ = write(clientFD, ptr.baseAddress!, resultData.count) }
         }
         close(clientFD)
     }
@@ -373,35 +721,31 @@ enum DaemonMode {
 // MARK: - Client Mode
 
 enum ClientMode {
-    static func run() {
-        // Read stdin
-        var stdinLines: [String] = []
-        if isatty(FileHandle.standardInput.fileDescriptor) == 0 {
-            while let line = readLine() { stdinLines.append(line) }
-        }
-
-        // Parse config from args
-        var placeholder: String? = nil
-        var icon: String? = nil
+    static func parseArgs() -> Invocation {
+        var inv = Invocation()
         var args = Array(CommandLine.arguments.dropFirst())
         while !args.isEmpty {
             let arg = args.removeFirst()
             switch arg {
-            case "-p", "--placeholder":
-                if !args.isEmpty { placeholder = args.removeFirst() }
-            case "-i", "--icon":
-                if !args.isEmpty { icon = args.removeFirst() }
-            default:
-                break
+            case "-p", "--placeholder": if !args.isEmpty { inv.placeholder = args.removeFirst() }
+            case "-i", "--icon":        if !args.isEmpty { inv.icon = args.removeFirst() }
+            case "--launcher":          inv.launcher = true
+            case "--max-empty":         if !args.isEmpty { inv.maxEmpty = Int(args.removeFirst()) }
+            default: break
             }
         }
+        return inv
+    }
 
-        // Try connecting to daemon
-        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-        guard fd >= 0 else {
-            runDirect(lines: stdinLines, placeholder: placeholder, icon: icon)
-            return
+    static func run() {
+        var stdinLines: [String] = []
+        if isatty(FileHandle.standardInput.fileDescriptor) == 0 {
+            while let line = readLine() { stdinLines.append(line) }
         }
+        let inv = parseArgs()
+
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else { runDirect(lines: stdinLines, inv: inv); return }
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
@@ -410,33 +754,22 @@ enum ClientMode {
                 _ = memcpy(ptr, cstr, min(strlen(cstr) + 1, MemoryLayout.size(ofValue: ptr.pointee)))
             }
         }
-
         let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
         let connected = withUnsafePointer(to: &addr, { ptr in
             ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { connect(fd, $0, addrLen) }
         }) == 0
+        if !connected { close(fd); runDirect(lines: stdinLines, inv: inv); return }
 
-        if !connected {
-            close(fd)
-            runDirect(lines: stdinLines, placeholder: placeholder, icon: icon)
-            return
-        }
+        let mode = inv.launcher ? "launcher" : ""
+        let maxEmpty = inv.maxEmpty.map(String.init) ?? ""
+        var payload = "CONFIG\t\(inv.placeholder ?? "")\t\(inv.icon ?? "")\t\(mode)\t\(maxEmpty)\n"
+        for line in stdinLines { payload += line + "\n" }
 
-        // Build payload: CONFIG line + item lines
-        var payload = "CONFIG\t\(placeholder ?? "")\t\(icon ?? "")\n"
-        for line in stdinLines {
-            payload += line + "\n"
-        }
-
-        // Send payload then shutdown write end
         if let data = payload.data(using: .utf8) {
-            data.withUnsafeBytes { ptr in
-                _ = write(fd, ptr.baseAddress!, data.count)
-            }
+            data.withUnsafeBytes { ptr in _ = write(fd, ptr.baseAddress!, data.count) }
         }
         shutdown(fd, SHUT_WR)
 
-        // Read result
         var resultData = Data()
         var buf = [UInt8](repeating: 0, count: 4096)
         while true {
@@ -448,62 +781,44 @@ enum ClientMode {
 
         if let result = String(data: resultData, encoding: .utf8)?.trimmingCharacters(in: .newlines),
            !result.isEmpty {
-            print(result)
-            exit(0)
+            print(result); exit(0)
         } else {
             exit(1)
         }
     }
 
-    // Direct mode: run NSApplication inline (fallback when daemon is not running)
-    static func runDirect(lines: [String], placeholder: String?, icon: String?) {
+    // Fallback when the daemon is not running.
+    static func runDirect(lines: [String], inv: Invocation) {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
 
         let state = DaemonState()
-        state.loadItems(lines: lines, placeholder: placeholder, icon: icon)
+        let ui = ChooseUI(state: state)
+        state.metrics = Settings.load().metrics
+        state.load(lines: lines, placeholder: inv.placeholder, icon: inv.icon,
+                   launcher: inv.launcher, maxEmpty: inv.maxEmpty)
 
-        let contentView = ContentView(state: state)
-        let hostingView = NSHostingView(rootView: contentView)
-
-        let window = makeWindow()
-        window.contentView = hostingView
-
-        state.onResult = { result in
-            if !result.isEmpty {
-                print(result)
-                NSApp.terminate(nil)
-            } else {
-                exit(1)
-            }
+        ui.resultSink = { result in
+            if result.isEmpty { exit(1) }
+            print(result); NSApp.terminate(nil)
         }
-
-        // Resign key = dismiss
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.didResignKeyNotification,
-            object: window,
-            queue: .main
-        ) { _ in
-            state.onResult?("")
-        }
-
-        state.isVisible = true
-
-        // Let SwiftUI lay out, then size and show
-        DispatchQueue.main.async {
-            let size = hostingView.fittingSize
-            window.setContentSize(size)
-            window.center()
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-
-            if let tf = state.textField {
-                window.makeFirstResponder(tf)
-            }
-        }
-
+        DispatchQueue.main.async { ui.present() }
         app.run()
     }
+}
+
+// MARK: - Theme
+
+enum Theme {
+    static let base = Color(hex: "1e1e2e")
+    static let surface0 = Color(hex: "313244")
+    static let surface1 = Color(hex: "45475a")
+    static let surface2 = Color(hex: "585b70")
+    static let text = Color(hex: "cdd6f4")
+    static let subtext = Color(hex: "a6adc8")
+    static let subtext0 = Color(hex: "6c7086")
+    static let mauve = Color(hex: "cba6f7")
+    static let blue = Color(hex: "89b4fa")
 }
 
 // MARK: - ContentView
@@ -513,35 +828,20 @@ struct ContentView: View {
     @State private var query = ""
     @State private var selectedIndex = 0
 
-    let base = Color(hex: "1e1e2e")
-    let surface0 = Color(hex: "313244")
-    let surface1 = Color(hex: "45475a")
-    let surface2 = Color(hex: "585b70")
-    let text = Color(hex: "cdd6f4")
-    let subtext = Color(hex: "a6adc8")
-    let subtext0 = Color(hex: "6c7086")
-    let mauve = Color(hex: "cba6f7")
-    let blue = Color(hex: "89b4fa")
-    let green = Color(hex: "a6e3a1")
-    let peach = Color(hex: "fab387")
-
-    let itemHeight: CGFloat = 36
-    let maxVisibleItems = 12
-    let actionBarHeight: CGFloat = 40
+    var rowHeight: CGFloat { state.metrics.rowHeight }
+    var maxVisibleItems: Int { state.metrics.maxVisibleItems }
 
     var filtered: [ChooseItem] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            return state.itemsSorted
+            return Array(state.itemsSorted.prefix(state.maxEmpty))
         }
-
-        let searchTerms = trimmed.lowercased().split(separator: " ").map(String.init)
-        let matched = state.items.filter { item in
-            return searchTerms.allSatisfy { item.searchable.contains($0) }
+        let q = Array(trimmed.lowercased())
+        let scored = state.items.compactMap { item -> (ChooseItem, Double)? in
+            guard let s = state.matchScore(item, query: q) else { return nil }
+            return (item, s)
         }
-        return matched.sorted { a, b in
-            state.frecencyScore(for: a) > state.frecencyScore(for: b)
-        }
+        return scored.sorted { $0.1 > $1.1 }.map { $0.0 }
     }
 
     var selectedItem: ChooseItem? {
@@ -550,106 +850,72 @@ struct ContentView: View {
     }
 
     var listHeight: CGFloat {
-        let count = min(filtered.count, maxVisibleItems)
-        return CGFloat(count) * itemHeight
-    }
-
-    var showActionBar: Bool {
-        guard let item = selectedItem else { return false }
-        return item.actions.count > 0
+        CGFloat(min(filtered.count, maxVisibleItems)) * rowHeight
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            CustomTextField(
-                text: $query,
-                selectedIndex: $selectedIndex,
-                itemCount: filtered.count,
-                placeholder: state.placeholderText,
-                state: state,
-                onSubmit: { action in
-                    select(action: action)
-                }
-            )
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(surface0)
-
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(filtered.enumerated()), id: \.element.id) { i, item in
-                            ItemRow(
-                                item: item,
-                                isSelected: i == selectedIndex,
-                                base: base,
-                                text: text,
-                                subtext: subtext,
-                                mauve: mauve
-                            )
-                            .frame(height: itemHeight)
-                            .id(item.id)
-                            .onTapGesture { selectedIndex = i; select(action: "enter") }
-                        }
-                    }
-                }
-                .frame(height: listHeight)
-                .onChange(of: selectedIndex) {
-                    if selectedIndex < filtered.count {
-                        proxy.scrollTo(filtered[selectedIndex].id)
-                    }
-                }
-            }
-
-            if showActionBar, let item = selectedItem {
-                Divider()
-                    .background(surface1)
-
-                ActionBar(
-                    actions: item.actions,
-                    surface0: surface0,
-                    surface1: surface1,
-                    surface2: surface2,
-                    text: text,
-                    subtext: subtext0,
-                    blue: blue
+            // Search header
+            HStack(spacing: 12) {
+                Image(systemName: state.globalIcon ?? "magnifyingglass")
+                    .font(.system(size: state.metrics.searchIconSize, weight: .medium))
+                    .foregroundColor(Theme.subtext)
+                CustomTextField(
+                    text: $query,
+                    selectedIndex: $selectedIndex,
+                    itemCount: filtered.count,
+                    placeholder: state.placeholderText,
+                    fontSize: state.metrics.searchFontSize,
+                    state: state,
+                    onSubmit: { action in select(action: action) }
                 )
-                .frame(height: actionBarHeight)
-                .background(surface0.opacity(0.8))
+            }
+            .padding(.horizontal, 20)
+            .frame(height: state.metrics.headerHeight)
+
+            if !filtered.isEmpty {
+                Divider().background(Theme.surface1.opacity(0.5))
+
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(filtered.enumerated()), id: \.element.id) { i, item in
+                                ItemRow(item: item, isSelected: i == selectedIndex)
+                                    .frame(height: rowHeight)
+                                    .id(item.id)
+                                    .onTapGesture { selectedIndex = i; select(action: "enter") }
+                            }
+                        }
+                        .padding(.vertical, 6)
+                    }
+                    .frame(height: listHeight + 12)
+                    .onChange(of: selectedIndex) {
+                        if selectedIndex < filtered.count { proxy.scrollTo(filtered[selectedIndex].id) }
+                    }
+                }
+
+                if let item = selectedItem {
+                    Divider().background(Theme.surface1.opacity(0.5))
+                    ActionBar(actions: item.actions)
+                        .frame(height: 44)
+                }
             }
         }
-        .frame(width: 700)
+        .frame(width: state.metrics.width)
         .fixedSize(horizontal: false, vertical: true)
-        .background(base)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(Theme.base.opacity(0.55))
         .onChange(of: query) { selectedIndex = 0 }
-        .onChange(of: state.requestID) {
-            query = ""
-            selectedIndex = 0
-        }
+        .onChange(of: filtered.count) { state.onResize?() }
+        .onChange(of: state.requestID) { query = ""; selectedIndex = 0; state.onResize?() }
     }
 
     func select(action: String) {
         if filtered.isEmpty {
-            if !query.isEmpty {
-                state.onResult?("enter\t\(query)")
-                return
-            }
-            state.onResult?("")
+            if !query.isEmpty { state.commitText(query) } else { state.cancel() }
             return
         }
-        guard selectedIndex < filtered.count else {
-            state.onResult?("")
-            return
-        }
-        let item = filtered[selectedIndex]
-        state.frecency.record(item.title)
-
-        if item.action(for: action) != nil {
-            state.onResult?("\(action)\t\(item.raw)")
-        } else {
-            state.onResult?("enter\t\(item.raw)")
-        }
+        guard selectedIndex < filtered.count else { state.cancel(); return }
+        state.commit(filtered[selectedIndex], action: action)
     }
 }
 
@@ -658,10 +924,6 @@ struct ContentView: View {
 struct ItemRow: View {
     let item: ChooseItem
     let isSelected: Bool
-    let base: Color
-    let text: Color
-    let subtext: Color
-    let mauve: Color
 
     private var appIconPath: String? {
         guard let icon = item.icon, icon.hasPrefix("app:") else { return nil }
@@ -669,34 +931,40 @@ struct ItemRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
-            if let path = appIconPath {
-                Image(nsImage: AppIconCache.shared.icon(for: path))
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 22, height: 22)
-            } else if let iconName = item.icon {
-                Image(systemName: iconName)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(isSelected ? base : subtext)
-                    .frame(width: 22)
+        HStack(spacing: 14) {
+            Group {
+                if let path = appIconPath {
+                    Image(nsImage: AppIconCache.shared.icon(for: path))
+                        .resizable().aspectRatio(contentMode: .fit)
+                } else if let iconName = item.icon {
+                    Image(systemName: iconName)
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(isSelected ? Theme.mauve : Theme.subtext)
+                }
             }
+            .frame(width: 26, height: 26)
 
             Text(item.title)
-                .foregroundColor(isSelected ? base : text)
-                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundColor(Theme.text)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .lineLimit(1)
 
-            Spacer()
+            Spacer(minLength: 8)
 
             if let subtitle = item.subtitle {
                 Text(subtitle)
-                    .foregroundColor(isSelected ? base.opacity(0.7) : subtext)
+                    .foregroundColor(Theme.subtext0)
                     .font(.system(size: 13, design: .rounded))
+                    .lineLimit(1)
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 6)
-        .background(isSelected ? mauve : Color.clear)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isSelected ? Theme.mauve.opacity(0.20) : Color.clear)
+                .padding(.horizontal, 8)
+        )
         .contentShape(Rectangle())
     }
 }
@@ -719,34 +987,26 @@ final class AppIconCache {
 
 struct ActionBar: View {
     let actions: [ItemAction]
-    let surface0: Color
-    let surface1: Color
-    let surface2: Color
-    let text: Color
-    let subtext: Color
-    let blue: Color
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 18) {
+            Spacer()
             ForEach(Array(actions.enumerated()), id: \.offset) { index, action in
                 HStack(spacing: 6) {
+                    Text(action.label)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundColor(Theme.subtext)
                     Text(action.displayKey)
                         .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(index == 0 ? surface0 : text)
-                        .padding(.horizontal, 6)
+                        .foregroundColor(index == 0 ? Theme.base : Theme.text)
+                        .padding(.horizontal, 7)
                         .padding(.vertical, 3)
-                        .background(index == 0 ? blue : surface2)
-                        .cornerRadius(4)
-
-                    Text(action.label)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundColor(index == 0 ? text : subtext)
+                        .background(index == 0 ? Theme.blue : Theme.surface2)
+                        .cornerRadius(5)
                 }
             }
-
-            Spacer()
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 18)
     }
 }
 
@@ -757,14 +1017,15 @@ struct CustomTextField: NSViewRepresentable {
     @Binding var selectedIndex: Int
     let itemCount: Int
     let placeholder: String
+    let fontSize: CGFloat
     let state: DaemonState
     let onSubmit: (String) -> Void
 
     func makeNSView(context: Context) -> NSTextField {
         let tf = NSTextField()
         tf.delegate = context.coordinator
-        tf.font = NSFont.systemFont(ofSize: 16, weight: .medium)
-        tf.textColor = NSColor(Color(hex: "cdd6f4"))
+        tf.font = NSFont.systemFont(ofSize: fontSize, weight: .regular)
+        tf.textColor = NSColor(Theme.text)
         tf.backgroundColor = .clear
         tf.focusRingType = .none
         tf.isBordered = false
@@ -772,7 +1033,6 @@ struct CustomTextField: NSViewRepresentable {
         tf.placeholderString = placeholder
         tf.cell?.sendsActionOnEndEditing = false
 
-        // Store weak ref for re-focusing
         DispatchQueue.main.async {
             state.textField = tf
             tf.window?.makeFirstResponder(tf)
@@ -783,6 +1043,9 @@ struct CustomTextField: NSViewRepresentable {
     func updateNSView(_ tf: NSTextField, context: Context) {
         if tf.stringValue != text { tf.stringValue = text }
         tf.placeholderString = placeholder
+        if tf.font?.pointSize != fontSize {
+            tf.font = NSFont.systemFont(ofSize: fontSize, weight: .regular)
+        }
         context.coordinator.itemCount = itemCount
     }
 
@@ -811,18 +1074,13 @@ struct CustomTextField: NSViewRepresentable {
                 return true
             case #selector(NSResponder.insertNewline(_:)):
                 let flags = NSEvent.modifierFlags
-                if flags.contains(.command) {
-                    parent.onSubmit("cmd")
-                } else if flags.contains(.option) {
-                    parent.onSubmit("opt")
-                } else if flags.contains(.control) {
-                    parent.onSubmit("ctrl")
-                } else {
-                    parent.onSubmit("enter")
-                }
+                if flags.contains(.command) { parent.onSubmit("cmd") }
+                else if flags.contains(.option) { parent.onSubmit("opt") }
+                else if flags.contains(.control) { parent.onSubmit("ctrl") }
+                else { parent.onSubmit("enter") }
                 return true
             case #selector(NSResponder.cancelOperation(_:)):
-                parent.state.onResult?("")
+                parent.state.cancel()
                 return true
             default:
                 return false
@@ -838,6 +1096,8 @@ extension Color {
         let scanner = Scanner(string: hex)
         var rgb: UInt64 = 0
         scanner.scanHexInt64(&rgb)
-        self.init(red: Double((rgb >> 16) & 0xFF) / 255, green: Double((rgb >> 8) & 0xFF) / 255, blue: Double(rgb & 0xFF) / 255)
+        self.init(red: Double((rgb >> 16) & 0xFF) / 255,
+                  green: Double((rgb >> 8) & 0xFF) / 255,
+                  blue: Double(rgb & 0xFF) / 255)
     }
 }

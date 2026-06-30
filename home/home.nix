@@ -242,6 +242,13 @@
     executable = true;
   };
 
+  # choose picker settings — single source of truth for the command palette's
+  # options. Edit here and rebuild; choose re-reads the file on each open. Schema
+  # is intentionally small for now (parsed leniently in pkgs/choose Settings).
+  home.file.".config/choose/config.json".text = builtins.toJSON {
+    windowMode = "default"; # "default" | "compact"
+  };
+
   # nix-index + comma (run any nix package with ", cmd")
   programs.nix-index = {
     enable = true;

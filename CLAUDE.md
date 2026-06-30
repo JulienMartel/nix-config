@@ -36,7 +36,7 @@ Single source of truth is `catppuccin.flavor` in `home/home.nix`. Prefer enablin
 
 ## Patterns
 
-- **New `choose` command** (custom Swift command palette): add a `commands/<id>.sh`, register it in `pkgs/choose-commands/default.nix` (`name` / `description` / SF Symbol `icon` / `script`).
+- **New `choose` command** (custom Swift command palette): add a `commands/<id>.sh`, register it in `pkgs/choose-commands/default.nix` (`name` / `description` / SF Symbol `icon` / `script`). `choose-palette` runs `choose --launcher`, which natively enumerates installed apps (boosting freshly-installed ones) and merges them with these commands; apps are launched by the daemon itself. Utility sub-menus (ports/wifi/brew-services) call plain `choose` and swap into the same live window without re-opening — don't reintroduce a close→reopen between steps.
 - **New SketchyBar plugin**: add `dotfiles/sketchybar/plugins/<name>.sh`, wire it into `dotfiles/sketchybar/sketchybarrc`. Follow an existing plugin (e.g. `harvest.sh`) for conventions.
 
 ## Conventions

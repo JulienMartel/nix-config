@@ -63,12 +63,6 @@ let
       icon = "shippingbox";
       script = ./commands/brew-services.sh;
     };
-    apps = {
-      name = "Applications";
-      description = "Launch an application";
-      icon = "square.grid.2x2";
-      script = ./commands/apps.sh;
-    };
   };
 
   # Generate registry file content (tab-separated: name\tdescription\ticon\tid)
@@ -88,25 +82,24 @@ let
   # Create PATH string containing all command script bin directories
   commandPaths = lib.concatStringsSep ":" (map (drv: "${drv}/bin") commandScripts);
 
-  # The palette script that shows all commands
+  # The palette script: launcher mode merges these commands with installed apps.
+  # `choose` enumerates /Applications natively and launches apps itself, so the
+  # only thing returned to this script is a selected command ("run\t<id>").
   paletteScript = writeShellScriptBin "choose-palette" ''
     # Include paths to all choose-* commands and choose itself
     export PATH="${commandPaths}:${choose}/bin:$PATH"
 
-    # Registry is embedded at build time
+    # Command registry is embedded at build time (name\tdescription\ticon\tid).
     REGISTRY='${registryContent}'
 
-    # Show the palette
-    selected=$(echo "$REGISTRY" | choose -p "Quick Actions" -i "sparkles")
+    # Launcher mode: apps are added natively; empty query shows the top 7.
+    selected=$(echo "$REGISTRY" | choose --launcher --max-empty 7 -p "Search apps & actions..." -i "magnifyingglass")
 
+    # App launches are handled inside choose; a command selection comes back as
+    # "run\t<id>". Anything else (empty) means dismissed or an app was opened.
     if [[ -n "$selected" ]]; then
-      # Output format is: action\traw_line
-      # Raw line format is: name\tdescription\ticon\tcmd_id
-      # So command ID is at field 5 (action + 4 fields from raw line)
-      cmd_id=$(echo "$selected" | cut -f5)
-
+      cmd_id=$(echo "$selected" | cut -f2)
       if [[ -n "$cmd_id" ]]; then
-        # Execute the selected command
         exec choose-"$cmd_id"
       fi
     fi
