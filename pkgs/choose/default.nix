@@ -20,6 +20,10 @@ stdenvNoCC.mkDerivation {
       -O
 
     cp Info.plist Choose.app/Contents/
+
+    # Bundle the emoji dataset (read at runtime via Bundle.main).
+    mkdir -p Choose.app/Contents/Resources
+    cp emoji.json Choose.app/Contents/Resources/
   '';
 
   installPhase = ''

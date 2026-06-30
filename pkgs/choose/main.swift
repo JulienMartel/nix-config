@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import CoreText
 
 // MARK: - Data Types
 
@@ -35,8 +36,11 @@ struct ChooseItem: Identifiable {
     let payload: String       // cmd id (command) / bundle path (app) / raw (plain)
     let frecencyKey: String   // stable key for usage history
     let baseBoost: Double     // recency boost for freshly-installed apps
+    let group: String?        // optional section header; nil → flat (ungrouped) list
 
-    // Generic stdin line: title \t subtitle \t icon \t actions
+    // Generic stdin line: title \t subtitle \t icon \t actions \t group
+    // The trailing `group` field is optional; when any line carries one the list
+    // renders with section headers (see ContentView), otherwise it stays flat.
     static func parsePlain(_ line: String, globalIcon: String?) -> ChooseItem {
         let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
         let title = parts.count > 0 ? parts[0] : line
@@ -57,9 +61,11 @@ struct ChooseItem: Identifiable {
         }
         if actions.isEmpty { actions.append(ItemAction(key: "enter", label: "Select")) }
 
+        let group = parts.count > 4 && !parts[4].isEmpty ? parts[4] : nil
+
         return ChooseItem(raw: line, title: title, subtitle: subtitle, icon: icon,
                           actions: actions, kind: .plain, payload: line,
-                          frecencyKey: title, baseBoost: 0)
+                          frecencyKey: title, baseBoost: 0, group: group)
     }
 
     // Launcher command registry line: name \t description \t icon \t id
@@ -72,7 +78,7 @@ struct ChooseItem: Identifiable {
         return ChooseItem(raw: line, title: title, subtitle: subtitle, icon: icon,
                           actions: [ItemAction(key: "enter", label: "Run")],
                           kind: .command, payload: id,
-                          frecencyKey: "cmd:\(id)", baseBoost: 0)
+                          frecencyKey: "cmd:\(id)", baseBoost: 0, group: nil)
     }
 
     static func app(name: String, path: String, boost: Double) -> ChooseItem {
@@ -81,7 +87,7 @@ struct ChooseItem: Identifiable {
                           actions: [ItemAction(key: "enter", label: "Open"),
                                     ItemAction(key: "cmd", label: "Reveal in Finder")],
                           kind: .app, payload: path,
-                          frecencyKey: "app:\(path)", baseBoost: boost)
+                          frecencyKey: "app:\(path)", baseBoost: boost, group: nil)
     }
 
     func action(for key: String) -> ItemAction? { actions.first { $0.key == key } }
@@ -254,7 +260,7 @@ struct Commit {
 
 // MARK: - State
 
-enum DisplayMode { case list, clipboard }
+enum DisplayMode { case list, clipboard, emoji }
 
 final class DaemonState: ObservableObject {
     @Published var items: [ChooseItem] = []
@@ -266,13 +272,20 @@ final class DaemonState: ObservableObject {
     @Published var metrics: LayoutMetrics = .standard
     @Published var displayMode: DisplayMode = .list
     @Published var clipEntries: [ClipEntry] = []
+    @Published var emojiEntries: [EmojiEntry] = []
 
     var isLauncher = false
     var maxEmpty = Int.max
 
-    // The clipboard view is a fixed-size two-pane window; everything else follows
-    // the launcher's windowMode width.
-    var targetWidth: CGFloat { displayMode == .clipboard ? ClipboardLayout.width : metrics.width }
+    // The clipboard and emoji views are fixed-size windows; everything else
+    // follows the launcher's windowMode width.
+    var targetWidth: CGFloat {
+        switch displayMode {
+        case .clipboard: return ClipboardLayout.width
+        case .emoji: return EmojiLayout.width
+        case .list: return metrics.width
+        }
+    }
 
     let frecency = Frecency()
     private var frecencyScores: [UUID: Double] = [:]
@@ -292,6 +305,7 @@ final class DaemonState: ObservableObject {
         requestID = UUID()
         displayMode = .list
         clipEntries = []
+        emojiEntries = []
     }
 
     // Load the clipboard history view from the daemon's own store.
@@ -304,6 +318,31 @@ final class DaemonState: ObservableObject {
     func commitClip(_ entry: ClipEntry) {
         ClipboardStore.shared.restore(entry)
         onCommit?(Commit(clientString: "", disposition: .hideNow, appLaunch: nil))
+    }
+
+    // Load the emoji grid from the bundled dataset.
+    func loadEmoji(placeholder: String?) {
+        displayMode = .emoji
+        emojiEntries = EmojiStore.shared.all
+        placeholderText = placeholder ?? "Search emoji…"
+    }
+
+    func emojiFrecency(_ c: String) -> Double { frecency.score(for: "emoji:\(c)") }
+
+    // Relevance of an emoji for a typed query (name + keywords), nil → no match.
+    func emojiMatch(_ e: EmojiEntry, query: [Character]) -> Double? {
+        guard let s = Fuzzy.score(query, e.search) else { return nil }
+        let frec = emojiFrecency(e.c)
+        return s + (frec / (frec + 5)) * 1.5
+    }
+
+    // Copy the emoji to the clipboard, record frecency, and echo it to the client.
+    func commitEmoji(_ e: EmojiEntry) {
+        frecency.record("emoji:\(e.c)")
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(e.c, forType: .string)
+        onCommit?(Commit(clientString: e.c, disposition: .hideNow, appLaunch: nil))
     }
 
     func load(lines: [String], placeholder: String?, icon: String?, launcher: Bool, maxEmpty: Int?) {
@@ -412,6 +451,14 @@ enum ClipboardLayout {
     static let height: CGFloat = 480
     static let listWidth: CGFloat = 300
     static let rowHeight: CGFloat = 56
+}
+
+// Fixed geometry for the emoji grid window.
+enum EmojiLayout {
+    static let width: CGFloat = 520
+    static let columns = 9
+    static let cellHeight: CGFloat = 50
+    static let gridHeight: CGFloat = 320
 }
 
 // User settings, read from ~/.config/choose/config.json. Parsed leniently via
@@ -635,6 +682,64 @@ extension NSImage {
     }
 }
 
+// MARK: - Emoji
+
+struct EmojiEntry: Identifiable {
+    let c: String          // the glyph
+    let name: String
+    let keywords: String
+    let search: String     // precomputed "name keywords", lowercased
+    var id: String { c }
+}
+
+// Loads the bundled emoji dataset (Resources/emoji.json) and filters it to the
+// glyphs the running macOS can actually render. The vendored dataset is a
+// superset spanning many Unicode releases; this keeps only what THIS OS draws,
+// so the picker matches the installed macOS version exactly (no tofu, no
+// half-supported sequences) and self-corrects on OS upgrades — no hardcoded
+// version table to maintain.
+final class EmojiStore {
+    static let shared = EmojiStore()
+    let all: [EmojiEntry]
+
+    private init() {
+        guard let url = Bundle.main.url(forResource: "emoji", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+        else { all = []; return }
+
+        let probeFont = NSFont(name: "Apple Color Emoji", size: 24)
+        all = arr.compactMap { o -> EmojiEntry? in
+            guard let c = o["c"] as? String, let n = o["n"] as? String else { return nil }
+            // If the emoji font is somehow unavailable, don't filter at all.
+            if let f = probeFont, !EmojiStore.renders(c, font: f) { return nil }
+            let k = (o["k"] as? String) ?? ""
+            return EmojiEntry(c: c, name: n, keywords: k, search: "\(n) \(k)".lowercased())
+        }
+    }
+
+    // Supported on this OS == every run is still drawn by Apple Color Emoji.
+    // CoreText falls back to another font for any glyph the emoji font lacks
+    // (e.g. emoji newer than the installed macOS), so a fallback run means the
+    // glyph isn't in this OS's set. This allows multi-glyph ligatures (gendered
+    // couples, families) while dropping tofu — no Unicode-version table needed.
+    private static func renders(_ s: String, font: NSFont) -> Bool {
+        let attr = NSAttributedString(string: s, attributes: [.font: font])
+        let line = CTLineCreateWithAttributedString(attr)
+        guard let runs = CTLineGetGlyphRuns(line) as? [CTRun], !runs.isEmpty else { return false }
+        for run in runs {
+            let attrs = CTRunGetAttributes(run) as NSDictionary
+            guard let runFont = attrs[kCTFontAttributeName as String] else { return false }
+            if CTFontCopyPostScriptName(runFont as! CTFont) as String != "AppleColorEmoji" {
+                return false
+            }
+        }
+        return true
+    }
+
+    func warm() { DispatchQueue.global(qos: .utility).async { _ = EmojiStore.shared.all } }
+}
+
 // MARK: - Window
 
 class ChooseWindow: NSWindow {
@@ -645,6 +750,20 @@ class ChooseWindow: NSWindow {
 // MARK: - ChooseUI (window controller shared by daemon + direct mode)
 
 final class ChooseUI {
+    // A resizable rounded-rect mask: a solid rounded square with cap insets so it
+    // stretches to any window size without distorting the corners.
+    static func roundedMask(radius: CGFloat) -> NSImage {
+        let d = radius * 2 + 1
+        let image = NSImage(size: NSSize(width: d, height: d), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.resizingMode = .stretch
+        return image
+    }
+
     let window: ChooseWindow
     let hosting: NSHostingView<ContentView>
     let state: DaemonState
@@ -679,6 +798,10 @@ final class ChooseUI {
         blur.layer?.masksToBounds = true
         blur.layer?.borderWidth = 1
         blur.layer?.borderColor = NSColor.white.withAlphaComponent(0.08).cgColor
+        // layer.cornerRadius alone doesn't clip the vibrancy material or shape the
+        // window shadow — a resizable rounded maskImage does both, killing the
+        // square corner that pokes out behind the rounded panel.
+        blur.maskImage = ChooseUI.roundedMask(radius: 16)
         hosting.autoresizingMask = [.width, .height]
         blur.addSubview(hosting)
         window.contentView = blur
@@ -830,6 +953,7 @@ struct Invocation {
     var icon: String?
     var launcher = false
     var clipboard = false
+    var emoji = false
     var maxEmpty: Int?
 }
 
@@ -845,6 +969,7 @@ enum DaemonMode {
         ui.window.orderOut(nil)
 
         AppScanner.shared.warm()
+        EmojiStore.shared.warm()   // filter the dataset to OS-renderable glyphs off the main thread
 
         // Clipboard history watcher: poll the pasteboard while the daemon lives.
         if Settings.load().clipboard.enabled {
@@ -923,6 +1048,7 @@ enum DaemonMode {
             if p.count > 2 && !p[2].isEmpty { inv.icon = p[2] }
             if p.count > 3 && p[3] == "launcher" { inv.launcher = true }
             if p.count > 3 && p[3] == "clipboard" { inv.clipboard = true }
+            if p.count > 3 && p[3] == "emoji" { inv.emoji = true }
             if p.count > 4, let m = Int(p[4]) { inv.maxEmpty = m }
             itemLines = Array(lines.dropFirst())
         }
@@ -936,6 +1062,8 @@ enum DaemonMode {
             state.metrics = metrics
             if inv.clipboard {
                 state.loadClipboard(placeholder: inv.placeholder)
+            } else if inv.emoji {
+                state.loadEmoji(placeholder: inv.placeholder)
             } else {
                 state.load(lines: itemLines, placeholder: inv.placeholder, icon: inv.icon,
                            launcher: inv.launcher, maxEmpty: inv.maxEmpty)
@@ -967,6 +1095,7 @@ enum ClientMode {
             case "-i", "--icon":        if !args.isEmpty { inv.icon = args.removeFirst() }
             case "--launcher":          inv.launcher = true
             case "--clipboard":         inv.clipboard = true
+            case "--emoji":             inv.emoji = true
             case "--max-empty":         if !args.isEmpty { inv.maxEmpty = Int(args.removeFirst()) }
             default: break
             }
@@ -997,7 +1126,7 @@ enum ClientMode {
         }) == 0
         if !connected { close(fd); runDirect(lines: stdinLines, inv: inv); return }
 
-        let mode = inv.launcher ? "launcher" : (inv.clipboard ? "clipboard" : "")
+        let mode = inv.launcher ? "launcher" : (inv.clipboard ? "clipboard" : (inv.emoji ? "emoji" : ""))
         let maxEmpty = inv.maxEmpty.map(String.init) ?? ""
         var payload = "CONFIG\t\(inv.placeholder ?? "")\t\(inv.icon ?? "")\t\(mode)\t\(maxEmpty)\n"
         for line in stdinLines { payload += line + "\n" }
@@ -1034,6 +1163,8 @@ enum ClientMode {
         state.metrics = Settings.load().metrics
         if inv.clipboard {
             state.loadClipboard(placeholder: inv.placeholder)
+        } else if inv.emoji {
+            state.loadEmoji(placeholder: inv.placeholder)
         } else {
             state.load(lines: lines, placeholder: inv.placeholder, icon: inv.icon,
                        launcher: inv.launcher, maxEmpty: inv.maxEmpty)
@@ -1077,16 +1208,41 @@ struct ContentView: View {
         query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    // True when any item carries a group → render with section headers.
+    var hasGroups: Bool { state.items.contains { $0.group != nil } }
+
+    // Distinct groups in first-seen (input) order; this is the section order.
+    var groupOrder: [String] {
+        var seen = Set<String>(); var order: [String] = []
+        for it in state.items {
+            if let g = it.group, !seen.contains(g) { seen.insert(g); order.append(g) }
+        }
+        return order
+    }
+
+    // Re-bucket a priority-ordered list into section order, preserving each
+    // item's incoming order within its section. (Swift's sort isn't stable, so
+    // we bucket explicitly rather than sort by group index.)
+    func grouped(_ items: [ChooseItem]) -> [ChooseItem] {
+        guard hasGroups else { return items }
+        var buckets: [String: [ChooseItem]] = [:]
+        for it in items { buckets[it.group ?? "", default: []].append(it) }
+        return groupOrder.flatMap { buckets[$0] ?? [] }
+    }
+
     var filtered: [ChooseItem] {
+        let base: [ChooseItem]
         if queryIsEmpty {
-            return Array(state.itemsSorted.prefix(state.maxEmpty))
+            base = Array(state.itemsSorted.prefix(state.maxEmpty))
+        } else {
+            let q = Array(query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+            let scored = state.items.compactMap { item -> (ChooseItem, Double)? in
+                guard let s = state.matchScore(item, query: q) else { return nil }
+                return (item, s)
+            }
+            base = scored.sorted { $0.1 > $1.1 }.map { $0.0 }
         }
-        let q = Array(query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
-        let scored = state.items.compactMap { item -> (ChooseItem, Double)? in
-            guard let s = state.matchScore(item, query: q) else { return nil }
-            return (item, s)
-        }
-        return scored.sorted { $0.1 > $1.1 }.map { $0.0 }
+        return grouped(base)
     }
 
     // In compact mode an empty query hides the list until the user types or ↓.
@@ -1103,13 +1259,53 @@ struct ContentView: View {
         return visible[selectedIndex]
     }
 
+    // Render model: section headers interleaved with the selectable items.
+    // `index` is the position in `visible` (headers are not selectable, so
+    // keyboard nav over `visible` skips them for free).
+    enum RenderRow: Identifiable {
+        case header(String)
+        case item(ChooseItem, Int)
+        var id: String {
+            switch self {
+            case .header(let g): return "header:\(g)"
+            case .item(let it, _): return "item:\(it.id)"
+            }
+        }
+    }
+
+    var renderRows: [RenderRow] {
+        var rows: [RenderRow] = []
+        var lastGroup: String?? = .none
+        for (i, item) in visible.enumerated() {
+            if hasGroups, item.group != (lastGroup ?? nil) {
+                if let g = item.group { rows.append(.header(g)) }
+                lastGroup = .some(item.group)
+            }
+            rows.append(.item(item, i))
+        }
+        return rows
+    }
+
     var listHeight: CGFloat {
-        CGFloat(min(visible.count, maxVisibleItems)) * rowHeight
+        let cap = min(visible.count, maxVisibleItems)
+        guard hasGroups else { return CGFloat(cap) * rowHeight }
+        // Fit `cap` items plus whatever headers precede them in the window.
+        var items = 0, headers = 0
+        for row in renderRows {
+            if items >= cap { break }
+            switch row {
+            case .header: headers += 1
+            case .item: items += 1
+            }
+        }
+        return CGFloat(cap) * rowHeight + CGFloat(headers) * GroupHeaderRow.height
     }
 
     var body: some View {
         if state.displayMode == .clipboard {
             ClipboardView(state: state)
+        } else if state.displayMode == .emoji {
+            EmojiView(state: state)
         } else {
             launcherBody
         }
@@ -1142,11 +1338,18 @@ struct ContentView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(Array(visible.enumerated()), id: \.element.id) { i, item in
-                                ItemRow(item: item, isSelected: i == selectedIndex)
-                                    .frame(height: rowHeight)
-                                    .id(item.id)
-                                    .onTapGesture { selectedIndex = i; select(action: "enter") }
+                            ForEach(renderRows) { row in
+                                switch row {
+                                case .header(let title):
+                                    GroupHeaderRow(title: title)
+                                        .frame(height: GroupHeaderRow.height)
+                                        .id(row.id)
+                                case .item(let item, let i):
+                                    ItemRow(item: item, isSelected: i == selectedIndex)
+                                        .frame(height: rowHeight)
+                                        .id(item.id)
+                                        .onTapGesture { selectedIndex = i; select(action: "enter") }
+                                }
                             }
                         }
                         .padding(.vertical, 6)
@@ -1170,6 +1373,7 @@ struct ContentView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .onChange(of: query) { selectedIndex = 0; revealed = false }
         .onChange(of: visible.count) { state.onResize?() }
+        .onChange(of: renderRows.count) { state.onResize?() }
         .onChange(of: state.requestID) { query = ""; selectedIndex = 0; revealed = false; state.onResize?() }
     }
 
@@ -1362,6 +1566,132 @@ struct ClipPreview: View {
     }
 }
 
+// MARK: - Emoji View
+
+struct EmojiView: View {
+    @ObservedObject var state: DaemonState
+    @State private var query = ""
+    @State private var selectedIndex = 0
+
+    var filtered: [EmojiEntry] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            // Empty query: most-used first (frecency), stable dataset order otherwise.
+            return state.emojiEntries.enumerated().sorted { a, b in
+                let fa = state.emojiFrecency(a.element.c)
+                let fb = state.emojiFrecency(b.element.c)
+                return fa != fb ? fa > fb : a.offset < b.offset
+            }.map { $0.element }
+        }
+        let q = Array(trimmed.lowercased())
+        let scored = state.emojiEntries.compactMap { e -> (EmojiEntry, Double)? in
+            guard let s = state.emojiMatch(e, query: q) else { return nil }
+            return (e, s)
+        }
+        return scored.sorted { $0.1 > $1.1 }.map { $0.0 }
+    }
+
+    var selected: EmojiEntry? {
+        guard selectedIndex < filtered.count else { return nil }
+        return filtered[selectedIndex]
+    }
+
+    var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 4), count: EmojiLayout.columns)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Image(systemName: "face.smiling")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Theme.subtext)
+                CustomTextField(
+                    text: $query, selectedIndex: $selectedIndex,
+                    itemCount: filtered.count, placeholder: state.placeholderText,
+                    fontSize: 18, state: state,
+                    onSubmit: { _ in commit() },
+                    gridColumns: EmojiLayout.columns
+                )
+            }
+            .padding(.horizontal, 20)
+            .frame(height: 52)
+
+            Divider().background(Theme.surface1.opacity(0.5))
+
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 4) {
+                        ForEach(Array(filtered.enumerated()), id: \.element.id) { i, e in
+                            Text(e.c)
+                                .font(.system(size: 26))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: EmojiLayout.cellHeight)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(i == selectedIndex ? Theme.mauve.opacity(0.30) : Color.clear)
+                                )
+                                .id(e.c)
+                                .onTapGesture { selectedIndex = i; commit() }
+                        }
+                    }
+                    .padding(8)
+                }
+                .frame(height: EmojiLayout.gridHeight)
+                .onChange(of: selectedIndex) {
+                    if selectedIndex < filtered.count { proxy.scrollTo(filtered[selectedIndex].c) }
+                }
+            }
+
+            Divider().background(Theme.surface1.opacity(0.5))
+
+            HStack(spacing: 10) {
+                if let e = selected {
+                    Text(e.c).font(.system(size: 18))
+                    Text(e.name)
+                        .foregroundColor(Theme.subtext)
+                        .font(.system(size: 12))
+                        .lineLimit(1)
+                } else {
+                    Text("No match").foregroundColor(Theme.subtext0).font(.system(size: 12))
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 36)
+        }
+        .frame(width: EmojiLayout.width)
+        .fixedSize(horizontal: false, vertical: true)
+        .background(Theme.base.opacity(0.55))
+        .onChange(of: query) { selectedIndex = 0 }
+        .onChange(of: state.requestID) { query = ""; selectedIndex = 0 }
+    }
+
+    func commit() {
+        guard let e = selected else { state.cancel(); return }
+        state.commitEmoji(e)
+    }
+}
+
+// MARK: - GroupHeaderRow
+
+// A non-selectable section header rendered between groups of items.
+struct GroupHeaderRow: View {
+    static let height: CGFloat = 28
+    let title: String
+
+    var body: some View {
+        Text(title.uppercased())
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .foregroundColor(Theme.subtext0)
+            .kerning(0.6)
+            .padding(.horizontal, 22)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: GroupHeaderRow.height, alignment: .bottom)
+            .padding(.bottom, 4)
+    }
+}
+
 // MARK: - ItemRow
 
 struct ItemRow: View {
@@ -1481,6 +1811,8 @@ struct CustomTextField: NSViewRepresentable {
     let state: DaemonState
     let onSubmit: (String) -> Void
     var onRevealDown: () -> Void = {}
+    // >1 turns on 2D grid navigation (emoji): ↑↓ move by a row, ←→ by one cell.
+    var gridColumns: Int = 1
 
     func makeNSView(context: Context) -> NSTextField {
         let tf = NSTextField()
@@ -1508,6 +1840,7 @@ struct CustomTextField: NSViewRepresentable {
             tf.font = NSFont.systemFont(ofSize: fontSize, weight: .regular)
         }
         context.coordinator.itemCount = itemCount
+        context.coordinator.parent = self
     }
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -1526,15 +1859,22 @@ struct CustomTextField: NSViewRepresentable {
         }
 
         func control(_ control: NSControl, textView: NSTextView, doCommandBy sel: Selector) -> Bool {
+            let cols = max(1, parent.gridColumns)
             switch sel {
             case #selector(NSResponder.moveDown(_:)):
                 if itemCount == 0 {
                     parent.onRevealDown()        // compact mode: ↓ reveals the list
-                } else if parent.selectedIndex < itemCount - 1 {
-                    parent.selectedIndex += 1
+                } else if parent.selectedIndex + cols < itemCount {
+                    parent.selectedIndex += cols
                 }
                 return true
             case #selector(NSResponder.moveUp(_:)):
+                if parent.selectedIndex - cols >= 0 { parent.selectedIndex -= cols }
+                return true
+            case #selector(NSResponder.moveRight(_:)) where cols > 1:
+                if parent.selectedIndex < itemCount - 1 { parent.selectedIndex += 1 }
+                return true
+            case #selector(NSResponder.moveLeft(_:)) where cols > 1:
                 if parent.selectedIndex > 0 { parent.selectedIndex -= 1 }
                 return true
             case #selector(NSResponder.insertNewline(_:)):
