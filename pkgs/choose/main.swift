@@ -420,7 +420,7 @@ enum SocketConfig {
 
 // Layout dimensions for a given window mode. The window resizes to `width` and
 // the list/header shrink with the other fields, so "compact" reads as a tighter
-// Raycast-style launcher.
+// launcher.
 struct LayoutMetrics {
     let width: CGFloat
     let rowHeight: CGFloat
@@ -430,7 +430,7 @@ struct LayoutMetrics {
     let searchFontSize: CGFloat
     let topInsetFraction: CGFloat   // distance from top of screen, as a fraction of height
     // When true, an empty query shows no list until the user types or presses ↓
-    // (Raycast's compact behaviour). When false, the empty query shows the top-N.
+    // (the compact behaviour). When false, the empty query shows the top-N.
     let hideEmptyList: Bool
 
     static let standard = LayoutMetrics(
@@ -1245,11 +1245,13 @@ struct ContentView: View {
         return grouped(base)
     }
 
-    // In compact mode an empty query hides the list until the user types or ↓.
+    // In compact mode the launcher hides its list on an empty query until the
+    // user types or presses ↓. This is a launcher-only affordance — utility /
+    // second-step menus (ports, brew, force-quit…) always show their list.
     var showList: Bool {
         if !queryIsEmpty { return true }
-        if !state.metrics.hideEmptyList { return true }
-        return revealed
+        if state.isLauncher && state.metrics.hideEmptyList { return revealed }
+        return true
     }
 
     var visible: [ChooseItem] { showList ? filtered : [] }

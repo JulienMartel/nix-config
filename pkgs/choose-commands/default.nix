@@ -51,6 +51,12 @@ let
       icon = "chart.bar";
       script = ./commands/activity.sh;
     };
+    force-quit = {
+      name = "Force Quit";
+      description = "Force quit a running app";
+      icon = "xmark.octagon";
+      script = ./commands/force-quit.sh;
+    };
     lock = {
       name = "Lock Screen";
       description = "Lock the display";
