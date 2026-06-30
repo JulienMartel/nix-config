@@ -29,10 +29,31 @@ let
     ''
     target
   ];
+
+  # Option B hyper key: remap Caps Lock -> F18 (pure hidutil, native to macOS)
+  # so AeroSpace can use F18 as the trigger for its `launch` leader mode.
+  # While true, this SUPERSEDES Raycast's caps->hyper — caps becomes F18 at the
+  # HID layer before Raycast ever sees it, so the two can't share caps. Flip to
+  # false and rebuild to instantly hand caps back to Raycast.
+  useNativeHyper = true;
 in
 {
   # Primary user for user-specific settings (required by nix-darwin)
   system.primaryUser = username;
+
+  # Caps Lock -> F18, feeding AeroSpace's `launch` leader mode (see
+  # useNativeHyper above). Decimal values are the hidutil HID usage codes.
+  system.keyboard.enableKeyMapping = useNativeHyper;
+  system.keyboard.userKeyMapping =
+    if useNativeHyper then
+      [
+        {
+          HIDKeyboardModifierMappingSrc = 30064771129; # 0x700000039 caps lock
+          HIDKeyboardModifierMappingDst = 30064771181; # 0x70000006D F18
+        }
+      ]
+    else
+      [ ];
 
   # Enable zsh system-wide (handles Homebrew PATH automatically)
   programs.zsh.enable = true;

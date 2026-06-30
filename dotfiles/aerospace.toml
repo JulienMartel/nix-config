@@ -102,6 +102,32 @@ alt-shift-k = 'move-node-to-workspace K'
 # Notion Calendar
 alt-shift-d = 'move-node-to-workspace D'
 
+# App launchers — hyper (caps lock, = cmd-alt-ctrl-shift) + letter.
+# launch.sh switches to the assigned workspace first, then opens/focuses the
+# app (no workspace arg = open/focus in the current workspace). Replaces the
+# old Raycast app-open hotkeys; caps->hyper remap still lives in Raycast.
+cmd-alt-ctrl-shift-c = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Cursor" C'
+cmd-alt-ctrl-shift-t = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Ghostty" T'
+cmd-alt-ctrl-shift-s = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Slack" S'
+cmd-alt-ctrl-shift-b = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Zen" B'
+cmd-alt-ctrl-shift-g = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Google Gemini" G'
+cmd-alt-ctrl-shift-l = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Linear" L'
+cmd-alt-ctrl-shift-f = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Figma" F'
+cmd-alt-ctrl-shift-m = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Music" M'
+cmd-alt-ctrl-shift-h = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Swather" H'
+cmd-alt-ctrl-shift-k = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Claude" K'
+cmd-alt-ctrl-shift-d = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Notion Calendar" D'
+cmd-alt-ctrl-shift-n = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Obsidian" N'
+cmd-alt-ctrl-shift-r = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" N'
+# Unassigned — opens/focuses in the current workspace (no workspace switch).
+cmd-alt-ctrl-shift-p = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Passwords"'
+
+# Option B leader: Caps Lock is remapped to F18 (see configuration.nix
+# useNativeHyper). Tap caps -> enter `launch` mode -> letter -> open app. This
+# is the Raycast-free path; the hyper chords above stay as a fallback for when
+# useNativeHyper is flipped off.
+f18 = ['mode launch', 'exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=on']
+
 alt-f = 'fullscreen'
 
 # Re-apply on-window-detected workspace assignments (manual recovery from
@@ -127,6 +153,30 @@ alt-shift-l = ['join-with right', 'mode main']
 down = 'volume down'
 up = 'volume up'
 shift-down = ['volume set 0', 'mode main']
+
+# Launch leader mode (entered by tapping caps -> F18). Each letter mirrors the
+# hyper chords above, then drops back to main. esc / any unbound key + esc to
+# bail out without launching anything.
+[mode.launch.binding]
+esc = ['exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=off', 'mode main']
+# Non-launch actions that used to be Raycast hyper shortcuts, routed through the
+# leader so they survive caps->F18. choose = custom palette; v = Raycast clipboard.
+space = ['exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose-palette', 'mode main']
+v = ['exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=off', 'exec-and-forget open "raycast://extensions/raycast/clipboard-history/clipboard-history"', 'mode main']
+c = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Cursor" C', 'mode main']
+t = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Ghostty" T', 'mode main']
+s = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Slack" S', 'mode main']
+b = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Zen" B', 'mode main']
+g = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Google Gemini" G', 'mode main']
+l = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Linear" L', 'mode main']
+f = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Figma" F', 'mode main']
+m = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Music" M', 'mode main']
+h = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Swather" H', 'mode main']
+k = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Claude" K', 'mode main']
+d = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Notion Calendar" D', 'mode main']
+n = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Obsidian" N', 'mode main']
+r = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" N', 'mode main']
+p = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Passwords"', 'mode main']
 
 [[on-window-detected]]
 if.app-id = 'com.todesktop.230313mzl4w4u92'

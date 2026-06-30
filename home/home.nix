@@ -213,6 +213,10 @@
     source = ../dotfiles/aerospace/on-wake.sh;
     executable = true;
   };
+  home.file.".config/aerospace/launch.sh" = {
+    source = ../dotfiles/aerospace/launch.sh;
+    executable = true;
+  };
 
   # Dotfiles - SketchyBar configuration
   home.file.".config/sketchybar/sketchybarrc".source = ../dotfiles/sketchybar/sketchybarrc;
