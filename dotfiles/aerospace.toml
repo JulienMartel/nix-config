@@ -158,6 +158,10 @@ esc = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mo
 # (palette is on cmd+space now, so the old space->palette leader is gone.)
 v = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose --clipboard', 'mode main']
 e = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose --emoji', 'mode main']
+# - / = resize the focused tiled window (growing it shrinks its neighbour). The
+# first press also drops into `resize` mode so further -/= repeat without re-tapping caps.
+minus = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/resize_mode.sh on', 'resize smart -50', 'mode resize']
+equal = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/resize_mode.sh on', 'resize smart +50', 'mode resize']
 t = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Ghostty" T', 'mode main']
 s = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Slack" S', 'mode main']
 b = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Zen" B', 'mode main']
@@ -169,6 +173,14 @@ d = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Notion Ca
 n = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Obsidian" N', 'mode main']
 r = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" R', 'mode main']
 p = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Passwords"', 'mode main']
+
+# Resize mode (entered via the launch leader's -/=). Repeat -/= to keep
+# growing/shrinking the focused tiled window; esc/enter to return to main.
+[mode.resize.binding]
+minus = 'resize smart -50'
+equal = 'resize smart +50'
+esc = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/resize_mode.sh off', 'mode main']
+enter = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/resize_mode.sh off', 'mode main']
 
 [[on-window-detected]]
 if.app-id = 'com.mitchellh.ghostty'
