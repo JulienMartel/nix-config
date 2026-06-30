@@ -158,13 +158,33 @@ sketchybar --add item apple.reload popup.apple.logo \
 
 # Spaces - All AeroSpace workspaces
 sketchybar --add event aerospace_workspace_change
-WORKSPACES=("1" "2" "3" "4" "C" "T" "N" "S" "B" "G" "L" "F" "M" "K" "D")
+WORKSPACES=("1" "2" "3" "4" "T" "N" "R" "S" "B" "F" "M" "H" "K" "D")
 
+# App-workspaces show the app's logo (sketchybar-app-font ligature tokens);
+# numbered workspaces keep their digit in the bar's Nerd Font. N is a shared
+# notes workspace (Notes/Things/Obsidian) — defaulted to the Obsidian glyph.
 for workspace in "${WORKSPACES[@]}"
 do
+    ICON="$workspace"
+    IFONT="Hack Nerd Font:Bold:17.0"
+    case "$workspace" in
+        T) ICON=":ghostty:"     ; IFONT="sketchybar-app-font:Regular:16.0" ;;
+        N) ICON=":obsidian:"    ; IFONT="sketchybar-app-font:Regular:16.0" ;;
+        R) ICON=":things:"      ; IFONT="sketchybar-app-font:Regular:16.0" ;;
+        S) ICON=":slack:"       ; IFONT="sketchybar-app-font:Regular:16.0" ;;
+        B) ICON=":zen_browser:" ; IFONT="sketchybar-app-font:Regular:16.0" ;;
+        F) ICON=":figma:"       ; IFONT="sketchybar-app-font:Regular:16.0" ;;
+        M) ICON=":music:"       ; IFONT="sketchybar-app-font:Regular:16.0" ;;
+        # Swather has no app-font glyph — use the Nerd Font hourglass (its icon).
+        # fa-hourglass U+F254 as raw UTF-8 bytes (bash 3.2 printf has no \u).
+        H) ICON=$(printf '\xEF\x89\x94') ;;
+        K) ICON=":claude:"      ; IFONT="sketchybar-app-font:Regular:16.0" ;;
+        D) ICON=":calendar:"    ; IFONT="sketchybar-app-font:Regular:16.0" ;;
+    esac
     sketchybar --add item space.$workspace left \
         --set space.$workspace \
-            icon="$workspace" \
+            icon="$ICON" \
+            icon.font="$IFONT" \
             icon.drawing=on \
             icon.padding_left=10 \
             icon.padding_right=10 \
@@ -200,8 +220,28 @@ sketchybar --add item front_app left \
         script="$HOME/.config/sketchybar/plugins/front_app.sh" \
     --subscribe front_app front_app_switched
 
+# Launch-mode picker — one bubble per leader hotkey, hidden until `launch` mode.
+# plugins/launch_mode.sh shows + colors these (focused=mauve / open=green /
+# closed=grey), hides the workspace + front_app pills, and turns the Apple logo
+# into a → "go-to" glyph. The key list mirrors [mode.launch.binding] in
+# aerospace.toml — keep them in sync.
+LAUNCHER_KEYS=("t" "s" "b" "f" "m" "h" "k" "d" "n" "r" "p")
+for key in "${LAUNCHER_KEYS[@]}"; do
+    GLYPH=$(echo "$key" | tr '[:lower:]' '[:upper:]')
+    sketchybar --add item launcher.$key left \
+        --set launcher.$key \
+            drawing=off \
+            icon="$GLYPH" \
+            icon.padding_left=10 \
+            icon.padding_right=10 \
+            label.drawing=off \
+            background.color=$MANTLE \
+            background.corner_radius=12 \
+            background.height=28
+done
+
 # Leader-mode ("launch") feedback is handled by plugins/launch_mode.sh, which
-# dims the whole bar and glows the Apple logo mauve — no dedicated pill.
+# dims the bar, swaps the left side for the picker above, and glows the → lead.
 
 ##### RIGHT SIDE #####
 

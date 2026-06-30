@@ -20,6 +20,7 @@
     choose
     choose-commands
     claude-code
+    opencode
     fnm
     nixfmt
     gemini-cli-bin
@@ -253,6 +254,11 @@
       # Copies from these apps are never recorded (on top of the automatic
       # org.nspasteboard.ConcealedType filter that already drops password copies).
       blacklistBundleIds = [ "com.apple.Passwords" ];
+      # Auto-paste a selected entry into the previously-focused app (synthesize
+      # ⌘V), Raycast-style. Needs the daemon's Accessibility grant (see the
+      # "choose daemon runs from a signed copy" gotcha in CLAUDE.md); falls back
+      # to clipboard-only when untrusted.
+      autoPaste = true;
     };
   };
 

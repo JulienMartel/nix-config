@@ -1,4 +1,10 @@
-{ lib, stdenvNoCC, writeShellScriptBin, symlinkJoin, choose }:
+{
+  lib,
+  stdenvNoCC,
+  writeShellScriptBin,
+  symlinkJoin,
+  choose,
+}:
 
 let
   # Command registry - add new commands here
@@ -8,12 +14,14 @@ let
       description = "Select WiFi Network";
       icon = "wifi";
       script = ./commands/wifi.sh;
+      submenu = true;
     };
     ports = {
       name = "Ports";
       description = "Kill Listening Ports";
       icon = "network";
       script = ../choose/ports;
+      submenu = true;
     };
     rebuild = {
       name = "Rebuild System";
@@ -56,6 +64,28 @@ let
       description = "Force quit a running app";
       icon = "xmark.octagon";
       script = ./commands/force-quit.sh;
+      submenu = true;
+    };
+    screenshots = {
+      name = "Screenshots";
+      description = "Browse & copy recent screenshots";
+      icon = "photo.on.rectangle";
+      script = ./commands/screenshots.sh;
+      submenu = true;
+    };
+    clipboard = {
+      name = "Clipboard History";
+      description = "Browse & paste recent copies";
+      icon = "doc.on.clipboard";
+      script = ./commands/clipboard.sh;
+      submenu = true;
+    };
+    emoji = {
+      name = "Emoji";
+      description = "Search & copy emoji";
+      icon = "face.smiling";
+      script = ./commands/emoji.sh;
+      submenu = true;
     };
     lock = {
       name = "Lock Screen";
@@ -68,19 +98,28 @@ let
       description = "Start/Stop/Restart services";
       icon = "shippingbox";
       script = ./commands/brew-services.sh;
+      submenu = true;
     };
   };
 
-  # Generate registry file content (tab-separated: name\tdescription\ticon\tid)
+  # Generate registry file content (tab-separated):
+  #   name \t description \t icon \t id \t submenu(1|0)
+  # submenu=1 marks a two-step command (it re-invokes choose), so the daemon
+  # keeps the window up with a loading state instead of fading between steps.
   registryContent = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (id: cmd: "${cmd.name}\t${cmd.description}\t${cmd.icon}\t${id}") commands
+    lib.mapAttrsToList (
+      id: cmd:
+      "${cmd.name}\t${cmd.description}\t${cmd.icon}\t${id}\t${if cmd.submenu or false then "1" else "0"}"
+    ) commands
   );
 
   # Wrap each command script with proper PATH
-  wrapCommand = id: cmd: writeShellScriptBin "choose-${id}" ''
-    export PATH="${choose}/bin:$PATH"
-    exec bash ${cmd.script} "$@"
-  '';
+  wrapCommand =
+    id: cmd:
+    writeShellScriptBin "choose-${id}" ''
+      export PATH="${choose}/bin:$PATH"
+      exec bash ${cmd.script} "$@"
+    '';
 
   # All wrapped command scripts as derivations
   commandScripts = lib.mapAttrsToList wrapCommand commands;

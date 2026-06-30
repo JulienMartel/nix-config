@@ -1,79 +1,156 @@
 #!/bin/bash
 # launch_mode.sh on|off
 #
-# Spotlights AeroSpace's `launch` leader-mode by dimming the WHOLE bar: every
-# on-screen pill fades to a low-contrast grey while the Apple logo — the
-# launcher itself — glows Catppuccin mauve. Tapping caps (F18) arms it; esc or
-# any launch action disarms it. There is no dedicated "LAUNCH" pill; the modal
-# state IS the dimmed bar.
+# Replaces the LEFT side of the bar with a launcher while AeroSpace's `launch`
+# leader-mode is armed:
+#   - the workspace pills AND the front-app pill are hidden, replaced by a
+#     PICKER — one bubble per leader hotkey (launcher.<key>, defined in
+#     sketchybarrc), colored by state: focused = mauve, open/running = green
+#     letter, closed = grey;
+#   - open/active hints are moved to the LEFT of the row (keeping their original
+#     relative order) so the live state reads first;
+#   - the Apple logo becomes a → "go-to" glyph.
+# Nothing on the right side is touched. Tapping caps (F18) arms it; esc or any
+# launch action disarms it.
 #
-# Restore is exact: `on` snapshots each visible pill's current colors and `off`
-# replays them, so dynamic pills (focused workspace, battery level, wifi state,
-# Elgato/Harvest status) return to their real colors without re-running their
-# scripts — no weather/API refetch on every leader tap.
-#
-# While armed, EVERY item's script is frozen (updates=off) so neither a pill's
-# own periodic refresh (harvest 3s, wifi/clock 10s, battery 30s, …) nor a hidden
-# batch-updater (aerospace_watcher polls every 2s and repaints the workspaces
-# via external --set, which updates=off on the space.* items can't block) can
-# repaint over the dim. Each item's original `updates` value is snapshotted and
-# restored on disarm.
+# Concurrency: caps -> letter fires `on` and `off` as two near-simultaneous
+# fire-and-forget processes. Each writes the desired state and runs a LOCKED
+# reconcile that drives the bar toward the latest state, so the last keypress
+# always wins and the two can never interleave into a half-armed mess.
 
-export PATH="/run/current-system/sw/bin:/opt/homebrew/bin:$PATH"
+export PATH="/run/current-system/sw/bin:/opt/homebrew/bin:/usr/bin:/bin:$PATH"
 
-SNAP="/tmp/sketchybar_launch_dim.json"
+STATE="/tmp/sketchybar_launch_state"   # desired: "on" | "off"
+SNAP="/tmp/sketchybar_launch_apple.json"  # present == currently armed
+LOCK="/tmp/sketchybar_launch.lock"
 
 # Catppuccin Mocha
 MAUVE=0xffcba6f7
 BASE=0xff1e1e2e
 MANTLE=0xff181825
+SURFACE0=0xff313244
 OVERLAY0=0xff6c7086
+GREEN=0xffa6e3a1
+TEXT=0xffcdd6f4
 
-# Dim target: pills sink toward the bar; icons/labels drop to a muted grey.
-DIM_BG=$MANTLE
-DIM_FG=$OVERLAY0
+# md-arrow-right-bold (U+F0734) as raw UTF-8 bytes — /bin/bash is 3.2, whose
+# printf has no \u/\U; \xHH works.
+ARROW=$(printf '\xF3\xB0\x9C\xB4')
 
-arm() {
-    # Snapshot once. A second `on` (double cap-tap) must not capture the
-    # already-dimmed state, so only snapshot when none is in flight.
-    if [ ! -f "$SNAP" ]; then
-        # Capture ALL items (a hidden updater like aerospace_watcher must be
-        # frozen too), flagging which are currently on-screen so only those get
-        # dimmed/restored.
-        for item in $(sketchybar --query bar | jq -r '.items[]'); do
-            sketchybar --query "$item"
-        done | jq -s '
-            [ .[]
-              | { name,
-                  vis:     (any(.bounding_rects[]?; .origin[0] >= 0)),
-                  bg:      (.geometry.background.color // "0x00000000"),
-                  icon:    (.icon.color  // "0xffffffff"),
-                  label:   (.label.color // "0xffffffff"),
-                  updates: (.scripting.updates // "when_shown") } ]' > "$SNAP"
-    fi
+# Leader hotkey -> assigned workspace (mirrors [mode.launch.binding] in
+# aerospace.toml). Empty = no assigned space (always shown as closed/grey, since
+# there's no workspace to read open/active from): Passwords.
+LAUNCHERS="t:T n:N r:R s:S b:B f:F m:M h:H k:K d:D p:"
 
-    # Freeze every item's script, dim the on-screen pills, then light the
-    # launcher mauve.
-    local freeze dim
-    freeze=$(jq -r '.[] | "--set \(.name) updates=off"' "$SNAP" | tr '\n' ' ')
-    dim=$(jq -r ".[] | select(.vis) | \"--set \(.name) background.color=$DIM_BG icon.color=$DIM_FG label.color=$DIM_FG\"" "$SNAP" | tr '\n' ' ')
-    eval "sketchybar $freeze $dim --set apple.logo background.color=$MAUVE icon.color=$BASE"
+spaces() { sketchybar --query bar | jq -r '.items[] | select(startswith("space."))'; }
+
+acquire_lock() {
+    local n=0
+    until mkdir "$LOCK" 2>/dev/null; do
+        sleep 0.02
+        n=$((n + 1))
+        [ $n -ge 75 ] && rmdir "$LOCK" 2>/dev/null   # ~1.5s: steal a crashed lock
+    done
+    trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 }
 
-disarm() {
-    [ -f "$SNAP" ] || return 0
-    # Restore the visible pills' colors, then thaw every script back to its
-    # original updates value (a thawed updater repaints to live state, which
-    # matches the snapshot we just replayed).
-    local restore thaw
-    restore=$(jq -r '.[] | select(.vis) | "--set \(.name) background.color=\(.bg) icon.color=\(.icon) label.color=\(.label)"' "$SNAP" | tr '\n' ' ')
-    thaw=$(jq -r '.[] | "--set \(.name) updates=\(.updates)"' "$SNAP" | tr '\n' ' ')
-    eval "sketchybar $restore $thaw"
+do_arm() {
+    sketchybar --query apple.logo | jq '{
+        icon: .icon.value, font: .icon.font,
+        color: .icon.color, bg: .geometry.background.color }' > "$SNAP"
+
+    local focused open
+    focused=$(aerospace list-workspaces --focused 2>/dev/null)
+    open=$(aerospace list-workspaces --monitor all --empty no 2>/dev/null)
+
+    # Hide + freeze the workspace pills and their batch-updater, hide front-app.
+    local hide="" sp
+    for sp in $(spaces); do hide+=" --set $sp drawing=off updates=off"; done
+    hide+=" --set aerospace_watcher updates=off --set front_app drawing=off"
+
+    # Color the picker; collect open/active first for the left-ward ordering.
+    local colors="" active="" closed=""
+    for entry in $LAUNCHERS; do
+        local key=${entry%%:*} ws=${entry#*:}
+        if [ -n "$ws" ] && [ "$ws" = "$focused" ]; then
+            colors+=" --set launcher.$key drawing=on background.color=$MAUVE icon.color=$BASE"
+            active+=" launcher.$key"
+        elif [ -n "$ws" ] && grep -qx "$ws" <<<"$open"; then
+            colors+=" --set launcher.$key drawing=on background.color=$SURFACE0 icon.color=$GREEN"
+            active+=" launcher.$key"
+        else
+            colors+=" --set launcher.$key drawing=on background.color=$MANTLE icon.color=$OVERLAY0"
+            closed+=" launcher.$key"
+        fi
+    done
+
+    eval "sketchybar $hide $colors"
+
+    # Lead glyph (separate call: the byte-glyph + spaced font name need quoting).
+    sketchybar --set apple.logo icon="$ARROW" icon.font="Hack Nerd Font:Bold:17.0" \
+               icon.color=$BASE background.color=$MAUVE
+
+    # Move open/active hints to the left, original relative order preserved.
+    sketchybar --reorder $active $closed
+}
+
+do_disarm() {
+    # Query occupancy up front so the whole left side repaints in ONE batch —
+    # no intermediate frame (the old mid-disarm aerospace_watcher.sh call left a
+    # visible gap that flashed).
+    local focused open
+    focused=$(aerospace list-workspaces --focused 2>/dev/null)
+    open=$(aerospace list-workspaces --monitor all --empty no 2>/dev/null)
+
+    local a="" sp ws
+    # Hide the picker bubbles.
+    for entry in $LAUNCHERS; do a+=" --set launcher.${entry%%:*} drawing=off"; done
+    # Thaw + repaint the workspace pills to live occupancy (mirrors space.sh).
+    for sp in $(spaces); do
+        ws=${sp#space.}
+        if [ "$ws" = "$focused" ]; then
+            a+=" --set $sp updates=when_shown drawing=on background.color=$MAUVE icon.color=$BASE label.color=$BASE"
+        elif grep -qx "$ws" <<<"$open"; then
+            a+=" --set $sp updates=when_shown drawing=on background.color=$SURFACE0 icon.color=$TEXT label.color=$TEXT"
+        else
+            a+=" --set $sp updates=when_shown drawing=off"
+        fi
+    done
+    a+=" --set aerospace_watcher updates=on --set front_app drawing=on"
+
+    # Restore the Apple logo (glyph/font from the snapshot) in the SAME batch so
+    # the left side repaints in a single frame.
+    local ai af ac ab
+    ai=$(jq -r '.icon'  "$SNAP"); af=$(jq -r '.font'  "$SNAP")
+    ac=$(jq -r '.color' "$SNAP"); ab=$(jq -r '.bg'    "$SNAP")
+    a+=" --set apple.logo icon=$ai icon.font='$af' icon.color=$ac background.color=$ab"
+
+    eval "sketchybar $a"
     rm -f "$SNAP"
 }
 
+# Drive the bar toward the latest desired state, re-reading STATE each pass so
+# the LAST writer wins even if it wrote while we were mid-render (caps->letter
+# fires `on` then `off`; the trailing `off` always settles us back to normal).
+# SNAP present == armed, absent == normal, so steady-state passes are no-ops.
+reconcile() {
+    acquire_lock
+    local desired n=0
+    while [ $n -lt 6 ]; do
+        n=$((n + 1))
+        desired=$(cat "$STATE" 2>/dev/null)
+        if [ "$desired" = on ] && [ ! -f "$SNAP" ]; then
+            do_arm
+        elif [ "$desired" = off ] && [ -f "$SNAP" ]; then
+            do_disarm
+        else
+            break
+        fi
+    done
+}
+
 case "$1" in
-    on)  arm ;;
-    off) disarm ;;
+    on)  echo on  > "$STATE"; reconcile ;;
+    off) echo off > "$STATE"; reconcile ;;
     *)   echo "usage: $0 on|off" >&2; exit 1 ;;
 esac

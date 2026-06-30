@@ -75,8 +75,6 @@ alt-shift-3 = 'move-node-to-workspace 3'
 # 4
 alt-4 = 'workspace 4'
 alt-shift-4 = 'move-node-to-workspace 4'
-# Code
-alt-shift-c = 'move-node-to-workspace C'
 # Terminal
 alt-shift-t = 'move-node-to-workspace T'
 # Notes
@@ -85,10 +83,6 @@ alt-shift-n = 'move-node-to-workspace N'
 alt-shift-s = 'move-node-to-workspace S'
 # Browser
 alt-shift-b = 'move-node-to-workspace B'
-# Gemini
-alt-shift-g = 'move-node-to-workspace G'
-# Linear
-alt-shift-l = 'move-node-to-workspace L'
 # Figma
 alt-shift-f = 'move-node-to-workspace F'
 # Music
@@ -107,19 +101,16 @@ alt-shift-d = 'move-node-to-workspace D'
 # app (no workspace arg = open/focus in the current workspace). These physical
 # cmd-alt-ctrl-shift chords are a fallback for when useNativeHyper is off; the
 # caps-tap leader below is the usual path.
-cmd-alt-ctrl-shift-c = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Cursor" C'
 cmd-alt-ctrl-shift-t = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Ghostty" T'
 cmd-alt-ctrl-shift-s = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Slack" S'
 cmd-alt-ctrl-shift-b = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Zen" B'
-cmd-alt-ctrl-shift-g = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Google Gemini" G'
-cmd-alt-ctrl-shift-l = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Linear" L'
 cmd-alt-ctrl-shift-f = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Figma" F'
 cmd-alt-ctrl-shift-m = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Music" M'
 cmd-alt-ctrl-shift-h = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Swather" H'
 cmd-alt-ctrl-shift-k = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Claude" K'
 cmd-alt-ctrl-shift-d = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Notion Calendar" D'
 cmd-alt-ctrl-shift-n = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Obsidian" N'
-cmd-alt-ctrl-shift-r = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" N'
+cmd-alt-ctrl-shift-r = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" R'
 # Unassigned — opens/focuses in the current workspace (no workspace switch).
 cmd-alt-ctrl-shift-p = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Passwords"'
 
@@ -167,28 +158,17 @@ esc = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mo
 # (palette is on cmd+space now, so the old space->palette leader is gone.)
 v = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose --clipboard', 'mode main']
 e = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose --emoji', 'mode main']
-c = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Cursor" C', 'mode main']
 t = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Ghostty" T', 'mode main']
 s = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Slack" S', 'mode main']
 b = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Zen" B', 'mode main']
-g = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Google Gemini" G', 'mode main']
-l = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Linear" L', 'mode main']
 f = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Figma" F', 'mode main']
 m = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Music" M', 'mode main']
 h = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Swather" H', 'mode main']
 k = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Claude" K', 'mode main']
 d = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Notion Calendar" D', 'mode main']
 n = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Obsidian" N', 'mode main']
-r = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" N', 'mode main']
+r = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" R', 'mode main']
 p = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Passwords"', 'mode main']
-
-[[on-window-detected]]
-if.app-id = 'com.todesktop.230313mzl4w4u92'
-run = 'move-node-to-workspace C'
-
-[[on-window-detected]]
-if.app-id = ' com.google.Chrome.app.caidcmannjgahlnbpmidmiecjcoiiigg'
-run = 'move-node-to-workspace G'
 
 [[on-window-detected]]
 if.app-id = 'com.mitchellh.ghostty'
@@ -206,20 +186,13 @@ if.window-title-regex-substring = '^(?!quick-terminal).*$'
 run = 'move-node-to-workspace T'
 
 [[on-window-detected]]
-if.app-id = 'com.apple.Notes'
-run = 'move-node-to-workspace N'
-[[on-window-detected]]
 if.app-id = 'com.culturedcode.ThingsMac'
-run = 'move-node-to-workspace N'
+run = 'move-node-to-workspace R'
 [[on-window-detected]]
 if.app-id = 'md.obsidian'
 run = 'move-node-to-workspace N'
 
 [[on-window-detected]]
-if.app-id = 'com.linear'
-run = 'move-node-to-workspace L'
-[[on-window-detected]]
-
 if.app-id = 'com.tinyspeck.slackmacgap'
 run = 'move-node-to-workspace S'
 
