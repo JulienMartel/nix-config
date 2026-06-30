@@ -208,6 +208,17 @@ sketchybar --add item aerospace_watcher left \
         script="$HOME/.config/sketchybar/plugins/aerospace_watcher.sh" \
     --subscribe aerospace_watcher front_app_switched space_change
 
+# Empty-workspace reaction — when a ⌘Q leaves the focused workspace empty, pull
+# back to the most recent populated workspace ("gravity") and keep the emptied
+# one out of alt+tab. Non-drawing; see plugins/empty_workspace.sh for the
+# quit-vs-switch detection and the back-and-forth re-pointing.
+sketchybar --add item empty_workspace left \
+    --set empty_workspace \
+        drawing=off \
+        updates=on \
+        script="$HOME/.config/sketchybar/plugins/empty_workspace.sh" \
+    --subscribe empty_workspace front_app_switched
+
 # Front app name
 sketchybar --add item front_app left \
     --set front_app \
