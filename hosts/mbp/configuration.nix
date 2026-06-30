@@ -30,11 +30,10 @@ let
     target
   ];
 
-  # Option B hyper key: remap Caps Lock -> F18 (pure hidutil, native to macOS)
-  # so AeroSpace can use F18 as the trigger for its `launch` leader mode.
-  # While true, this SUPERSEDES Raycast's caps->hyper — caps becomes F18 at the
-  # HID layer before Raycast ever sees it, so the two can't share caps. Flip to
-  # false and rebuild to instantly hand caps back to Raycast.
+  # Hyper key: remap Caps Lock -> F18 (pure hidutil, native to macOS) so AeroSpace
+  # can use F18 as the trigger for its `launch` leader mode. Set to false and
+  # rebuild to disable the remap (caps reverts to plain Caps Lock and the leader
+  # is unavailable).
   useNativeHyper = true;
 in
 {
@@ -124,7 +123,6 @@ in
       "pear-devs/pear/pear-desktop"
       "protonvpn"
       "qfinder-pro"
-      "raycast"
       "slack"
       "tailscale-app"
       "zen"

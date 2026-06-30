@@ -11,9 +11,8 @@ flake.nix                      # entry point (inputs + darwinConfigurations.mbp)
 hosts/mbp/configuration.nix    # system: packages, Homebrew casks, macOS defaults, launchd
 home/home.nix                  # user: shell, programs, dotfile wiring
 dotfiles/                      # raw configs symlinked by home.nix
-  aerospace/  sketchybar/  ghostty/  zellij/  raycast/
+  aerospace/  sketchybar/  ghostty/  zellij/
 pkgs/                          # local packages (choose palette + choose-commands)
-scripts/                       # raycast import/export helpers
 ```
 
 ## New machine
@@ -49,10 +48,6 @@ darwin-rebuild --rollback
 ```
 
 Packages are pinned in `flake.lock` (on `nixpkgs-unstable`), so updates only happen when you run `nix flake update` — reproducible and reversible.
-
-## Raycast
-
-Raycast settings live in `dotfiles/raycast/` as exported JSON. `scripts/raycast-export.sh` saves the current config; `scripts/raycast-import.sh` restores it on a new machine. (Raycast Pro Cloud Sync is the no-fuss alternative.)
 
 ## Requirements
 
