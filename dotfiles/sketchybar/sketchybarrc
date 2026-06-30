@@ -158,7 +158,7 @@ sketchybar --add item apple.reload popup.apple.logo \
 
 # Spaces - All AeroSpace workspaces
 sketchybar --add event aerospace_workspace_change
-WORKSPACES=("1" "2" "3" "4" "C" "T" "N" "S" "B" "G" "L" "F" "M" "K" "D")
+WORKSPACES=("1" "2" "3" "4" "T" "N" "S" "B" "K" "D")
 
 for workspace in "${WORKSPACES[@]}"
 do
@@ -200,8 +200,28 @@ sketchybar --add item front_app left \
         script="$HOME/.config/sketchybar/plugins/front_app.sh" \
     --subscribe front_app front_app_switched
 
+# Launch-mode picker — one bubble per leader hotkey, hidden until `launch` mode.
+# plugins/launch_mode.sh shows + colors these (focused=mauve / open=green /
+# closed=grey), hides the workspace + front_app pills, and turns the Apple logo
+# into a → "go-to" glyph. The key list mirrors [mode.launch.binding] in
+# aerospace.toml — keep them in sync.
+LAUNCHER_KEYS=("t" "s" "b" "l" "f" "m" "h" "k" "d" "n" "r" "p")
+for key in "${LAUNCHER_KEYS[@]}"; do
+    GLYPH=$(echo "$key" | tr '[:lower:]' '[:upper:]')
+    sketchybar --add item launcher.$key left \
+        --set launcher.$key \
+            drawing=off \
+            icon="$GLYPH" \
+            icon.padding_left=10 \
+            icon.padding_right=10 \
+            label.drawing=off \
+            background.color=$MANTLE \
+            background.corner_radius=12 \
+            background.height=28
+done
+
 # Leader-mode ("launch") feedback is handled by plugins/launch_mode.sh, which
-# dims the whole bar and glows the Apple logo mauve — no dedicated pill.
+# dims the bar, swaps the left side for the picker above, and glows the → lead.
 
 ##### RIGHT SIDE #####
 
