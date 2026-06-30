@@ -160,9 +160,9 @@ shift-down = ['volume set 0', 'mode main']
 [mode.launch.binding]
 esc = ['exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=off', 'mode main']
 # Non-launch actions that used to be Raycast hyper shortcuts, routed through the
-# leader so they survive caps->F18. choose = custom palette; v = Raycast clipboard.
+# leader so they survive caps->F18. space = custom palette; v = choose clipboard history.
 space = ['exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose-palette', 'mode main']
-v = ['exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=off', 'exec-and-forget open "raycast://extensions/raycast/clipboard-history/clipboard-history"', 'mode main']
+v = ['exec-and-forget /opt/homebrew/bin/sketchybar --set mode_indicator drawing=off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose --clipboard', 'mode main']
 c = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Cursor" C', 'mode main']
 t = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Ghostty" T', 'mode main']
 s = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Slack" S', 'mode main']

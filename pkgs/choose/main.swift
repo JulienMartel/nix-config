@@ -254,6 +254,8 @@ struct Commit {
 
 // MARK: - State
 
+enum DisplayMode { case list, clipboard }
+
 final class DaemonState: ObservableObject {
     @Published var items: [ChooseItem] = []
     @Published var itemsSorted: [ChooseItem] = []   // empty-query order
@@ -262,9 +264,15 @@ final class DaemonState: ObservableObject {
     @Published var isVisible: Bool = false
     @Published var requestID = UUID()
     @Published var metrics: LayoutMetrics = .standard
+    @Published var displayMode: DisplayMode = .list
+    @Published var clipEntries: [ClipEntry] = []
 
     var isLauncher = false
     var maxEmpty = Int.max
+
+    // The clipboard view is a fixed-size two-pane window; everything else follows
+    // the launcher's windowMode width.
+    var targetWidth: CGFloat { displayMode == .clipboard ? ClipboardLayout.width : metrics.width }
 
     let frecency = Frecency()
     private var frecencyScores: [UUID: Double] = [:]
@@ -282,6 +290,20 @@ final class DaemonState: ObservableObject {
         isLauncher = false
         maxEmpty = Int.max
         requestID = UUID()
+        displayMode = .list
+        clipEntries = []
+    }
+
+    // Load the clipboard history view from the daemon's own store.
+    func loadClipboard(placeholder: String?) {
+        displayMode = .clipboard
+        clipEntries = ClipboardStore.shared.entries()
+        placeholderText = placeholder ?? "Clipboard history…"
+    }
+
+    func commitClip(_ entry: ClipEntry) {
+        ClipboardStore.shared.restore(entry)
+        onCommit?(Commit(clientString: "", disposition: .hideNow, appLaunch: nil))
     }
 
     func load(lines: [String], placeholder: String?, icon: String?, launcher: Bool, maxEmpty: Int?) {
@@ -368,23 +390,47 @@ struct LayoutMetrics {
     let searchIconSize: CGFloat
     let searchFontSize: CGFloat
     let topInsetFraction: CGFloat   // distance from top of screen, as a fraction of height
+    // When true, an empty query shows no list until the user types or presses ↓
+    // (Raycast's compact behaviour). When false, the empty query shows the top-N.
+    let hideEmptyList: Bool
 
     static let standard = LayoutMetrics(
         width: 720, rowHeight: 46, maxVisibleItems: 8, headerHeight: 60,
-        searchIconSize: 18, searchFontSize: 20, topInsetFraction: 0.16)
+        searchIconSize: 18, searchFontSize: 20, topInsetFraction: 0.16,
+        hideEmptyList: false)
 
     static let compact = LayoutMetrics(
         width: 600, rowHeight: 42, maxVisibleItems: 6, headerHeight: 52,
-        searchIconSize: 16, searchFontSize: 18, topInsetFraction: 0.20)
+        searchIconSize: 16, searchFontSize: 18, topInsetFraction: 0.20,
+        hideEmptyList: true)
+}
+
+// Fixed geometry for the clipboard history's two-pane window (independent of the
+// launcher's windowMode).
+enum ClipboardLayout {
+    static let width: CGFloat = 820
+    static let height: CGFloat = 480
+    static let listWidth: CGFloat = 300
+    static let rowHeight: CGFloat = 56
 }
 
 // User settings, read from ~/.config/choose/config.json. Parsed leniently via
 // JSONSerialization so unknown/extra keys (added by future versions) never break
 // an older binary, and any missing/malformed value falls back to a default.
+struct ClipboardSettings {
+    var enabled: Bool = true
+    var maxEntries: Int = 200
+    // Copies whose frontmost app matches one of these bundle ids are never
+    // recorded (belt-and-suspenders on top of the org.nspasteboard.ConcealedType
+    // filter, which already drops password-manager copies).
+    var blacklistBundleIds: [String] = ["com.apple.Passwords"]
+}
+
 struct Settings {
     enum WindowMode: String { case standard = "default", compact }
 
     var windowMode: WindowMode = .standard
+    var clipboard = ClipboardSettings()
 
     var metrics: LayoutMetrics {
         switch windowMode {
@@ -408,7 +454,184 @@ struct Settings {
         if let wm = obj["windowMode"] as? String, let mode = WindowMode(rawValue: wm) {
             s.windowMode = mode
         }
+        if let cb = obj["clipboard"] as? [String: Any] {
+            if let e = cb["enabled"] as? Bool { s.clipboard.enabled = e }
+            if let m = cb["maxEntries"] as? Int { s.clipboard.maxEntries = m }
+            if let bl = cb["blacklistBundleIds"] as? [String] { s.clipboard.blacklistBundleIds = bl }
+        }
         return s
+    }
+}
+
+// MARK: - Clipboard History
+
+enum ClipKind: String, Codable { case text, image }
+
+struct ClipEntry: Codable, Identifiable {
+    let id: String          // uuid; also the blob filename stem
+    let kind: ClipKind
+    let ts: Double          // unix time captured
+    let appName: String?    // frontmost app at copy time
+    let bundleId: String?
+    let preview: String     // one-line text snippet, or "1920 × 1080" for images
+    let hash: String        // content hash, for dedup
+    var width: Int?
+    var height: Int?
+}
+
+// Records pasteboard history into ~/.local/share/choose/clipboard and serves it
+// to the picker. Lives inside the long-running daemon, polling changeCount —
+// NSPasteboard has no change notification. Reading/writing the pasteboard needs
+// no special permissions.
+final class ClipboardStore {
+    static let shared = ClipboardStore()
+
+    private let dir: URL
+    private let blobs: URL
+    private let indexURL: URL
+    private let queue = DispatchQueue(label: "choose.clipboard")
+    private var entriesCache: [ClipEntry] = []
+    private var lastChangeCount: Int
+
+    // de-facto nspasteboard.org markers that mean "don't record me".
+    private static let skipTypes = [
+        "org.nspasteboard.ConcealedType",
+        "org.nspasteboard.TransientType",
+        "org.nspasteboard.AutoGeneratedType",
+    ].map { NSPasteboard.PasteboardType($0) }
+
+    private init() {
+        dir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".local/share/choose/clipboard")
+        blobs = dir.appendingPathComponent("blobs")
+        indexURL = dir.appendingPathComponent("index.json")
+        lastChangeCount = NSPasteboard.general.changeCount   // ignore whatever's already there
+        try? FileManager.default.createDirectory(at: blobs, withIntermediateDirectories: true)
+        load()
+    }
+
+    // MARK: Public
+
+    func entries() -> [ClipEntry] { queue.sync { entriesCache } }
+
+    func text(for entry: ClipEntry) -> String {
+        (try? String(contentsOf: blobURL(entry, ext: "txt"), encoding: .utf8)) ?? entry.preview
+    }
+
+    func image(for entry: ClipEntry) -> NSImage? {
+        NSImage(contentsOf: blobURL(entry, ext: "png"))
+    }
+
+    // Put the entry back on the system clipboard. We bump lastChangeCount past
+    // our own write so the poller doesn't re-record it.
+    func restore(_ entry: ClipEntry) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        switch entry.kind {
+        case .text: pb.setString(text(for: entry), forType: .string)
+        case .image: if let img = image(for: entry) { pb.writeObjects([img]) }
+        }
+        lastChangeCount = pb.changeCount
+    }
+
+    // Called on a timer from the daemon.
+    func poll() {
+        let pb = NSPasteboard.general
+        guard pb.changeCount != lastChangeCount else { return }
+        lastChangeCount = pb.changeCount
+        capture(from: pb)
+    }
+
+    // MARK: Capture
+
+    private func capture(from pb: NSPasteboard) {
+        let types = Set(pb.types ?? [])
+        if !Self.skipTypes.allSatisfy({ !types.contains($0) }) { return }   // concealed/transient
+
+        let settings = Settings.load().clipboard
+        let front = NSWorkspace.shared.frontmostApplication
+        let bundleId = front?.bundleIdentifier
+        if let b = bundleId, settings.blacklistBundleIds.contains(b) { return }
+        let appName = front?.localizedName
+
+        // Prefer non-empty text; otherwise an image.
+        if let s = pb.string(forType: .string),
+           !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            add(makeText(s, appName: appName, bundleId: bundleId), cap: settings.maxEntries)
+        } else if let img = NSImage(pasteboard: pb),
+                  let png = img.pngData() {
+            add(makeImage(png, image: img, appName: appName, bundleId: bundleId),
+                cap: settings.maxEntries)
+        }
+    }
+
+    private func makeText(_ s: String, appName: String?, bundleId: String?) -> (ClipEntry, Data) {
+        let data = Data(s.utf8)
+        let snippet = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\n", with: " ")
+        let preview = String(snippet.prefix(140))
+        let entry = ClipEntry(id: UUID().uuidString, kind: .text, ts: Date().timeIntervalSince1970,
+                              appName: appName, bundleId: bundleId, preview: preview,
+                              hash: Self.fnv1a(data), width: nil, height: nil)
+        return (entry, data)
+    }
+
+    private func makeImage(_ png: Data, image: NSImage, appName: String?, bundleId: String?) -> (ClipEntry, Data) {
+        let w = Int(image.size.width), h = Int(image.size.height)
+        let entry = ClipEntry(id: UUID().uuidString, kind: .image, ts: Date().timeIntervalSince1970,
+                              appName: appName, bundleId: bundleId, preview: "\(w) × \(h)",
+                              hash: Self.fnv1a(png), width: w, height: h)
+        return (entry, png)
+    }
+
+    private func add(_ made: (ClipEntry, Data), cap: Int) {
+        let (entry, data) = made
+        queue.sync {
+            // Dedup against the most recent entry.
+            if entriesCache.first?.hash == entry.hash { return }
+            let ext = entry.kind == .text ? "txt" : "png"
+            try? data.write(to: blobURL(entry, ext: ext), options: .atomic)
+            entriesCache.insert(entry, at: 0)
+            while entriesCache.count > max(cap, 1) {
+                let dropped = entriesCache.removeLast()
+                try? FileManager.default.removeItem(at: blobURL(dropped, ext: dropped.kind == .text ? "txt" : "png"))
+            }
+            save()
+        }
+    }
+
+    // MARK: Persistence
+
+    private func blobURL(_ entry: ClipEntry, ext: String) -> URL {
+        blobs.appendingPathComponent("\(entry.id).\(ext)")
+    }
+
+    private func load() {
+        guard let data = try? Data(contentsOf: indexURL),
+              let decoded = try? JSONDecoder().decode([ClipEntry].self, from: data) else { return }
+        entriesCache = decoded
+    }
+
+    private func save() {
+        guard let data = try? JSONEncoder().encode(entriesCache) else { return }
+        try? data.write(to: indexURL, options: .atomic)
+    }
+
+    // Stable 64-bit FNV-1a hash (NOT Swift's per-run hashValue) so dedup works
+    // across daemon restarts.
+    private static func fnv1a(_ data: Data) -> String {
+        var h: UInt64 = 0xcbf29ce484222325
+        for b in data { h = (h ^ UInt64(b)) &* 0x100000001b3 }
+        return String(h, radix: 16)
+    }
+}
+
+extension NSImage {
+    // PNG encoding of the image's bitmap representation.
+    func pngData() -> Data? {
+        guard let tiff = tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff) else { return nil }
+        return rep.representation(using: .png, properties: [:])
     }
 }
 
@@ -481,7 +704,7 @@ final class ChooseUI {
         cancelLinger()
         let fresh = !window.isVisible
         let size = hosting.fittingSize
-        let target = NSSize(width: state.metrics.width, height: size.height)
+        let target = NSSize(width: state.targetWidth, height: size.height)
 
         if fresh {
             window.setContentSize(target)
@@ -519,7 +742,7 @@ final class ChooseUI {
         let oldTop = window.frame.maxY
         var f = window.frame
         f.size.height = h
-        f.size.width = state.metrics.width
+        f.size.width = state.targetWidth
         f.origin.y = oldTop - h
         window.setFrame(f, display: true)
         hosting.frame = window.contentView?.bounds ?? .zero
@@ -606,6 +829,7 @@ struct Invocation {
     var placeholder: String?
     var icon: String?
     var launcher = false
+    var clipboard = false
     var maxEmpty: Int?
 }
 
@@ -621,6 +845,13 @@ enum DaemonMode {
         ui.window.orderOut(nil)
 
         AppScanner.shared.warm()
+
+        // Clipboard history watcher: poll the pasteboard while the daemon lives.
+        if Settings.load().clipboard.enabled {
+            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                ClipboardStore.shared.poll()
+            }
+        }
 
         let cleanupAndExit: @convention(c) (Int32) -> Void = { _ in
             unlink(SocketConfig.path); _exit(0)
@@ -691,6 +922,7 @@ enum DaemonMode {
             if p.count > 1 && !p[1].isEmpty { inv.placeholder = p[1] }
             if p.count > 2 && !p[2].isEmpty { inv.icon = p[2] }
             if p.count > 3 && p[3] == "launcher" { inv.launcher = true }
+            if p.count > 3 && p[3] == "clipboard" { inv.clipboard = true }
             if p.count > 4, let m = Int(p[4]) { inv.maxEmpty = m }
             itemLines = Array(lines.dropFirst())
         }
@@ -702,8 +934,12 @@ enum DaemonMode {
         DispatchQueue.main.async {
             state.reset()
             state.metrics = metrics
-            state.load(lines: itemLines, placeholder: inv.placeholder, icon: inv.icon,
-                       launcher: inv.launcher, maxEmpty: inv.maxEmpty)
+            if inv.clipboard {
+                state.loadClipboard(placeholder: inv.placeholder)
+            } else {
+                state.load(lines: itemLines, placeholder: inv.placeholder, icon: inv.icon,
+                           launcher: inv.launcher, maxEmpty: inv.maxEmpty)
+            }
             ui.resultSink = { r in result = r; semaphore.signal() }
             ui.present()
         }
@@ -730,6 +966,7 @@ enum ClientMode {
             case "-p", "--placeholder": if !args.isEmpty { inv.placeholder = args.removeFirst() }
             case "-i", "--icon":        if !args.isEmpty { inv.icon = args.removeFirst() }
             case "--launcher":          inv.launcher = true
+            case "--clipboard":         inv.clipboard = true
             case "--max-empty":         if !args.isEmpty { inv.maxEmpty = Int(args.removeFirst()) }
             default: break
             }
@@ -760,7 +997,7 @@ enum ClientMode {
         }) == 0
         if !connected { close(fd); runDirect(lines: stdinLines, inv: inv); return }
 
-        let mode = inv.launcher ? "launcher" : ""
+        let mode = inv.launcher ? "launcher" : (inv.clipboard ? "clipboard" : "")
         let maxEmpty = inv.maxEmpty.map(String.init) ?? ""
         var payload = "CONFIG\t\(inv.placeholder ?? "")\t\(inv.icon ?? "")\t\(mode)\t\(maxEmpty)\n"
         for line in stdinLines { payload += line + "\n" }
@@ -795,8 +1032,12 @@ enum ClientMode {
         let state = DaemonState()
         let ui = ChooseUI(state: state)
         state.metrics = Settings.load().metrics
-        state.load(lines: lines, placeholder: inv.placeholder, icon: inv.icon,
-                   launcher: inv.launcher, maxEmpty: inv.maxEmpty)
+        if inv.clipboard {
+            state.loadClipboard(placeholder: inv.placeholder)
+        } else {
+            state.load(lines: lines, placeholder: inv.placeholder, icon: inv.icon,
+                       launcher: inv.launcher, maxEmpty: inv.maxEmpty)
+        }
 
         ui.resultSink = { result in
             if result.isEmpty { exit(1) }
@@ -827,16 +1068,20 @@ struct ContentView: View {
     @ObservedObject var state: DaemonState
     @State private var query = ""
     @State private var selectedIndex = 0
+    @State private var revealed = false   // compact mode: list shown after ↓ / typing
 
     var rowHeight: CGFloat { state.metrics.rowHeight }
     var maxVisibleItems: Int { state.metrics.maxVisibleItems }
 
+    var queryIsEmpty: Bool {
+        query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var filtered: [ChooseItem] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
+        if queryIsEmpty {
             return Array(state.itemsSorted.prefix(state.maxEmpty))
         }
-        let q = Array(trimmed.lowercased())
+        let q = Array(query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
         let scored = state.items.compactMap { item -> (ChooseItem, Double)? in
             guard let s = state.matchScore(item, query: q) else { return nil }
             return (item, s)
@@ -844,16 +1089,33 @@ struct ContentView: View {
         return scored.sorted { $0.1 > $1.1 }.map { $0.0 }
     }
 
+    // In compact mode an empty query hides the list until the user types or ↓.
+    var showList: Bool {
+        if !queryIsEmpty { return true }
+        if !state.metrics.hideEmptyList { return true }
+        return revealed
+    }
+
+    var visible: [ChooseItem] { showList ? filtered : [] }
+
     var selectedItem: ChooseItem? {
-        guard selectedIndex < filtered.count else { return nil }
-        return filtered[selectedIndex]
+        guard selectedIndex < visible.count else { return nil }
+        return visible[selectedIndex]
     }
 
     var listHeight: CGFloat {
-        CGFloat(min(filtered.count, maxVisibleItems)) * rowHeight
+        CGFloat(min(visible.count, maxVisibleItems)) * rowHeight
     }
 
     var body: some View {
+        if state.displayMode == .clipboard {
+            ClipboardView(state: state)
+        } else {
+            launcherBody
+        }
+    }
+
+    var launcherBody: some View {
         VStack(spacing: 0) {
             // Search header
             HStack(spacing: 12) {
@@ -863,23 +1125,24 @@ struct ContentView: View {
                 CustomTextField(
                     text: $query,
                     selectedIndex: $selectedIndex,
-                    itemCount: filtered.count,
+                    itemCount: visible.count,
                     placeholder: state.placeholderText,
                     fontSize: state.metrics.searchFontSize,
                     state: state,
-                    onSubmit: { action in select(action: action) }
+                    onSubmit: { action in select(action: action) },
+                    onRevealDown: { revealed = true }
                 )
             }
             .padding(.horizontal, 20)
             .frame(height: state.metrics.headerHeight)
 
-            if !filtered.isEmpty {
+            if !visible.isEmpty {
                 Divider().background(Theme.surface1.opacity(0.5))
 
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(Array(filtered.enumerated()), id: \.element.id) { i, item in
+                            ForEach(Array(visible.enumerated()), id: \.element.id) { i, item in
                                 ItemRow(item: item, isSelected: i == selectedIndex)
                                     .frame(height: rowHeight)
                                     .id(item.id)
@@ -890,7 +1153,7 @@ struct ContentView: View {
                     }
                     .frame(height: listHeight + 12)
                     .onChange(of: selectedIndex) {
-                        if selectedIndex < filtered.count { proxy.scrollTo(filtered[selectedIndex].id) }
+                        if selectedIndex < visible.count { proxy.scrollTo(visible[selectedIndex].id) }
                     }
                 }
 
@@ -904,18 +1167,198 @@ struct ContentView: View {
         .frame(width: state.metrics.width)
         .fixedSize(horizontal: false, vertical: true)
         .background(Theme.base.opacity(0.55))
-        .onChange(of: query) { selectedIndex = 0 }
-        .onChange(of: filtered.count) { state.onResize?() }
-        .onChange(of: state.requestID) { query = ""; selectedIndex = 0; state.onResize?() }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .onChange(of: query) { selectedIndex = 0; revealed = false }
+        .onChange(of: visible.count) { state.onResize?() }
+        .onChange(of: state.requestID) { query = ""; selectedIndex = 0; revealed = false; state.onResize?() }
     }
 
     func select(action: String) {
-        if filtered.isEmpty {
+        if visible.isEmpty {
             if !query.isEmpty { state.commitText(query) } else { state.cancel() }
             return
         }
-        guard selectedIndex < filtered.count else { state.cancel(); return }
-        state.commit(filtered[selectedIndex], action: action)
+        guard selectedIndex < visible.count else { state.cancel(); return }
+        state.commit(visible[selectedIndex], action: action)
+    }
+}
+
+// MARK: - Clipboard View
+
+func relativeTime(_ ts: Double) -> String {
+    let s = max(0, Date().timeIntervalSince1970 - ts)
+    if s < 60 { return "just now" }
+    if s < 3600 { return "\(Int(s / 60))m ago" }
+    if s < 86400 { return "\(Int(s / 3600))h ago" }
+    return "\(Int(s / 86400))d ago"
+}
+
+// Resolves a source app's icon from its bundle id (cached), falling back to an
+// SF Symbol by clip kind.
+final class AppIconResolver {
+    static let shared = AppIconResolver()
+    private let cache = NSCache<NSString, NSImage>()
+
+    func icon(forBundleId bundleId: String?, kind: ClipKind) -> NSImage {
+        if let b = bundleId {
+            if let c = cache.object(forKey: b as NSString) { return c }
+            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: b) {
+                let icon = NSWorkspace.shared.icon(forFile: url.path)
+                cache.setObject(icon, forKey: b as NSString)
+                return icon
+            }
+        }
+        let name = kind == .image ? "photo" : "doc.on.clipboard"
+        return NSImage(systemSymbolName: name, accessibilityDescription: nil) ?? NSImage()
+    }
+}
+
+struct ClipboardView: View {
+    @ObservedObject var state: DaemonState
+    @State private var query = ""
+    @State private var selectedIndex = 0
+
+    var filtered: [ClipEntry] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return state.clipEntries }
+        return state.clipEntries.filter {
+            $0.preview.lowercased().contains(q) || ($0.appName?.lowercased().contains(q) ?? false)
+        }
+    }
+
+    var selected: ClipEntry? {
+        guard selectedIndex < filtered.count else { return nil }
+        return filtered[selectedIndex]
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Image(systemName: "doc.on.clipboard")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Theme.subtext)
+                CustomTextField(
+                    text: $query, selectedIndex: $selectedIndex,
+                    itemCount: filtered.count, placeholder: state.placeholderText,
+                    fontSize: 18, state: state, onSubmit: { _ in commit() }
+                )
+            }
+            .padding(.horizontal, 20)
+            .frame(height: 52)
+
+            Divider().background(Theme.surface1.opacity(0.5))
+
+            HStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(filtered.enumerated()), id: \.element.id) { i, entry in
+                                ClipRow(entry: entry, isSelected: i == selectedIndex)
+                                    .id(entry.id)
+                                    .onTapGesture { selectedIndex = i; commit() }
+                            }
+                        }
+                        .padding(.vertical, 6)
+                    }
+                    .onChange(of: selectedIndex) {
+                        if selectedIndex < filtered.count { proxy.scrollTo(filtered[selectedIndex].id) }
+                    }
+                }
+                .frame(width: ClipboardLayout.listWidth)
+
+                Divider().background(Theme.surface1.opacity(0.5))
+
+                ClipPreview(entry: selected)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(maxHeight: .infinity)
+        }
+        .frame(width: ClipboardLayout.width, height: ClipboardLayout.height)
+        .background(Theme.base.opacity(0.55))
+        .onChange(of: query) { selectedIndex = 0 }
+        .onChange(of: state.requestID) { query = ""; selectedIndex = 0 }
+    }
+
+    func commit() {
+        guard let entry = selected else { state.cancel(); return }
+        state.commitClip(entry)
+    }
+}
+
+struct ClipRow: View {
+    let entry: ClipEntry
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(nsImage: AppIconResolver.shared.icon(forBundleId: entry.bundleId, kind: entry.kind))
+                .resizable().aspectRatio(contentMode: .fit)
+                .frame(width: 22, height: 22)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.kind == .image ? "Image — \(entry.preview)" : entry.preview)
+                    .foregroundColor(Theme.text)
+                    .font(.system(size: 13, weight: .medium))
+                    .lineLimit(1)
+                Text([entry.appName, relativeTime(entry.ts)].compactMap { $0 }.joined(separator: " · "))
+                    .foregroundColor(Theme.subtext0)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 4)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: ClipboardLayout.rowHeight)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isSelected ? Theme.mauve.opacity(0.20) : Color.clear)
+                .padding(.horizontal, 6)
+        )
+        .contentShape(Rectangle())
+    }
+}
+
+struct ClipPreview: View {
+    let entry: ClipEntry?
+
+    var body: some View {
+        if let entry = entry {
+            VStack(alignment: .leading, spacing: 0) {
+                if entry.kind == .image, let img = ClipboardStore.shared.image(for: entry) {
+                    ScrollView {
+                        Image(nsImage: img)
+                            .resizable().aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: .infinity)
+                            .padding(16)
+                    }
+                } else {
+                    ScrollView {
+                        Text(ClipboardStore.shared.text(for: entry))
+                            .font(.system(size: 13, design: .monospaced))
+                            .foregroundColor(Theme.text)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                    }
+                }
+                Divider().background(Theme.surface1.opacity(0.5))
+                HStack(spacing: 8) {
+                    Text([entry.appName, entry.kind == .image ? entry.preview : nil]
+                        .compactMap { $0 }.joined(separator: " · "))
+                        .foregroundColor(Theme.subtext)
+                    Spacer()
+                    Text(relativeTime(entry.ts)).foregroundColor(Theme.subtext0)
+                }
+                .font(.system(size: 11))
+                .padding(.horizontal, 16)
+                .frame(height: 32)
+            }
+        } else {
+            Text("No clipboard history yet")
+                .foregroundColor(Theme.subtext0)
+                .font(.system(size: 13))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 }
 
@@ -959,7 +1402,7 @@ struct ItemRow: View {
             }
         }
         .padding(.horizontal, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(isSelected ? Theme.mauve.opacity(0.20) : Color.clear)
@@ -989,24 +1432,41 @@ struct ActionBar: View {
     let actions: [ItemAction]
 
     var body: some View {
-        HStack(spacing: 18) {
+        HStack(spacing: 0) {
             Spacer()
             ForEach(Array(actions.enumerated()), id: \.offset) { index, action in
-                HStack(spacing: 6) {
+                if index > 0 {
+                    Rectangle()
+                        .fill(Theme.surface1.opacity(0.6))
+                        .frame(width: 1, height: 16)
+                        .padding(.horizontal, 14)
+                }
+                HStack(spacing: 7) {
                     Text(action.label)
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundColor(Theme.subtext)
-                    Text(action.displayKey)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(index == 0 ? Theme.base : Theme.text)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(index == 0 ? Theme.blue : Theme.surface2)
-                        .cornerRadius(5)
+                    KeyCap(action.displayKey)
                 }
             }
         }
         .padding(.horizontal, 18)
+    }
+}
+
+struct KeyCap: View {
+    let symbol: String
+    init(_ symbol: String) { self.symbol = symbol }
+
+    var body: some View {
+        Text(symbol)
+            .font(.system(size: 12, weight: .medium, design: .rounded))
+            .foregroundColor(Theme.subtext)
+            .frame(minWidth: 22, minHeight: 22)
+            .padding(.horizontal, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Theme.surface1.opacity(0.5))
+            )
     }
 }
 
@@ -1020,6 +1480,7 @@ struct CustomTextField: NSViewRepresentable {
     let fontSize: CGFloat
     let state: DaemonState
     let onSubmit: (String) -> Void
+    var onRevealDown: () -> Void = {}
 
     func makeNSView(context: Context) -> NSTextField {
         let tf = NSTextField()
@@ -1067,7 +1528,11 @@ struct CustomTextField: NSViewRepresentable {
         func control(_ control: NSControl, textView: NSTextView, doCommandBy sel: Selector) -> Bool {
             switch sel {
             case #selector(NSResponder.moveDown(_:)):
-                if parent.selectedIndex < itemCount - 1 { parent.selectedIndex += 1 }
+                if itemCount == 0 {
+                    parent.onRevealDown()        // compact mode: ↓ reveals the list
+                } else if parent.selectedIndex < itemCount - 1 {
+                    parent.selectedIndex += 1
+                }
                 return true
             case #selector(NSResponder.moveUp(_:)):
                 if parent.selectedIndex > 0 { parent.selectedIndex -= 1 }

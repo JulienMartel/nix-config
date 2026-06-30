@@ -246,7 +246,14 @@
   # options. Edit here and rebuild; choose re-reads the file on each open. Schema
   # is intentionally small for now (parsed leniently in pkgs/choose Settings).
   home.file.".config/choose/config.json".text = builtins.toJSON {
-    windowMode = "default"; # "default" | "compact"
+    windowMode = "compact"; # "default" | "compact"
+    clipboard = {
+      enabled = true;
+      maxEntries = 200;
+      # Copies from these apps are never recorded (on top of the automatic
+      # org.nspasteboard.ConcealedType filter that already drops password copies).
+      blacklistBundleIds = [ "com.apple.Passwords" ];
+    };
   };
 
   # nix-index + comma (run any nix package with ", cmd")
