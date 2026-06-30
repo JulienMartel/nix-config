@@ -808,9 +808,14 @@ final class ChooseUI {
 
         state.onCommit = { [weak self] commit in self?.handleCommit(commit) }
         state.onResize = { [weak self] in
-            // Defer one runloop tick so SwiftUI has committed the new layout
-            // before we measure its fitting height.
-            DispatchQueue.main.async { self?.resizeToFit() }
+            // Resize in the SAME runloop turn as the content change. Forcing
+            // layout makes fittingSize current immediately, so the window and the
+            // SwiftUI content never composite at mismatched sizes — that one-frame
+            // mismatch (small content inside the still-tall window/blur) is the
+            // flash you see when the query filters the list, worst on 0→1 letters.
+            guard let self = self else { return }
+            self.hosting.layoutSubtreeIfNeeded()
+            self.resizeToFit()
         }
 
         NotificationCenter.default.addObserver(
@@ -860,6 +865,7 @@ final class ChooseUI {
     // the list grows/shrinks downward as the query filters it.
     func resizeToFit() {
         guard window.isVisible else { return }
+        hosting.layoutSubtreeIfNeeded()
         let h = hosting.fittingSize.height
         guard h > 1, abs(h - window.frame.height) > 0.5 else { return }
         let oldTop = window.frame.maxY
@@ -867,8 +873,13 @@ final class ChooseUI {
         f.size.height = h
         f.size.width = state.targetWidth
         f.origin.y = oldTop - h
+        // Commit the frame + hosting bounds atomically with implicit animation
+        // off, so the blur material can't animate/flicker through the resize.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         window.setFrame(f, display: true)
         hosting.frame = window.contentView?.bounds ?? .zero
+        CATransaction.commit()
     }
 
     private func positionFresh(size: NSSize) {
