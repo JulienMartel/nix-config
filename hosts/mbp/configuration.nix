@@ -30,6 +30,53 @@ let
     target
   ];
 
+  # Self-signing launch wrapper for the choose daemon. The daemon needs a STABLE
+  # code-signing identity so a macOS Accessibility (TCC) grant survives `choose`
+  # rebuilds (the store path's adhoc cdhash changes every build, losing any grant
+  # keyed to it). The nix build sandbox can't reach the login keychain, so we sign
+  # impurely here, in the user's Aqua session, against a stable writable copy:
+  #   - copy Choose.app out of the (mutable) store path to a fixed location,
+  #   - codesign it with the Apple Development identity already in the keychain
+  #     (stable designated requirement -> TCC grant persists across rebuilds),
+  #   - exec the daemon from that signed copy.
+  # The marker file records which store path the copy was signed from, so we only
+  # re-copy/re-sign when `choose` actually changed. Exec'ing via /bin/bash (boot
+  # volume) also sidesteps the cold-boot exit-78 race that plagues store-path
+  # executables (see withGUIWait above). If signing fails we fall back to the
+  # unsigned store binary so the palette keeps working (just without Accessibility).
+  chooseSignIdentity = "DE2FB6DF7E66864C5F254DACF0AFC1B00685BA5D"; # Apple Development: JULIEN BERNARD MARTEL (6NGM8QR7J9)
+  chooseDaemonLaunch = [
+    "/bin/bash"
+    "-c"
+    ''
+      # Wait for the GUI session (and thus the /nix volume + an unlocked login
+      # keychain) before touching the store path or codesign.
+      until /usr/bin/pgrep -x Dock >/dev/null 2>&1; do sleep 1; done
+      until /usr/bin/pgrep -x Finder >/dev/null 2>&1; do sleep 1; done
+      until /usr/bin/pgrep -x SystemUIServer >/dev/null 2>&1; do sleep 1; done
+
+      STORE_APP="${pkgs.choose}/Applications/Choose.app"
+      STATE_DIR="$HOME/.local/state/choose"
+      DEST="$STATE_DIR/Choose.app"
+      MARKER="$STATE_DIR/.signed-from"
+
+      if [ ! -d "$DEST" ] || [ "$(/bin/cat "$MARKER" 2>/dev/null)" != "$STORE_APP" ]; then
+        /bin/mkdir -p "$STATE_DIR"
+        /bin/rm -rf "$DEST"
+        if /bin/cp -R "$STORE_APP" "$DEST" \
+           && /bin/chmod -R u+w "$DEST" \
+           && /usr/bin/codesign --force --identifier com.local.choose -s "${chooseSignIdentity}" "$DEST"; then
+          /usr/bin/printf '%s' "$STORE_APP" > "$MARKER"
+        else
+          echo "choose: codesign failed, falling back to unsigned store binary (no Accessibility)" >&2
+          /bin/rm -f "$MARKER"
+          exec "$STORE_APP/Contents/MacOS/choose" --daemon
+        fi
+      fi
+      exec "$DEST/Contents/MacOS/choose" --daemon
+    ''
+  ];
+
   # Hyper key: remap Caps Lock -> F18 (pure hidutil, native to macOS) so AeroSpace
   # can use F18 as the trigger for its `launch` leader mode. Set to false and
   # rebuild to disable the remap (caps reverts to plain Caps Lock and the leader
@@ -77,6 +124,11 @@ in
     biome
   ];
 
+  # Fonts managed by nix (linked into /Library/Fonts). sketchybar-app-font is a
+  # ligature font: setting an item's icon to a token like `:ghostty:` renders
+  # that app's logo — used for the workspace pill glyphs in sketchybarrc.
+  fonts.packages = [ pkgs.sketchybar-app-font ];
+
   # Homebrew - declaratively managed GUI apps (casks)
   homebrew = {
     enable = true;
@@ -116,7 +168,6 @@ in
       "google-chrome"
       "insomnia"
       "legcord"
-      "linear"
       "loom"
       "notion-calendar"
       "obsidian"
@@ -189,13 +240,12 @@ in
     CustomUserPreferences."com.apple.commerce".AutoUpdate = true;
   };
 
-  # Choose daemon - persistent background process for instant command palette
+  # Choose daemon - persistent background process for instant command palette.
+  # Launched via the self-signing wrapper (see chooseDaemonLaunch above) so the
+  # daemon runs from a stably-signed copy and can hold an Accessibility grant.
   launchd.user.agents.choose = {
     serviceConfig = {
-      ProgramArguments = [
-        "${pkgs.choose}/Applications/Choose.app/Contents/MacOS/choose"
-        "--daemon"
-      ];
+      ProgramArguments = chooseDaemonLaunch;
       KeepAlive = true;
       RunAtLoad = true;
       ProcessType = "Interactive";

@@ -1,4 +1,8 @@
-{ lib, stdenvNoCC, darwin }:
+{
+  lib,
+  stdenvNoCC,
+  darwin,
+}:
 
 stdenvNoCC.mkDerivation {
   pname = "choose";
@@ -17,6 +21,7 @@ stdenvNoCC.mkDerivation {
     /usr/bin/xcrun swiftc -parse-as-library -o Choose.app/Contents/MacOS/choose main.swift \
       -framework SwiftUI \
       -framework AppKit \
+      -framework ApplicationServices \
       -O
 
     cp Info.plist Choose.app/Contents/

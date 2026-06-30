@@ -1,6 +1,9 @@
 import SwiftUI
 import AppKit
 import CoreText
+import CoreServices
+import ApplicationServices
+import CoreGraphics
 
 // MARK: - Data Types
 
@@ -37,6 +40,7 @@ struct ChooseItem: Identifiable {
     let frecencyKey: String   // stable key for usage history
     let baseBoost: Double     // recency boost for freshly-installed apps
     let group: String?        // optional section header; nil → flat (ungrouped) list
+    let submenu: Bool         // command re-invokes choose (two-step) → loading state
 
     // Generic stdin line: title \t subtitle \t icon \t actions \t group
     // The trailing `group` field is optional; when any line carries one the list
@@ -65,20 +69,21 @@ struct ChooseItem: Identifiable {
 
         return ChooseItem(raw: line, title: title, subtitle: subtitle, icon: icon,
                           actions: actions, kind: .plain, payload: line,
-                          frecencyKey: title, baseBoost: 0, group: group)
+                          frecencyKey: title, baseBoost: 0, group: group, submenu: false)
     }
 
-    // Launcher command registry line: name \t description \t icon \t id
+    // Launcher command registry line: name \t description \t icon \t id \t submenu(1|0)
     static func parseCommand(_ line: String) -> ChooseItem {
         let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
         let title = parts.count > 0 ? parts[0] : line
         let subtitle = parts.count > 1 && !parts[1].isEmpty ? parts[1] : nil
         let icon = parts.count > 2 && !parts[2].isEmpty ? parts[2] : "sparkles"
         let id = parts.count > 3 ? parts[3] : title
+        let submenu = parts.count > 4 && parts[4] == "1"
         return ChooseItem(raw: line, title: title, subtitle: subtitle, icon: icon,
                           actions: [ItemAction(key: "enter", label: "Run")],
                           kind: .command, payload: id,
-                          frecencyKey: "cmd:\(id)", baseBoost: 0, group: nil)
+                          frecencyKey: "cmd:\(id)", baseBoost: 0, group: nil, submenu: submenu)
     }
 
     static func app(name: String, path: String, boost: Double) -> ChooseItem {
@@ -87,7 +92,7 @@ struct ChooseItem: Identifiable {
                           actions: [ItemAction(key: "enter", label: "Open"),
                                     ItemAction(key: "cmd", label: "Reveal in Finder")],
                           kind: .app, payload: path,
-                          frecencyKey: "app:\(path)", baseBoost: boost, group: nil)
+                          frecencyKey: "app:\(path)", baseBoost: boost, group: nil, submenu: false)
     }
 
     func action(for key: String) -> ItemAction? { actions.first { $0.key == key } }
@@ -250,17 +255,24 @@ final class Frecency {
 
 // MARK: - Commit
 
-enum Disposition { case hideNow, linger }
+// hideNow: close immediately. linger: brief fade (terminal action). loading:
+// keep the window up showing a spinner until the next request swaps in (a
+// two-step command re-invoking choose) — never a gap between steps.
+enum Disposition { case hideNow, linger, loading }
 
 struct Commit {
     let clientString: String?               // sent back to the connected client (nil → "")
     let disposition: Disposition
     let appLaunch: (path: String, reveal: Bool)?
+    // When true, after hiding the window the daemon reactivates the previously
+    // focused app and synthesizes ⌘V (clipboard auto-paste). Defaults false so
+    // the existing memberwise-init call sites need no change.
+    var pasteAfter: Bool = false
 }
 
 // MARK: - State
 
-enum DisplayMode { case list, clipboard, emoji }
+enum DisplayMode { case list, clipboard, emoji, screenshots }
 
 final class DaemonState: ObservableObject {
     @Published var items: [ChooseItem] = []
@@ -273,6 +285,14 @@ final class DaemonState: ObservableObject {
     @Published var displayMode: DisplayMode = .list
     @Published var clipEntries: [ClipEntry] = []
     @Published var emojiEntries: [EmojiEntry] = []
+    @Published var screenshotEntries: [ScreenshotEntry] = []
+    @Published var isLoading = false   // skeleton shown between a two-step command's steps
+    @Published var loadingTitle = ""   // selected command's name, shown in the static header
+    @Published var loadingIcon = "magnifyingglass"
+    // The launcher's search text. Held here (not as ContentView @State) so reset()
+    // can clear it synchronously before step 2 renders — no one-frame flash of the
+    // previous query.
+    @Published var query = ""
 
     var isLauncher = false
     var maxEmpty = Int.max
@@ -283,6 +303,7 @@ final class DaemonState: ObservableObject {
         switch displayMode {
         case .clipboard: return ClipboardLayout.width
         case .emoji: return EmojiLayout.width
+        case .screenshots: return ScreenshotLayout.width
         case .list: return metrics.width
         }
     }
@@ -306,6 +327,9 @@ final class DaemonState: ObservableObject {
         displayMode = .list
         clipEntries = []
         emojiEntries = []
+        screenshotEntries = []
+        isLoading = false
+        query = ""
     }
 
     // Load the clipboard history view from the daemon's own store.
@@ -317,6 +341,30 @@ final class DaemonState: ObservableObject {
 
     func commitClip(_ entry: ClipEntry) {
         ClipboardStore.shared.restore(entry)
+        // Auto-paste when enabled AND we hold the Accessibility grant; otherwise
+        // fall back to clipboard-only (restore already ran) and nudge once.
+        var paste = false
+        if Settings.load().clipboard.autoPaste {
+            if AXIsProcessTrusted() {
+                paste = true
+            } else {
+                AccessibilityHint.promptOnce()
+            }
+        }
+        onCommit?(Commit(clientString: "", disposition: .hideNow, appLaunch: nil, pasteAfter: paste))
+    }
+
+    // Load the recent-screenshots grid from the configured screencapture folder.
+    func loadScreenshots(placeholder: String?) {
+        displayMode = .screenshots
+        screenshotEntries = ScreenshotStore.recent()
+        placeholderText = placeholder ?? "Recent screenshots…"
+    }
+
+    // Copy the selected screenshot to the clipboard as both an image (paste into
+    // Slack/Notion) and a file reference (⌘V in Finder pastes the file).
+    func commitScreenshot(_ entry: ScreenshotEntry) {
+        Pasteboard.copyFile(URL(fileURLWithPath: entry.path))
         onCommit?(Commit(clientString: "", disposition: .hideNow, appLaunch: nil))
     }
 
@@ -383,6 +431,12 @@ final class DaemonState: ObservableObject {
 
     func commit(_ item: ChooseItem, action: String) {
         frecency.record(item.frecencyKey)
+        // For a two-step command, seed the loading header with its name + icon so
+        // it matches the step-2 header (which arrives with the same -p / -i).
+        if item.kind == .command && item.submenu {
+            loadingTitle = item.title
+            loadingIcon = item.icon ?? "magnifyingglass"
+        }
         onCommit?(buildCommit(item, action: action))
     }
 
@@ -400,7 +454,10 @@ final class DaemonState: ObservableObject {
             return Commit(clientString: "", disposition: .hideNow,
                           appLaunch: (item.payload, action == "cmd"))
         case .command:
-            return Commit(clientString: "run\t\(item.payload)", disposition: .linger, appLaunch: nil)
+            // Two-step commands re-invoke choose → keep the window up (loading)
+            // so step 2 swaps in without a gap. Terminal commands briefly linger.
+            return Commit(clientString: "run\t\(item.payload)",
+                          disposition: item.submenu ? .loading : .linger, appLaunch: nil)
         case .plain:
             let a = item.action(for: action) != nil ? action : "enter"
             return Commit(clientString: "\(a)\t\(item.raw)", disposition: .linger, appLaunch: nil)
@@ -461,6 +518,15 @@ enum EmojiLayout {
     static let gridHeight: CGFloat = 320
 }
 
+// Fixed geometry for the recent-screenshots two-pane window. Mirrors the
+// clipboard history layout (list on the left, large preview on the right).
+enum ScreenshotLayout {
+    static let width: CGFloat = 820
+    static let height: CGFloat = 480
+    static let listWidth: CGFloat = 300
+    static let rowHeight: CGFloat = 64
+}
+
 // User settings, read from ~/.config/choose/config.json. Parsed leniently via
 // JSONSerialization so unknown/extra keys (added by future versions) never break
 // an older binary, and any missing/malformed value falls back to a default.
@@ -471,6 +537,11 @@ struct ClipboardSettings {
     // recorded (belt-and-suspenders on top of the org.nspasteboard.ConcealedType
     // filter, which already drops password-manager copies).
     var blacklistBundleIds: [String] = ["com.apple.Passwords"]
+    // Auto-paste a selected entry into the previously-focused app (synthesize ⌘V)
+    // instead of only setting the clipboard. Requires the daemon to hold an
+    // Accessibility grant; falls back to clipboard-only when untrusted. Default
+    // off so a fresh install never silently needs a TCC permission.
+    var autoPaste: Bool = false
 }
 
 struct Settings {
@@ -505,8 +576,148 @@ struct Settings {
             if let e = cb["enabled"] as? Bool { s.clipboard.enabled = e }
             if let m = cb["maxEntries"] as? Int { s.clipboard.maxEntries = m }
             if let bl = cb["blacklistBundleIds"] as? [String] { s.clipboard.blacklistBundleIds = bl }
+            if let ap = cb["autoPaste"] as? Bool { s.clipboard.autoPaste = ap }
         }
         return s
+    }
+}
+
+// MARK: - Pasteboard
+
+enum Pasteboard {
+    // Put a file on the clipboard with BOTH a file-URL flavor (⌘V in Finder
+    // pastes the file) and image flavors (⌘V in Slack/Notion pastes the picture)
+    // on a single pasteboard item, so one copy serves both paste targets.
+    static func copyFile(_ url: URL) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        let item = NSPasteboardItem()
+        item.setString(url.absoluteString, forType: .fileURL)
+        if let img = NSImage(contentsOf: url), let tiff = img.tiffRepresentation {
+            item.setData(tiff, forType: .tiff)
+            if let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                item.setData(png, forType: .png)
+            }
+        }
+        pb.writeObjects([item])
+    }
+}
+
+// MARK: - Auto-paste
+
+// Synthesizes a ⌘V keystroke into whatever app is frontmost. Requires the
+// process to hold an Accessibility grant (CGEvent posting is gated by TCC);
+// callers must check AXIsProcessTrusted() first.
+enum Paste {
+    private static let kVK_ANSI_V: CGKeyCode = 0x09
+
+    static func sendCommandV() {
+        let src = CGEventSource(stateID: .combinedSessionState)
+        let down = CGEvent(keyboardEventSource: src, virtualKey: kVK_ANSI_V, keyDown: true)
+        let up = CGEvent(keyboardEventSource: src, virtualKey: kVK_ANSI_V, keyDown: false)
+        down?.flags = .maskCommand
+        up?.flags = .maskCommand
+        down?.post(tap: .cghidEventTap)
+        up?.post(tap: .cghidEventTap)
+    }
+}
+
+// One-time nudge when auto-paste is enabled but the daemon isn't trusted yet:
+// fire the system Accessibility prompt (which deep-links to the right Settings
+// pane), guarded by a marker so it never nags on every paste.
+enum AccessibilityHint {
+    private static var marker: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".local/state/choose/.autopaste-prompted")
+    }
+
+    static func promptOnce() {
+        let m = marker
+        if FileManager.default.fileExists(atPath: m.path) { return }
+        try? FileManager.default.createDirectory(at: m.deletingLastPathComponent(),
+                                                 withIntermediateDirectories: true)
+        FileManager.default.createFile(atPath: m.path, contents: nil)
+        let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+        _ = AXIsProcessTrustedWithOptions(opts)
+    }
+}
+
+// MARK: - Screenshots
+
+struct ScreenshotEntry: Identifiable {
+    let id: String      // absolute path, also the thumbnail cache key
+    let path: String
+    let name: String
+    let ts: Double      // file modification time (unix)
+}
+
+// Enumerates recent screenshots from the folder `screencapture` writes to.
+enum ScreenshotStore {
+    // Where macOS saves screenshots: the `location` default (≈ Raycast/Finder),
+    // ~-expanded, falling back to ~/Desktop when unset.
+    static func directory() -> URL {
+        if let loc = CFPreferencesCopyAppValue("location" as CFString,
+                                               "com.apple.screencapture" as CFString) as? String,
+           !loc.isEmpty {
+            return URL(fileURLWithPath: (loc as NSString).expandingTildeInPath)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Desktop")
+    }
+
+    private static let imageExts: Set<String> = ["png", "jpg", "jpeg", "heic", "tiff", "gif", "bmp", "pdf"]
+
+    static func recent(limit: Int = 60) -> [ScreenshotEntry] {
+        let fm = FileManager.default
+        let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey]
+        guard let urls = try? fm.contentsOfDirectory(at: directory(),
+                                                     includingPropertiesForKeys: keys,
+                                                     options: [.skipsHiddenFiles]) else { return [] }
+        var dated: [(ScreenshotEntry, Date)] = []
+        for url in urls {
+            guard imageExts.contains(url.pathExtension.lowercased()), isScreenshot(url) else { continue }
+            let mod = (try? url.resourceValues(forKeys: [.contentModificationDateKey])
+                .contentModificationDate) ?? Date(timeIntervalSince1970: 0)
+            dated.append((ScreenshotEntry(id: url.path, path: url.path,
+                                          name: url.lastPathComponent,
+                                          ts: mod.timeIntervalSince1970), mod))
+        }
+        return dated.sorted { $0.1 > $1.1 }.prefix(limit).map { $0.0 }
+    }
+
+    // Spotlight's screenshot flag is locale/format-independent (unlike a filename
+    // glob). Falls back to a name heuristic when the file isn't indexed yet.
+    static func isScreenshot(_ url: URL) -> Bool {
+        if let item = MDItemCreate(nil, url.path as CFString),
+           let val = MDItemCopyAttribute(item, "kMDItemIsScreenCapture" as CFString) {
+            return (val as? NSNumber)?.boolValue ?? false
+        }
+        let n = url.lastPathComponent.lowercased()
+        return n.hasPrefix("screenshot") || n.hasPrefix("screen shot") || n.hasPrefix("cleanshot")
+    }
+}
+
+// Downscaled thumbnails for the screenshot list rows, generated once and cached
+// so scrolling doesn't re-decode full-resolution PNGs.
+final class ThumbResolver {
+    static let shared = ThumbResolver()
+    private let cache = NSCache<NSString, NSImage>()
+
+    func thumb(_ path: String) -> NSImage {
+        if let c = cache.object(forKey: path as NSString) { return c }
+        let target = NSSize(width: 96, height: 64)
+        let thumb = NSImage(size: target)
+        if let full = NSImage(contentsOfFile: path) {
+            thumb.lockFocus()
+            NSGraphicsContext.current?.imageInterpolation = .high
+            // Aspect-fit the screenshot inside the thumbnail box.
+            let s = min(target.width / max(full.size.width, 1), target.height / max(full.size.height, 1))
+            let w = full.size.width * s, h = full.size.height * s
+            full.draw(in: NSRect(x: (target.width - w) / 2, y: (target.height - h) / 2, width: w, height: h),
+                      from: .zero, operation: .copy, fraction: 1.0)
+            thumb.unlockFocus()
+        }
+        cache.setObject(thumb, forKey: path as NSString)
+        return thumb
     }
 }
 
@@ -769,7 +980,13 @@ final class ChooseUI {
     let state: DaemonState
 
     private var lingerItem: DispatchWorkItem?
+    private var spinnerItem: DispatchWorkItem?
     var resultSink: ((String) -> Void)?
+
+    // The app that was frontmost when the window first appeared — captured before
+    // we steal focus, preserved across submenu swaps, and reactivated on an
+    // auto-paste commit. Cleared when the window fully hides.
+    private var capturedApp: NSRunningApplication?
 
     init(state: DaemonState) {
         self.state = state
@@ -802,7 +1019,10 @@ final class ChooseUI {
         // window shadow — a resizable rounded maskImage does both, killing the
         // square corner that pokes out behind the rounded panel.
         blur.maskImage = ChooseUI.roundedMask(radius: 16)
-        hosting.autoresizingMask = [.width, .height]
+        // Pin the content to the TOP edge (fixed height, flexible bottom margin)
+        // so an animated window resize reveals/covers from the bottom instead of
+        // letting NSHostingView re-center the content and slide it vertically.
+        hosting.autoresizingMask = [.width, .minYMargin]
         blur.addSubview(hosting)
         window.contentView = blur
 
@@ -830,25 +1050,29 @@ final class ChooseUI {
 
     func present() {
         cancelLinger()
+        state.isLoading = false   // new content replaces any in-flight spinner
         let fresh = !window.isVisible
-        let size = hosting.fittingSize
-        let target = NSSize(width: state.targetWidth, height: size.height)
 
         if fresh {
+            // Record who had focus before we steal it, so an auto-paste commit can
+            // hand focus back and ⌘V into the right app. Skip our own process so a
+            // stale activation can't capture choose itself.
+            let front = NSWorkspace.shared.frontmostApplication
+            if front?.processIdentifier != NSRunningApplication.current.processIdentifier {
+                capturedApp = front
+            }
+
+            // First appear: size + position instantly (nothing to animate from).
+            let size = hosting.fittingSize
+            let target = NSSize(width: state.targetWidth, height: size.height)
             window.setContentSize(target)
             positionFresh(size: target)
-        } else {
-            // Keep the top edge anchored so the list grows/shrinks downward.
-            let oldTop = window.frame.maxY
-            window.setContentSize(target)
-            var f = window.frame
-            f.origin.y = oldTop - f.height
-            if let vf = (window.screen ?? NSScreen.main)?.visibleFrame {
-                f.origin.x = vf.midX - f.width / 2
-            }
-            window.setFrame(f, display: true)
+            hosting.frame = window.contentView?.bounds ?? .zero
         }
-        hosting.frame = window.contentView?.bounds ?? .zero
+        // Non-fresh (window already up, e.g. swapping in step 2 after the skeleton):
+        // leave the current size and let the deferred resizeToFit tween to the new
+        // content height, so the step transition animates instead of snapping.
+
         window.alphaValue = 1
         state.isVisible = true
 
@@ -856,30 +1080,53 @@ final class ChooseUI {
         if fresh { NSApp.activate(ignoringOtherApps: true) }
         if let tf = state.textField { window.makeFirstResponder(tf) }
 
-        // Correct the height once SwiftUI has laid out the freshly-loaded items
-        // (fittingSize above can lag the @Published change by a tick).
-        DispatchQueue.main.async { [weak self] in self?.resizeToFit() }
+        // Fit to the freshly-loaded content once SwiftUI has laid it out. Animate
+        // the step transition (non-fresh); keep the first-appear correction instant.
+        DispatchQueue.main.async { [weak self] in self?.resizeToFit(animated: !fresh) }
     }
 
     // Match the window height to the SwiftUI content, anchoring the top edge so
     // the list grows/shrinks downward as the query filters it.
-    func resizeToFit() {
+    // animated=true gives a slight eased height/width tween — used for the step
+    // transitions (step 1 → skeleton → step 2). Typing-driven resizes pass false
+    // so filtering stays instant/snappy.
+    func resizeToFit(animated: Bool = false) {
         guard window.isVisible else { return }
         hosting.layoutSubtreeIfNeeded()
         let h = hosting.fittingSize.height
-        guard h > 1, abs(h - window.frame.height) > 0.5 else { return }
+        let w = state.targetWidth
+        guard h > 1,
+              abs(h - window.frame.height) > 0.5 || abs(w - window.frame.width) > 0.5 else { return }
         let oldTop = window.frame.maxY
         var f = window.frame
         f.size.height = h
-        f.size.width = state.targetWidth
-        f.origin.y = oldTop - h
-        // Commit the frame + hosting bounds atomically with implicit animation
-        // off, so the blur material can't animate/flicker through the resize.
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        window.setFrame(f, display: true)
-        hosting.frame = window.contentView?.bounds ?? .zero
-        CATransaction.commit()
+        f.size.width = w
+        f.origin.y = oldTop - h          // anchor the top edge; grow/shrink downward
+        if let vf = (window.screen ?? NSScreen.main)?.visibleFrame {
+            f.origin.x = vf.midX - w / 2  // keep centered if the width changed
+        }
+        if animated {
+            // Pin the content to its FINAL height at the current top edge before
+            // tweening. With the .minYMargin autoresizing mask the content then
+            // stays put (top-anchored) while the window reveals/covers from the
+            // bottom — no vertical slide.
+            let contentH = window.contentView?.bounds.height ?? window.frame.height
+            hosting.frame = NSRect(x: 0, y: contentH - h, width: w, height: h)
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.09
+                ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                ctx.allowsImplicitAnimation = true
+                window.animator().setFrame(f, display: true)
+            }
+        } else {
+            // Commit the frame + hosting bounds atomically with implicit animation
+            // off, so the blur material can't animate/flicker through the resize.
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            window.setFrame(f, display: true)
+            hosting.frame = window.contentView?.bounds ?? .zero
+            CATransaction.commit()
+        }
     }
 
     private func positionFresh(size: NSSize) {
@@ -893,8 +1140,6 @@ final class ChooseUI {
     // MARK: Commit handling
 
     private func handleCommit(_ commit: Commit) {
-        state.isVisible = false
-
         if let app = commit.appLaunch {
             let url = URL(fileURLWithPath: app.path)
             if app.reveal {
@@ -909,16 +1154,36 @@ final class ChooseUI {
         resultSink?(commit.clientString ?? "")
 
         switch commit.disposition {
-        case .hideNow: hideNow()
-        case .linger: startLinger()
+        case .hideNow:
+            state.isVisible = false
+            hideNow()
+            if commit.pasteAfter { restoreFocusAndPaste() }
+        case .linger:
+            state.isVisible = false
+            startLinger()
+        case .loading:
+            // Keep the window up (and key, so click-away still cancels) until the
+            // two-step command's step 2 calls present() and swaps the content in.
+            startLoading()
         }
     }
 
-    // MARK: Hide / linger
+    // MARK: Hide / linger / loading
 
     func hideNow() {
         cancelLinger()
         window.orderOut(nil)
+    }
+
+    // Hand focus back to the app that was frontmost before choose appeared, then
+    // synthesize ⌘V once it's active. The small delay lets the activation settle
+    // so the keystroke lands in the target app rather than the just-hidden window.
+    private func restoreFocusAndPaste() {
+        guard let app = capturedApp else { return }
+        app.activate(options: [.activateIgnoringOtherApps])
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            Paste.sendCommandV()
+        }
     }
 
     private func startLinger() {
@@ -928,9 +1193,30 @@ final class ChooseUI {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: work)
     }
 
+    // Show the skeleton after a short grace period (so fast sub-commands swap
+    // with no flash), and fall back to fading out if step 2 never arrives. We do
+    // NOT resize here — the skeleton fills the window at its current (step 1)
+    // height, so there's no arbitrary intermediary height; the single animated
+    // resize happens only when step 2's real content lands.
+    private func startLoading() {
+        cancelLinger()
+        let show = DispatchWorkItem { [weak self] in self?.state.isLoading = true }
+        spinnerItem = show
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: show)
+
+        let fallback = DispatchWorkItem { [weak self] in
+            self?.state.isLoading = false
+            self?.fadeOut()
+        }
+        lingerItem = fallback
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8.0, execute: fallback)
+    }
+
     private func cancelLinger() {
         lingerItem?.cancel()
         lingerItem = nil
+        spinnerItem?.cancel()
+        spinnerItem = nil
     }
 
     private func fadeOut() {
@@ -949,11 +1235,32 @@ final class ChooseUI {
 @main
 enum Main {
     static func main() {
-        if CommandLine.arguments.contains("--daemon") {
+        let args = CommandLine.arguments
+        if let i = args.firstIndex(of: "--copy-file"), i + 1 < args.count {
+            CopyFileMode.run(path: args[i + 1])
+        } else if args.contains("--check-accessibility") {
+            // Silent trust check for scripted verification. AXIsProcessTrusted
+            // reflects THIS binary's code identity, so run it from the signed copy
+            // to confirm the daemon's identity holds the grant.
+            print(AXIsProcessTrusted() ? "true" : "false")
+        } else if args.contains("--request-accessibility") {
+            // One-shot bootstrap: fire the system "add to Accessibility" prompt.
+            let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+            print(AXIsProcessTrustedWithOptions(opts) ? "true" : "false")
+        } else if args.contains("--daemon") {
             DaemonMode.run()
         } else {
             ClientMode.run()
         }
+    }
+}
+
+// `choose --copy-file <path>`: copy a file to the clipboard as both image and
+// file reference (see Pasteboard.copyFile) and exit. Synchronous — no run loop.
+enum CopyFileMode {
+    static func run(path: String) {
+        Pasteboard.copyFile(URL(fileURLWithPath: path))
+        exit(0)
     }
 }
 
@@ -965,6 +1272,7 @@ struct Invocation {
     var launcher = false
     var clipboard = false
     var emoji = false
+    var screenshots = false
     var maxEmpty: Int?
 }
 
@@ -1000,6 +1308,7 @@ enum DaemonMode {
         }
 
         NSLog("choose daemon started, listening on \(SocketConfig.path)")
+        NSLog("choose daemon accessibility trusted=\(AXIsProcessTrusted())")
         app.run()
     }
 
@@ -1060,6 +1369,7 @@ enum DaemonMode {
             if p.count > 3 && p[3] == "launcher" { inv.launcher = true }
             if p.count > 3 && p[3] == "clipboard" { inv.clipboard = true }
             if p.count > 3 && p[3] == "emoji" { inv.emoji = true }
+            if p.count > 3 && p[3] == "screenshots" { inv.screenshots = true }
             if p.count > 4, let m = Int(p[4]) { inv.maxEmpty = m }
             itemLines = Array(lines.dropFirst())
         }
@@ -1075,6 +1385,8 @@ enum DaemonMode {
                 state.loadClipboard(placeholder: inv.placeholder)
             } else if inv.emoji {
                 state.loadEmoji(placeholder: inv.placeholder)
+            } else if inv.screenshots {
+                state.loadScreenshots(placeholder: inv.placeholder)
             } else {
                 state.load(lines: itemLines, placeholder: inv.placeholder, icon: inv.icon,
                            launcher: inv.launcher, maxEmpty: inv.maxEmpty)
@@ -1107,6 +1419,7 @@ enum ClientMode {
             case "--launcher":          inv.launcher = true
             case "--clipboard":         inv.clipboard = true
             case "--emoji":             inv.emoji = true
+            case "--screenshots":       inv.screenshots = true
             case "--max-empty":         if !args.isEmpty { inv.maxEmpty = Int(args.removeFirst()) }
             default: break
             }
@@ -1137,7 +1450,10 @@ enum ClientMode {
         }) == 0
         if !connected { close(fd); runDirect(lines: stdinLines, inv: inv); return }
 
-        let mode = inv.launcher ? "launcher" : (inv.clipboard ? "clipboard" : (inv.emoji ? "emoji" : ""))
+        let mode = inv.launcher ? "launcher"
+            : (inv.clipboard ? "clipboard"
+            : (inv.emoji ? "emoji"
+            : (inv.screenshots ? "screenshots" : "")))
         let maxEmpty = inv.maxEmpty.map(String.init) ?? ""
         var payload = "CONFIG\t\(inv.placeholder ?? "")\t\(inv.icon ?? "")\t\(mode)\t\(maxEmpty)\n"
         for line in stdinLines { payload += line + "\n" }
@@ -1176,6 +1492,8 @@ enum ClientMode {
             state.loadClipboard(placeholder: inv.placeholder)
         } else if inv.emoji {
             state.loadEmoji(placeholder: inv.placeholder)
+        } else if inv.screenshots {
+            state.loadScreenshots(placeholder: inv.placeholder)
         } else {
             state.load(lines: lines, placeholder: inv.placeholder, icon: inv.icon,
                        launcher: inv.launcher, maxEmpty: inv.maxEmpty)
@@ -1208,7 +1526,6 @@ enum Theme {
 
 struct ContentView: View {
     @ObservedObject var state: DaemonState
-    @State private var query = ""
     @State private var selectedIndex = 0
     @State private var revealed = false   // compact mode: list shown after ↓ / typing
 
@@ -1216,7 +1533,7 @@ struct ContentView: View {
     var maxVisibleItems: Int { state.metrics.maxVisibleItems }
 
     var queryIsEmpty: Bool {
-        query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        state.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     // True when any item carries a group → render with section headers.
@@ -1246,7 +1563,7 @@ struct ContentView: View {
         if queryIsEmpty {
             base = Array(state.itemsSorted.prefix(state.maxEmpty))
         } else {
-            let q = Array(query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+            let q = Array(state.query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
             let scored = state.items.compactMap { item -> (ChooseItem, Double)? in
                 guard let s = state.matchScore(item, query: q) else { return nil }
                 return (item, s)
@@ -1315,12 +1632,27 @@ struct ContentView: View {
     }
 
     var body: some View {
-        if state.displayMode == .clipboard {
-            ClipboardView(state: state)
-        } else if state.displayMode == .emoji {
-            EmojiView(state: state)
-        } else {
-            launcherBody
+        Group {
+            if state.isLoading {
+                SkeletonView(state: state)
+            } else if state.displayMode == .clipboard {
+                ClipboardView(state: state)
+            } else if state.displayMode == .emoji {
+                EmojiView(state: state)
+            } else if state.displayMode == .screenshots {
+                ScreenshotsView(state: state)
+            } else {
+                launcherBody
+            }
+        }
+        // New identity per request resets the child views' @State (clipboard /
+        // emoji / screenshots queries).
+        .id(state.requestID)
+        // query itself is cleared synchronously in reset() (no flash). These are
+        // local @State, so reset them per request here.
+        .onReceive(state.$requestID) { _ in
+            selectedIndex = 0
+            revealed = false
         }
     }
 
@@ -1332,7 +1664,7 @@ struct ContentView: View {
                     .font(.system(size: state.metrics.searchIconSize, weight: .medium))
                     .foregroundColor(Theme.subtext)
                 CustomTextField(
-                    text: $query,
+                    text: $state.query,
                     selectedIndex: $selectedIndex,
                     itemCount: visible.count,
                     placeholder: state.placeholderText,
@@ -1346,7 +1678,7 @@ struct ContentView: View {
             .frame(height: state.metrics.headerHeight)
 
             if !visible.isEmpty {
-                Divider().background(Theme.surface1.opacity(0.5))
+                Divider().background(Theme.surface1.opacity(0.3))
 
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -1374,7 +1706,7 @@ struct ContentView: View {
                 }
 
                 if let item = selectedItem {
-                    Divider().background(Theme.surface1.opacity(0.5))
+                    Divider().background(Theme.surface1.opacity(0.3))
                     ActionBar(actions: item.actions)
                         .frame(height: 44)
                 }
@@ -1384,19 +1716,92 @@ struct ContentView: View {
         .fixedSize(horizontal: false, vertical: true)
         .background(Theme.base.opacity(0.55))
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .onChange(of: query) { selectedIndex = 0; revealed = false }
+        .onChange(of: state.query) { selectedIndex = 0; revealed = false }
         .onChange(of: visible.count) { state.onResize?() }
         .onChange(of: renderRows.count) { state.onResize?() }
-        .onChange(of: state.requestID) { query = ""; selectedIndex = 0; revealed = false; state.onResize?() }
+        .onChange(of: state.requestID) { selectedIndex = 0; revealed = false; state.onResize?() }
     }
 
     func select(action: String) {
         if visible.isEmpty {
-            if !query.isEmpty { state.commitText(query) } else { state.cancel() }
+            if !state.query.isEmpty { state.commitText(state.query) } else { state.cancel() }
             return
         }
         guard selectedIndex < visible.count else { state.cancel(); return }
         state.commit(visible[selectedIndex], action: action)
+    }
+}
+
+// MARK: - Loading (skeleton) View
+
+// Shown between a two-step command's steps. The search header stays put — now
+// carrying the command's name + icon with a cleared field, matching the step-2
+// header that's about to arrive — while the results area shows pulsing skeleton
+// rows. Reads as "results loading", not a window reload.
+struct SkeletonView: View {
+    @ObservedObject var state: DaemonState
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Image(systemName: state.loadingIcon)
+                    .font(.system(size: state.metrics.searchIconSize, weight: .medium))
+                    .foregroundColor(Theme.subtext)
+                Text(state.loadingTitle)
+                    .font(.system(size: state.metrics.searchFontSize, weight: .regular))
+                    .foregroundColor(Theme.subtext0)
+                    .lineLimit(1)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .frame(height: state.metrics.headerHeight)
+
+            Divider().background(Theme.surface1.opacity(0.3))
+
+            // Fill the window at its CURRENT height (it isn't resized when loading
+            // begins) with exactly enough skeleton rows — no arbitrary intermediary
+            // height. The single animated resize happens when step 2's data lands.
+            GeometryReader { geo in
+                let n = max(1, Int(geo.size.height / state.metrics.rowHeight))
+                VStack(spacing: 0) {
+                    ForEach(0..<n, id: \.self) { i in
+                        SkeletonRow(delay: Double(i) * 0.1)
+                            .frame(height: state.metrics.rowHeight)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(.vertical, 6)
+        }
+        .frame(width: state.targetWidth)
+        .frame(maxHeight: .infinity)
+        .background(Theme.base.opacity(0.55))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+// A single placeholder row with a staggered, gentle pulse.
+struct SkeletonRow: View {
+    let delay: Double
+    @State private var pulse = false
+
+    var body: some View {
+        HStack(spacing: 14) {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Theme.surface1)
+                .frame(width: 24, height: 24)
+            RoundedRectangle(cornerRadius: 5)
+                .fill(Theme.surface1)
+                .frame(width: 150, height: 11)
+            Spacer()
+        }
+        .padding(.horizontal, 18)
+        .opacity(pulse ? 0.9 : 0.3)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true).delay(delay)) {
+                pulse = true
+            }
+        }
     }
 }
 
@@ -1463,7 +1868,7 @@ struct ClipboardView: View {
             .padding(.horizontal, 20)
             .frame(height: 52)
 
-            Divider().background(Theme.surface1.opacity(0.5))
+            Divider().background(Theme.surface1.opacity(0.3))
 
             HStack(spacing: 0) {
                 ScrollViewReader { proxy in
@@ -1483,7 +1888,7 @@ struct ClipboardView: View {
                 }
                 .frame(width: ClipboardLayout.listWidth)
 
-                Divider().background(Theme.surface1.opacity(0.5))
+                Divider().background(Theme.surface1.opacity(0.3))
 
                 ClipPreview(entry: selected)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1558,7 +1963,7 @@ struct ClipPreview: View {
                             .padding(16)
                     }
                 }
-                Divider().background(Theme.surface1.opacity(0.5))
+                Divider().background(Theme.surface1.opacity(0.3))
                 HStack(spacing: 8) {
                     Text([entry.appName, entry.kind == .image ? entry.preview : nil]
                         .compactMap { $0 }.joined(separator: " · "))
@@ -1572,6 +1977,160 @@ struct ClipPreview: View {
             }
         } else {
             Text("No clipboard history yet")
+                .foregroundColor(Theme.subtext0)
+                .font(.system(size: 13))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+// MARK: - Screenshots View
+
+// Two-pane recent-screenshots picker: a filterable list on the left, a large
+// preview of the highlighted shot on the right. Enter (or click) copies it to
+// the clipboard as both image data and a file reference. Mirrors ClipboardView.
+struct ScreenshotsView: View {
+    @ObservedObject var state: DaemonState
+    @State private var query = ""
+    @State private var selectedIndex = 0
+
+    var filtered: [ScreenshotEntry] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !q.isEmpty else { return state.screenshotEntries }
+        return state.screenshotEntries.filter { $0.name.lowercased().contains(q) }
+    }
+
+    var selected: ScreenshotEntry? {
+        guard selectedIndex < filtered.count else { return nil }
+        return filtered[selectedIndex]
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Image(systemName: "photo.on.rectangle")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Theme.subtext)
+                CustomTextField(
+                    text: $query, selectedIndex: $selectedIndex,
+                    itemCount: filtered.count, placeholder: state.placeholderText,
+                    fontSize: 18, state: state, onSubmit: { _ in commit() }
+                )
+            }
+            .padding(.horizontal, 20)
+            .frame(height: 52)
+
+            Divider().background(Theme.surface1.opacity(0.3))
+
+            if filtered.isEmpty {
+                Text("No screenshots found")
+                    .foregroundColor(Theme.subtext0)
+                    .font(.system(size: 13))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                HStack(spacing: 0) {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(Array(filtered.enumerated()), id: \.element.id) { i, entry in
+                                    ScreenshotRow(entry: entry, isSelected: i == selectedIndex)
+                                        .id(entry.id)
+                                        .onTapGesture { selectedIndex = i; commit() }
+                                }
+                            }
+                            .padding(.vertical, 6)
+                        }
+                        .onChange(of: selectedIndex) {
+                            if selectedIndex < filtered.count { proxy.scrollTo(filtered[selectedIndex].id) }
+                        }
+                    }
+                    .frame(width: ScreenshotLayout.listWidth)
+
+                    Divider().background(Theme.surface1.opacity(0.3))
+
+                    ScreenshotPreview(entry: selected)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(maxHeight: .infinity)
+            }
+        }
+        .frame(width: ScreenshotLayout.width, height: ScreenshotLayout.height)
+        .background(Theme.base.opacity(0.55))
+        .onChange(of: query) { selectedIndex = 0 }
+        .onChange(of: state.requestID) { query = ""; selectedIndex = 0 }
+    }
+
+    func commit() {
+        guard let entry = selected else { state.cancel(); return }
+        state.commitScreenshot(entry)
+    }
+}
+
+struct ScreenshotRow: View {
+    let entry: ScreenshotEntry
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(nsImage: ThumbResolver.shared.thumb(entry.path))
+                .resizable().aspectRatio(contentMode: .fit)
+                .frame(width: 48, height: 32)
+                .background(Theme.surface0.opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.name)
+                    .foregroundColor(Theme.text)
+                    .font(.system(size: 13, weight: .medium))
+                    .lineLimit(1).truncationMode(.middle)
+                Text(relativeTime(entry.ts))
+                    .foregroundColor(Theme.subtext0)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 4)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: ScreenshotLayout.rowHeight)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isSelected ? Theme.mauve.opacity(0.20) : Color.clear)
+                .padding(.horizontal, 6)
+        )
+        .contentShape(Rectangle())
+    }
+}
+
+struct ScreenshotPreview: View {
+    let entry: ScreenshotEntry?
+
+    var body: some View {
+        if let entry = entry {
+            VStack(alignment: .leading, spacing: 0) {
+                ScrollView {
+                    if let img = NSImage(contentsOfFile: entry.path) {
+                        Image(nsImage: img)
+                            .resizable().aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: .infinity)
+                            .padding(16)
+                    } else {
+                        Text("Can't preview \(entry.name)")
+                            .foregroundColor(Theme.subtext0)
+                            .padding(16)
+                    }
+                }
+                Divider().background(Theme.surface1.opacity(0.3))
+                HStack(spacing: 8) {
+                    Text(entry.name).foregroundColor(Theme.subtext).lineLimit(1).truncationMode(.middle)
+                    Spacer()
+                    Text(relativeTime(entry.ts)).foregroundColor(Theme.subtext0)
+                }
+                .font(.system(size: 11))
+                .padding(.horizontal, 16)
+                .frame(height: 32)
+            }
+        } else {
+            Text("No screenshots yet")
                 .foregroundColor(Theme.subtext0)
                 .font(.system(size: 13))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1630,7 +2189,7 @@ struct EmojiView: View {
             .padding(.horizontal, 20)
             .frame(height: 52)
 
-            Divider().background(Theme.surface1.opacity(0.5))
+            Divider().background(Theme.surface1.opacity(0.3))
 
             ScrollViewReader { proxy in
                 ScrollView {
@@ -1656,7 +2215,7 @@ struct EmojiView: View {
                 }
             }
 
-            Divider().background(Theme.surface1.opacity(0.5))
+            Divider().background(Theme.surface1.opacity(0.3))
 
             HStack(spacing: 10) {
                 if let e = selected {

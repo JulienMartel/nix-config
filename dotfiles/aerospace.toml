@@ -83,6 +83,10 @@ alt-shift-n = 'move-node-to-workspace N'
 alt-shift-s = 'move-node-to-workspace S'
 # Browser
 alt-shift-b = 'move-node-to-workspace B'
+# Figma
+alt-shift-f = 'move-node-to-workspace F'
+# Music
+alt-shift-m = 'move-node-to-workspace M'
 # AI
 alt-shift-a = 'move-node-to-workspace AI'
 # Swather
@@ -100,14 +104,13 @@ alt-shift-d = 'move-node-to-workspace D'
 cmd-alt-ctrl-shift-t = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Ghostty" T'
 cmd-alt-ctrl-shift-s = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Slack" S'
 cmd-alt-ctrl-shift-b = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Zen" B'
-cmd-alt-ctrl-shift-l = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Linear"'
-cmd-alt-ctrl-shift-f = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Figma"'
-cmd-alt-ctrl-shift-m = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Music"'
+cmd-alt-ctrl-shift-f = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Figma" F'
+cmd-alt-ctrl-shift-m = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Music" M'
 cmd-alt-ctrl-shift-h = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Swather" H'
 cmd-alt-ctrl-shift-k = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Claude" K'
 cmd-alt-ctrl-shift-d = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Notion Calendar" D'
 cmd-alt-ctrl-shift-n = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Obsidian" N'
-cmd-alt-ctrl-shift-r = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" N'
+cmd-alt-ctrl-shift-r = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" R'
 # Unassigned — opens/focuses in the current workspace (no workspace switch).
 cmd-alt-ctrl-shift-p = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Passwords"'
 
@@ -158,14 +161,13 @@ e = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode
 t = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Ghostty" T', 'mode main']
 s = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Slack" S', 'mode main']
 b = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Zen" B', 'mode main']
-l = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Linear"', 'mode main']
-f = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Figma"', 'mode main']
-m = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Music"', 'mode main']
+f = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Figma" F', 'mode main']
+m = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Music" M', 'mode main']
 h = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Swather" H', 'mode main']
 k = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Claude" K', 'mode main']
 d = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Notion Calendar" D', 'mode main']
 n = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Obsidian" N', 'mode main']
-r = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" N', 'mode main']
+r = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" R', 'mode main']
 p = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Passwords"', 'mode main']
 
 [[on-window-detected]]
@@ -184,11 +186,8 @@ if.window-title-regex-substring = '^(?!quick-terminal).*$'
 run = 'move-node-to-workspace T'
 
 [[on-window-detected]]
-if.app-id = 'com.apple.Notes'
-run = 'move-node-to-workspace N'
-[[on-window-detected]]
 if.app-id = 'com.culturedcode.ThingsMac'
-run = 'move-node-to-workspace N'
+run = 'move-node-to-workspace R'
 [[on-window-detected]]
 if.app-id = 'md.obsidian'
 run = 'move-node-to-workspace N'
@@ -200,6 +199,14 @@ run = 'move-node-to-workspace S'
 [[on-window-detected]]
 if.app-id = 'app.zen-browser.zen'
 run = 'move-node-to-workspace B'
+
+[[on-window-detected]]
+if.app-id = 'com.figma.Desktop'
+run = 'move-node-to-workspace F'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.Music'
+run = 'move-node-to-workspace M'
 
 [[on-window-detected]]
 if.app-id = 'com.swather.app'

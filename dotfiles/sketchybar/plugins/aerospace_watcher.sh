@@ -12,7 +12,7 @@ CURRENT=$(/opt/homebrew/bin/aerospace list-workspaces --focused 2>/dev/null)
 WITH_WINDOWS=$(/opt/homebrew/bin/aerospace list-workspaces --monitor all --empty no 2>/dev/null)
 
 ARGS=()
-for workspace in 1 2 3 4 C T N S B G L F M K D; do
+for workspace in 1 2 3 4 T N R S B F M H K D; do
     if [ "$workspace" = "$CURRENT" ]; then
         ARGS+=(--set space.$workspace background.color=$MAUVE icon.color=$BASE label.color=$BASE drawing=on)
     elif echo "$WITH_WINDOWS" | grep -q "^${workspace}$"; then
