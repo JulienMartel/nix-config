@@ -283,8 +283,14 @@ in
     };
   };
 
-  # Enable Touch ID for sudo
+  # Touch ID for sudo. `reattach` is REQUIRED here because we run sudo inside
+  # zellij: a terminal multiplexer detaches the process from the GUI (Aqua)
+  # session, so pam_tid.so can't reach the Touch ID UI and the prompt beachballs/
+  # wedges. pam_reattach.so (inserted before pam_tid by this option) reattaches
+  # the auth to the GUI session and fixes the hang. Falls back to the in-terminal
+  # password prompt if Touch ID is cancelled.
   security.pam.services.sudo_local.touchIdAuth = true;
+  security.pam.services.sudo_local.reattach = true;
 
   # nix.settings and the daemon itself are managed by the Determinate installer
   # (see /etc/nix/nix.custom.conf), so nix-darwin's nix module is disabled.
