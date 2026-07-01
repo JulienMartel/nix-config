@@ -158,7 +158,7 @@ sketchybar --add item apple.reload popup.apple.logo \
 
 # Spaces - All AeroSpace workspaces
 sketchybar --add event aerospace_workspace_change
-WORKSPACES=("1" "2" "3" "4" "T" "N" "R" "S" "B" "F" "M" "H" "K" "D")
+WORKSPACES=("1" "2" "3" "4" "T" "N" "R" "S" "B" "F" "M" "H" "C" "D")
 
 # App-workspaces show the app's logo (sketchybar-app-font ligature tokens);
 # numbered workspaces keep their digit in the bar's Nerd Font. N is a shared
@@ -178,7 +178,7 @@ do
         # Swather has no app-font glyph — use the Nerd Font hourglass (its icon).
         # fa-hourglass U+F254 as raw UTF-8 bytes (bash 3.2 printf has no \u).
         H) ICON=$(printf '\xEF\x89\x94') ;;
-        K) ICON=":claude:"      ; IFONT="sketchybar-app-font:Regular:16.0" ;;
+        C) ICON=":claude:"      ; IFONT="sketchybar-app-font:Regular:16.0" ;;
         D) ICON=":calendar:"    ; IFONT="sketchybar-app-font:Regular:16.0" ;;
     esac
     sketchybar --add item space.$workspace left \
@@ -236,7 +236,7 @@ sketchybar --add item front_app left \
 # closed=grey), hides the workspace + front_app pills, and turns the Apple logo
 # into a → "go-to" glyph. The key list mirrors [mode.launch.binding] in
 # aerospace.toml — keep them in sync.
-LAUNCHER_KEYS=("t" "s" "b" "f" "m" "h" "k" "d" "n" "r" "p")
+LAUNCHER_KEYS=("t" "s" "b" "f" "m" "h" "c" "d" "n" "r" "p")
 for key in "${LAUNCHER_KEYS[@]}"; do
     GLYPH=$(echo "$key" | tr '[:lower:]' '[:upper:]')
     sketchybar --add item launcher.$key left \

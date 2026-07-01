@@ -40,7 +40,7 @@ ARROW=$(printf '\xF3\xB0\x9C\xB4')
 # Leader hotkey -> assigned workspace (mirrors [mode.launch.binding] in
 # aerospace.toml). Empty = no assigned space (always shown as closed/grey, since
 # there's no workspace to read open/active from): Passwords.
-LAUNCHERS="t:T n:N r:R s:S b:B f:F m:M h:H k:K d:D p:"
+LAUNCHERS="t:T n:N r:R s:S b:B f:F m:M h:H c:C d:D p:"
 
 spaces() { sketchybar --query bar | jq -r '.items[] | select(startswith("space."))'; }
 

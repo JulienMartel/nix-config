@@ -92,7 +92,7 @@ alt-shift-a = 'move-node-to-workspace AI'
 # Swather
 alt-shift-h = 'move-node-to-workspace H'
 # Claude
-alt-shift-k = 'move-node-to-workspace K'
+alt-shift-c = 'move-node-to-workspace C'
 # Notion Calendar
 alt-shift-d = 'move-node-to-workspace D'
 
@@ -107,7 +107,7 @@ cmd-alt-ctrl-shift-b = 'exec-and-forget /Users/julienmartel/.config/aerospace/la
 cmd-alt-ctrl-shift-f = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Figma" F'
 cmd-alt-ctrl-shift-m = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Music" M'
 cmd-alt-ctrl-shift-h = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Swather" H'
-cmd-alt-ctrl-shift-k = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Claude" K'
+cmd-alt-ctrl-shift-c = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Claude" C'
 cmd-alt-ctrl-shift-d = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Notion Calendar" D'
 cmd-alt-ctrl-shift-n = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Obsidian" N'
 cmd-alt-ctrl-shift-r = 'exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" R'
@@ -168,7 +168,7 @@ b = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Zen" B', 
 f = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Figma" F', 'mode main']
 m = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Music" M', 'mode main']
 h = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Swather" H', 'mode main']
-k = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Claude" K', 'mode main']
+c = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Claude" C', 'mode main']
 d = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Notion Calendar" D', 'mode main']
 n = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Obsidian" N', 'mode main']
 r = ['exec-and-forget /Users/julienmartel/.config/aerospace/launch.sh "Things3" R', 'mode main']
@@ -226,7 +226,7 @@ run = 'move-node-to-workspace H'
 
 [[on-window-detected]]
 if.app-id = 'com.anthropic.claudefordesktop'
-run = 'move-node-to-workspace K'
+run = 'move-node-to-workspace C'
 
 [[on-window-detected]]
 if.app-id = 'com.cron.electron'
