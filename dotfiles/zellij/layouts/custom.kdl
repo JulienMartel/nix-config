@@ -1,4 +1,6 @@
-// Custom layout = built-in tab-bar + 1-line status-bar + spiral swap layout.
+// Custom layout = built-in tab-bar + 1-line status-bar + swap layouts.
+// Three tiled swap layouts, cycled with Alt+[ / Alt+]: spiral (default,
+// balanced), columns (equal side-by-side), grid (equal-area balanced grid).
 // Need to wire up the bars explicitly here because zellij only injects them
 // automatically when using the built-in default layout, not a custom one.
 // status-bar normally renders two rows (hotkeys + tips); we constrain it to
@@ -86,6 +88,217 @@ layout {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // Columns: every pane an equal full-height column, side by side. Best for
+    // eyeballing 2–4 agents at once on a wide display; gets narrow past ~5.
+    swap_tiled_layout name="columns" {
+        tab max_panes=1 {
+            pane
+        }
+        tab max_panes=2 {
+            pane split_direction="vertical" {
+                pane
+                pane
+            }
+        }
+        tab max_panes=3 {
+            pane split_direction="vertical" {
+                pane
+                pane
+                pane
+            }
+        }
+        tab max_panes=4 {
+            pane split_direction="vertical" {
+                pane
+                pane
+                pane
+                pane
+            }
+        }
+        tab max_panes=5 {
+            pane split_direction="vertical" {
+                pane
+                pane
+                pane
+                pane
+                pane
+            }
+        }
+        tab {
+            pane split_direction="vertical" {
+                pane
+                pane
+                pane
+                pane
+                pane
+                pane
+            }
+        }
+    }
+
+    // Grid: packs the panes into the most balanced grid for their count, sizing
+    // each column proportionally to how many panes it holds so EVERY pane ends up
+    // the same area — the largest that count allows. Whole squares/rectangles come
+    // out even (4→2×2, 6→3×2, 9→3×3); odd counts get a proportionally narrower
+    // column for the leftover so nothing is cramped (3 → one narrow pane on the
+    // left + two wider stacked on the right, all equal area). The count is split
+    // into ceil(√n) columns, extra panes filling the rightmost columns first.
+    // Best when you want every agent on screen and as large as possible at once.
+    //
+    // ⚠ max_panes counts EVERY pane in the tab, and default_tab_template injects a
+    // tab-bar + status-bar pane into each one — so a tab showing N content panes
+    // actually holds N+2 panes. Every max_panes below is therefore (content + 2);
+    // the trailing comment is the content count each template targets. (Without the
+    // +2, zellij matches a too-large template and partial-fills it — e.g. 6 content
+    // panes fell into the 8-slot template and rendered [2,3,1] instead of 3×2.)
+    swap_tiled_layout name="grid" {
+        tab max_panes=3 {  // 1
+            pane
+        }
+        tab max_panes=4 {  // 2 — side by side
+            pane split_direction="vertical" {
+                pane
+                pane
+            }
+        }
+        // [1,2] — single left (⅓), two stacked right (⅔)  ·  3 content
+        tab max_panes=5 {
+            pane split_direction="vertical" {
+                pane size="34%"
+                pane size="66%" {
+                    pane
+                    pane
+                }
+            }
+        }
+        // [2,2] — 2×2  ·  4 content
+        tab max_panes=6 {
+            pane split_direction="vertical" {
+                pane {
+                    pane
+                    pane
+                }
+                pane {
+                    pane
+                    pane
+                }
+            }
+        }
+        // [1,2,2] — narrow single + two 2-stacks  ·  5 content
+        tab max_panes=7 {
+            pane split_direction="vertical" {
+                pane size="20%"
+                pane size="40%" {
+                    pane
+                    pane
+                }
+                pane size="40%" {
+                    pane
+                    pane
+                }
+            }
+        }
+        // [2,2,2] — 3×2  ·  6 content
+        tab max_panes=8 {
+            pane split_direction="vertical" {
+                pane {
+                    pane
+                    pane
+                }
+                pane {
+                    pane
+                    pane
+                }
+                pane {
+                    pane
+                    pane
+                }
+            }
+        }
+        // [2,2,3] — two 2-stacks + one wider 3-stack  ·  7 content
+        tab max_panes=9 {
+            pane split_direction="vertical" {
+                pane size="29%" {
+                    pane
+                    pane
+                }
+                pane size="28%" {
+                    pane
+                    pane
+                }
+                pane size="43%" {
+                    pane
+                    pane
+                    pane
+                }
+            }
+        }
+        // [2,3,3] — one 2-stack + two wider 3-stacks  ·  8 content
+        tab max_panes=10 {
+            pane split_direction="vertical" {
+                pane size="25%" {
+                    pane
+                    pane
+                }
+                pane size="37%" {
+                    pane
+                    pane
+                    pane
+                }
+                pane size="38%" {
+                    pane
+                    pane
+                    pane
+                }
+            }
+        }
+        // [3,3,3] — 3×3  ·  9 content
+        tab max_panes=11 {
+            pane split_direction="vertical" {
+                pane {
+                    pane
+                    pane
+                    pane
+                }
+                pane {
+                    pane
+                    pane
+                    pane
+                }
+                pane {
+                    pane
+                    pane
+                    pane
+                }
+            }
+        }
+        // 10+ — even 4-column fallback (fills up to 12, overflow reflows)
+        tab {
+            pane split_direction="vertical" {
+                pane {
+                    pane
+                    pane
+                    pane
+                }
+                pane {
+                    pane
+                    pane
+                    pane
+                }
+                pane {
+                    pane
+                    pane
+                    pane
+                }
+                pane {
+                    pane
+                    pane
+                    pane
                 }
             }
         }
