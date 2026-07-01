@@ -441,11 +441,19 @@ in
   # macOS Spotlight's "Show Spotlight search" shortcut (symbolic hotkey 64).
   # Uses -dict-add so only key 64 is touched — other custom hotkeys in
   # AppleSymbolicHotKeys are left intact. Runs as the user (correct prefs domain).
-  # Takes effect on next login (symbolic-hotkey changes need a fresh loginwindow);
-  # already disabled on the current machine, so this is for fresh-machine parity.
+  #
+  # CRITICAL: the value MUST be written with integer-typed `enabled`/`parameters`.
+  # An old-style plist fragment ('{ enabled = 0; ... }') stores them as *strings*
+  # ("0", "32", ...), which loginwindow does NOT reliably honor — the system
+  # Spotlight binding stays half-alive and races AeroSpace's Carbon cmd+space
+  # registration, so Spotlight comes up intermittently. Feeding an XML plist
+  # fragment forces real <integer> types (matching macOS's own entries 60/61).
+  #
+  # Takes full effect on next login (symbolic-hotkey changes need a fresh
+  # loginwindow); activateSettings -u applies what it can immediately.
   home.activation.disableSpotlightCmdSpace = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     $DRY_RUN_CMD /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys \
-      -dict-add 64 '{ enabled = 0; value = { parameters = ( 32, 49, 1048576 ); type = "standard"; }; }'
+      -dict-add 64 '<dict><key>enabled</key><integer>0</integer><key>value</key><dict><key>type</key><string>standard</string><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>1048576</integer></array></dict></dict>'
     $DRY_RUN_CMD /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u || true
   '';
 
