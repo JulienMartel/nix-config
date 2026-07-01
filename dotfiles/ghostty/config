@@ -12,6 +12,7 @@ macos-option-as-alt = true
 
 quit-after-last-window-closed = true
 window-save-state = never
+confirm-close-surface = false
 
 #zellij overwrites
 keybind = cmd+t=unbind
