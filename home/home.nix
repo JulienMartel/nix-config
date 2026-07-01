@@ -3,6 +3,7 @@
   pkgs,
   lib,
   username,
+  nebelung,
   ...
 }:
 
@@ -140,6 +141,12 @@ in
     enableZshIntegration = true;
     settings = {
       gcloud.disabled = true;
+      # Nebelung palette instead of the catppuccin module's stock mocha (see
+      # catppuccin.starship.enable = false below). The whiskers starship port
+      # emits exactly this [palettes.catppuccin_mocha] table; we inject the
+      # same name->#hex map from nebelung.palette so there's no duplication.
+      palette = "catppuccin_mocha";
+      palettes.catppuccin_mocha = nebelung.palette;
     };
   };
 
@@ -329,7 +336,9 @@ in
   catppuccin.enable = true;
   catppuccin.flavor = "mocha";
   catppuccin.bat.enable = true;
-  catppuccin.starship.enable = true;
+  # Starship is themed by the Nebelung palette instead (programs.starship above),
+  # so keep the module's stock-mocha palette out of the way.
+  catppuccin.starship.enable = false;
   catppuccin.delta.enable = true;
   catppuccin.fzf.enable = true;
   catppuccin.lazygit.enable = true;
@@ -379,6 +388,10 @@ in
   # Dotfiles - Ghostty configuration
   home.file."Library/Application Support/com.mitchellh.ghostty/config".source =
     ../dotfiles/ghostty/config;
+  # Nebelung theme dropped into ghostty's theme dir; the config's `theme =`
+  # line (dotfiles/ghostty/config) selects it by filename for the dark variant.
+  home.file."Library/Application Support/com.mitchellh.ghostty/themes/nebelung".source =
+    "${nebelung.themes}/ghostty/themes/catppuccin-mocha.conf";
 
   # Dotfiles - Zellij config, layouts, and launch script
   home.file.".config/zellij/config.kdl".source = ../dotfiles/zellij/config.kdl;

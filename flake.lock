@@ -38,6 +38,29 @@
         "type": "github"
       }
     },
+    "nebelung": {
+      "inputs": {
+        "catppuccin": [
+          "catppuccin"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1782903962,
+        "narHash": "sha256-N91CBsZNVP2rw26wrMPdbzeKYZ3WLK1lrxGFRShGusY=",
+        "owner": "JulienMartel",
+        "repo": "nebelung",
+        "rev": "b594e7487bcbf07c12c88bbd8555835c0379b5d5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "JulienMartel",
+        "repo": "nebelung",
+        "type": "github"
+      }
+    },
     "nix-darwin": {
       "inputs": {
         "nixpkgs": [
@@ -112,6 +135,7 @@
       "inputs": {
         "catppuccin": "catppuccin",
         "home-manager": "home-manager",
+        "nebelung": "nebelung",
         "nix-darwin": "nix-darwin",
         "nix-index-database": "nix-index-database",
         "nixpkgs": "nixpkgs_2"

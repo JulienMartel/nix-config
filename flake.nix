@@ -16,6 +16,16 @@
 
     catppuccin.url = "github:catppuccin/nix";
 
+    # Nebelung theme builder (Catppuccin Mocha, blue stripped). Renders every
+    # port with whiskers in a pure derivation, so no imperative `brew install
+    # whiskers` and the themes rebuild with `darwin-rebuild`. Follows our
+    # nixpkgs + catppuccin so there's a single whiskers/nixpkgs in the closure.
+    nebelung = {
+      url = "github:JulienMartel/nebelung";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.catppuccin.follows = "catppuccin";
+    };
+
     nix-index-database = {
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -29,6 +39,7 @@
       nix-darwin,
       home-manager,
       catppuccin,
+      nebelung,
       nix-index-database,
     }:
     let
@@ -70,7 +81,14 @@
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = { inherit username; };
+            home-manager.extraSpecialArgs = {
+              inherit username;
+              # Built Nebelung theme tree + the palette as a name->"#hex" attrset.
+              nebelung = {
+                themes = nebelung.packages.${system}.default;
+                palette = nebelung.palette;
+              };
+            };
             home-manager.sharedModules = [
               catppuccin.homeModules.catppuccin
               nix-index-database.homeModules.nix-index
