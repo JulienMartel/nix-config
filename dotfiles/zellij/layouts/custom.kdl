@@ -95,41 +95,42 @@ layout {
 
     // Columns: every pane an equal full-height column, side by side. Best for
     // eyeballing 2–4 agents at once on a wide display; gets narrow past ~5.
+    // max_panes is content+2 (tab-bar + status-bar panes count too — see grid).
     swap_tiled_layout name="columns" {
-        tab max_panes=1 {
+        tab max_panes=3 {  // 1
             pane
         }
-        tab max_panes=2 {
+        tab max_panes=4 {  // 2
             pane split_direction="vertical" {
                 pane
                 pane
             }
         }
-        tab max_panes=3 {
+        tab max_panes=5 {  // 3
             pane split_direction="vertical" {
                 pane
                 pane
                 pane
             }
         }
-        tab max_panes=4 {
+        tab max_panes=6 {  // 4
             pane split_direction="vertical" {
-                pane
-                pane
-                pane
-                pane
-            }
-        }
-        tab max_panes=5 {
-            pane split_direction="vertical" {
-                pane
                 pane
                 pane
                 pane
                 pane
             }
         }
-        tab {
+        tab max_panes=7 {  // 5
+            pane split_direction="vertical" {
+                pane
+                pane
+                pane
+                pane
+                pane
+            }
+        }
+        tab {  // 6+
             pane split_direction="vertical" {
                 pane
                 pane
