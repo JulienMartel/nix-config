@@ -5,3 +5,16 @@
 # the main config and wants Enter to open/page files.
 [mgr]
 show_hidden = true
+# Drop the right-hand preview column (parent | current | preview → the last is 0
+# width, so it's hidden). The picker never previews file/folder contents — you're
+# just choosing a directory to open — so the empty preview pane is dead space.
+ratio = [ 1, 4, 0 ]
+
+# This is a pure directory picker — it never previews or opens files. Disable
+# yazi's metadata fetchers so that entering a folder spawns NO background
+# `mime.local` task. Otherwise the Enter = `enter` + `quit` chain quits while
+# that task is still running, and yazi flashes its "There are unfinished tasks,
+# quit anyway?" confirm dialog before closing. Empty fetchers = nothing to race.
+[plugin]
+fetchers = []
+preloaders = []

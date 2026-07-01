@@ -212,17 +212,42 @@ in
     enableZshIntegration = true;
     # Show dotfiles/dotfolders in the listing.
     settings.mgr.show_hidden = true;
+    # parent | current | preview. Default is [1 4 3]; match the preview column to
+    # the current file/dir list so the right pane is the same width as the list
+    # you're browsing.
+    settings.mgr.ratio = [
+      1
+      4
+      4
+    ];
     plugins = {
-      glow = pkgs.yaziPlugins.glow;
+      # Vendored: nixpkgs' yaziPlugins.glow (and its upstream) still use the
+      # pre-26 Lua API and crash on yazi 26.x ("attempt to call a nil value
+      # (method 'args')"). Our copy under dotfiles/ ports it to the current API.
+      # Revert to pkgs.yaziPlugins.glow once that snapshot is 26-compatible.
+      glow = ../dotfiles/yazi/plugins/glow.yazi;
       piper = pkgs.yaziPlugins.piper;
     };
+    # Esc closes the peek browser, mirroring q. The Super-y float runs plain
+    # `yazi` with close_on_exit, so quitting yazi dismisses the overlay. prepend
+    # keeps the rest of the preset keymap; this only overrides Esc in the mgr
+    # layer (typing a filter still cancels via Esc in the input layer — only
+    # clearing an already-applied filter/selection changes to "quit"). Matches
+    # the new-tab picker, which already treats Esc as cancel/quit.
+    keymap.mgr.prepend_keymap = [
+      {
+        on = "<Esc>";
+        run = "quit";
+        desc = "Close the peek browser";
+      }
+    ];
     settings.plugin.prepend_previewers = [
       {
-        name = "*.md";
+        url = "*.md";
         run = "glow";
       }
       {
-        name = "*.mdx";
+        url = "*.mdx";
         run = "glow";
       }
       {
@@ -257,10 +282,11 @@ in
         }
       ];
     };
-    # yazi's open.rules match on `url` (a filename glob) or `mime` — NOT `name`
-    # (that's the previewers' key). Using `name` here is a hard TOML parse error
-    # ("at least one of `url` or `mime` must be specified") that makes yazi throw
-    # away this whole config and fall back to preset settings.
+    # Both open.rules AND prepend_previewers match on `url` (a filename glob) or
+    # `mime` — `name` is not a valid key for either (newer yazi dropped it). Using
+    # `name` is a hard TOML parse error ("at least one of `url` or `mime` must be
+    # specified") that makes yazi throw away this whole config and fall back to
+    # preset settings.
     settings.open.rules = [
       {
         url = "*.md";
