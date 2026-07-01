@@ -52,7 +52,7 @@
 
   # ---- personal home layer: extra packages, private git config, secrets ----
   home-manager.users.${username} =
-    { config, lib, pkgs, ... }:
+    { config, lib, pkgs, nebelung, ... }:
     {
       home.packages = with pkgs; [
         claude-code
@@ -76,6 +76,38 @@
         http.cookiefile = "${config.home.homeDirectory}/.gitcookies";
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
       };
+
+      # Obsidian: paint the vault with Nebelung. The theme is a nebelung *port*
+      # (a CSS snippet overriding Obsidian's --color-* vars); we DON'T use the
+      # Catppuccin community theme — it re-introduces the blue Nebelung strips
+      # out, and a snippet can't reliably override a full theme's own rules.
+      # So: Default theme + this snippet.
+      #
+      # The vault lives in iCloud, so we COPY the snippet (a store symlink would
+      # sync as a dangling link to other devices) rather than link it. Obsidian
+      # owns appearance.json (rewrites it on any settings change), so we don't
+      # freeze it — jq patches it in place, idempotently, each rebuild:
+      # Default theme, dark mode, snippet enabled. Everything stays writable.
+      #
+      # Requires the obsidian port to be present in the pinned nebelung input;
+      # until `nix flake update nebelung` (in nebelhaus) propagates it, the
+      # `-f` guard makes this a no-op instead of a failed rebuild.
+      home.activation.obsidianNebelung =
+        lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          vault="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/notes/.obsidian"
+          snippet="${nebelung.themes}/obsidian/nebelung.css"
+          if [ -d "$vault" ] && [ -f "$snippet" ]; then
+            run mkdir -p "$vault/snippets"
+            run install -m 0644 "$snippet" "$vault/snippets/nebelung.css"
+            app="$vault/appearance.json"
+            [ -f "$app" ] || echo '{}' > "$app"
+            tmp="$(mktemp)"
+            ${pkgs.jq}/bin/jq \
+              '.cssTheme = "" | .theme = "obsidian"
+               | .enabledCssSnippets = ((.enabledCssSnippets // []) + ["nebelung"] | unique)' \
+              "$app" > "$tmp" && run mv "$tmp" "$app"
+          fi
+        '';
 
       # Secrets + tooling that shouldn't live in the public rice.
       programs.zsh.initContent = lib.mkAfter ''
