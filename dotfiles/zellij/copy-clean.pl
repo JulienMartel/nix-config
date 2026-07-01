@@ -3,20 +3,26 @@
 # land on the macOS clipboard.
 #
 # Terminal selection copies the *visual grid*: Claude Code renders every message
-# inside a left gutter and hard-wraps long paragraphs at the pane width, so a
-# raw copy carries gutter spaces on every line + a newline at each visual wrap.
-# We undo that in three passes:
+# inside a ~2-space left gutter and hard-wraps long paragraphs at the pane width,
+# so a raw copy carries gutter spaces on most lines + a newline at each wrap. The
+# first line of a message often sits at column 0 (the bullet ate its gutter),
+# which is why a naive "strip the common prefix" strips nothing.
 #
-#   1. dedent  — strip the common leading whitespace (the message gutter).
-#                Safe for code: only the *shared* prefix goes, relative indent
-#                is preserved.
-#   2. trim    — drop trailing whitespace, collapse blank-line runs to one.
-#   3. reflow  — rejoin hard-wrapped PROSE into paragraphs. Heavily guarded so
-#                code / lists / tables / indented blocks are left byte-for-byte:
-#                a newline is only removed when the line it ends was "full"
-#                (near the wrap width) AND neither side looks structural.
+# Strategy: split the selection into blocks (separated by blank lines), classify
+# each, and clean it accordingly:
+#   • prose  — rejoin the wrapped lines into one paragraph
+#   • list   — rejoin each item's wrapped continuation, keep items separate
+#   • code / table — leave byte-for-byte (only the shared gutter is dedented)
 #
-# Whatever survives is piped to pbcopy. Wired as `copy_command` in config.kdl.
+# This is deliberately PROSE-FIRST: normal writing must always paste cleanly.
+# The one discriminator that keeps code from being flattened is LINE FULLNESS —
+# prose lines wrap because they *ran out of room* (near the pane width), while
+# code lines end at logical boundaries (short), so a code block fails the
+# "all lines full" test and falls through to verbatim. We deliberately do NOT
+# guard on semicolons / punctuation / symbol density: prose uses those too, and
+# such guards only cause prose to stay wrongly wrapped. (Copy code with an
+# explicit pbcopy/echo if you need it byte-for-byte.) Set COPY_CLEAN_STDOUT=1 to
+# print to stdout instead of piping to pbcopy (for testing).
 use strict;
 use warnings;
 
@@ -24,73 +30,95 @@ my $text = do { local $/; <STDIN> };
 $text = '' unless defined $text;
 $text =~ s/\r\n?/\n/g;
 my @lines = split /\n/, $text, -1;
+s/\s+$// for @lines;                              # drop trailing whitespace
 
-# --- 1. dedent: remove the longest common leading-whitespace prefix -----------
-my $min_indent;
-for my $l (@lines) {
-    next if $l =~ /^\s*$/;                       # blank lines don't constrain
-    my ($ws) = $l =~ /^(\s*)/;
-    my $n = length $ws;
-    $min_indent = $n if !defined $min_indent || $n < $min_indent;
-}
-$min_indent //= 0;
-
-for my $l (@lines) {
-    if ($l =~ /^\s*$/) { $l = ''; next; }        # normalize blank lines
-    $l =~ s/^\s{0,$min_indent}// if $min_indent;
-    $l =~ s/\s+$//;                              # 2. trim trailing whitespace
-}
-
-# --- estimate the wrap column from the widest line ---------------------------
+# wrap column ≈ the widest line in the selection; a line is "full" (i.e. wrapped
+# rather than deliberately broken) when it reaches ~2/3 of that width.
 my $wrap = 0;
 for my $l (@lines) { my $n = length $l; $wrap = $n if $n > $wrap; }
-# Too-narrow selections (inline snippets, short code) are never treated as
-# wrapped prose — reflow only engages when there's a real wrap column to speak of.
 my $reflow_ok = $wrap >= 40;
-my $full_at   = $wrap - 12;                      # a line this long "ran out of room"
+my $full_at   = int($wrap * 0.6);
 
-# A structural line is never joined (as source or target): blank, relatively
-# indented (=> code/nested), or a list / quote / heading / table / code-bracket.
-sub structural {
-    my ($l) = @_;
-    return 1 if $l eq '';
-    return 1 if $l =~ /^\s/;                     # indented past the dedented base
-    return 1 if $l =~ /^(?:[-*+•]\s|\d+[.)]\s|>|#{1,6}\s)/;  # list / quote / heading
-    return 1 if $l =~ /\|/;                      # table pipe
-    return 1 if $l =~ /[{};]$/;                  # code statement/block ending
-    return 1 if $l =~ /^[)}\]]/;                 # closing bracket opens the line
+# --- split into blocks separated by blank lines ------------------------------
+my (@blocks, @cur);
+for my $l (@lines) {
+    if ($l eq '') { push @blocks, [@cur] if @cur; @cur = (); }
+    else          { push @cur, $l; }
+}
+push @blocks, [@cur] if @cur;
+
+sub leading { my ($w) = $_[0] =~ /^(\s*)/; return length $w; }
+sub is_marker { return $_[0] =~ /^\s*(?:[-*+•]\s|\d+[.)]\s)/; }
+
+# dedent a block by its own common leading whitespace (preserves relative indent)
+sub dedent {
+    my ($blk) = @_;
+    my $min;
+    for my $l (@$blk) {
+        my $n = leading($l);
+        $min = $n if !defined $min || $n < $min;
+    }
+    $min //= 0;
+    return map { my $x = $_; $x =~ s/^\s{0,$min}// if $min; $x } @$blk;
+}
+
+# Only tables and brace-delimited code stay verbatim. Tables must keep their
+# rows; a line ending in { or } is real code (prose never does). Everything else
+# is left to the fullness gate below — that alone keeps short code lines from
+# being joined, without ever mis-guarding prose punctuation.
+sub is_verbatim {
+    my ($blk) = @_;
+    for my $l (@$blk) {
+        return 1 if $l =~ /\|/;              # table row
+        return 1 if $l =~ /[{}]\s*$/;        # brace-delimited code line
+    }
     return 0;
 }
 
-# --- 3. reflow: greedily absorb full-wrap continuation lines -----------------
-my @out;
-my $i = 0;
-while ($i <= $#lines) {
-    my $cur = $lines[$i];
-    if ($reflow_ok && !structural($cur)) {
-        while ($i < $#lines) {
-            my $tail = $lines[$i];              # most recently absorbed physical line
-            my $next = $lines[$i + 1];
-            last if structural($next);
-            last if length($tail) < $full_at;   # tail wasn't full => intentional break
-            $cur .= ' ' . $next;
-            $i++;
-        }
+# prose: every line but the last is "full" (was wrapped, not hard-broken)
+sub is_prose {
+    my ($blk) = @_;
+    return 0 unless $reflow_ok;
+    return 0 if @$blk < 2;
+    for my $i (0 .. $#$blk - 1) {
+        return 0 if length($blk->[$i]) < $full_at;
     }
-    push @out, $cur;
-    $i++;
+    return 1;
 }
 
-# collapse blank runs to a single blank; trim leading/trailing blanks
-my @final;
-my $blank = 0;
-for my $l (@out) {
-    if ($l eq '') { push @final, '' if $blank++ == 0; }
-    else          { $blank = 0; push @final, $l; }
-}
-shift @final while @final && $final[0] eq '';
-pop   @final while @final && $final[-1] eq '';
+sub strip { my $x = $_[0]; $x =~ s/^\s+//; $x =~ s/\s+$//; return $x; }
 
-open(my $pb, '|-', 'pbcopy') or die "copy-clean: cannot exec pbcopy: $!\n";
-print $pb join("\n", @final);
-close($pb);
+my @out;
+for my $blk (@blocks) {
+    if (is_verbatim($blk)) {
+        push @out, join("\n", dedent($blk));
+    }
+    elsif (grep { is_marker($_) } @$blk) {
+        # list: start a new item at each marker line, fold wrapped
+        # continuation lines into the item they belong to.
+        my @ded = dedent($blk);
+        my @items;
+        for my $l (@ded) {
+            if (is_marker($l)) { push @items, $l; }
+            elsif (@items)     { $items[-1] .= ' ' . strip($l); }
+            else               { push @items, strip($l); }
+        }
+        push @out, join("\n", @items);
+    }
+    elsif (is_prose($blk)) {
+        push @out, join(' ', map { strip($_) } @$blk);
+    }
+    else {
+        push @out, join("\n", dedent($blk));
+    }
+}
+
+my $result = join("\n\n", @out);
+
+if ($ENV{COPY_CLEAN_STDOUT}) {
+    print $result;
+} else {
+    open(my $pb, '|-', 'pbcopy') or die "copy-clean: cannot exec pbcopy: $!\n";
+    print $pb $result;
+    close($pb);
+}
