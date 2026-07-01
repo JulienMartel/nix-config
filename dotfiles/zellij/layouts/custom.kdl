@@ -19,6 +19,12 @@ layout {
         pane
     }
 
+    // Spiral: every split is an even 50/50 halve, alternating
+    // vertical/horizontal, always nesting into the last (bottom-right)
+    // pane. Biggest pane stays on the left, then top-right, then
+    // bottom-right, and so on inward. Geometry is a pure function of the
+    // pane count, so closing any pane reflows to the same canonical form
+    // regardless of which side was closed.
     swap_tiled_layout name="spiral" {
         tab max_panes=1 {
             pane
@@ -31,7 +37,7 @@ layout {
         }
         tab max_panes=3 {
             pane split_direction="vertical" {
-                pane size="60%"
+                pane
                 pane {
                     pane
                     pane
@@ -40,9 +46,9 @@ layout {
         }
         tab max_panes=4 {
             pane split_direction="vertical" {
-                pane size="60%"
+                pane
                 pane {
-                    pane size="60%"
+                    pane
                     pane split_direction="vertical" {
                         pane
                         pane
@@ -50,16 +56,34 @@ layout {
                 }
             }
         }
-        tab {
+        tab max_panes=5 {
             pane split_direction="vertical" {
-                pane size="60%"
+                pane
                 pane {
-                    pane size="60%"
+                    pane
                     pane split_direction="vertical" {
-                        pane size="60%"
+                        pane
                         pane {
                             pane
                             pane
+                        }
+                    }
+                }
+            }
+        }
+        tab {
+            pane split_direction="vertical" {
+                pane
+                pane {
+                    pane
+                    pane split_direction="vertical" {
+                        pane
+                        pane {
+                            pane
+                            pane split_direction="vertical" {
+                                pane
+                                pane
+                            }
                         }
                     }
                 }
