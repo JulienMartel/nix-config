@@ -309,6 +309,24 @@ in
     };
   };
 
+  # Evict any stray brew-services sketchybar agent. sketchybar is launched
+  # solely by the nix-darwin agent above -- never by `brew services`. If a
+  # `brew services start sketchybar` ever runs (or leaves its RunAtLoad plist
+  # behind), that second instance grabs sketchybar's lock-file and the nix
+  # agent silently fails to draw the bar (symptom: empty menu bar after login,
+  # "could not acquire lock-file... already running?" in /tmp/sketchybar.err.log).
+  # Runs as root on every rebuild; boots out the user-domain agent and deletes
+  # its plist so it can't come back on the next login. Idempotent no-op when clean.
+  system.activationScripts.postActivation.text = ''
+    uid=$(/usr/bin/id -u ${username})
+    strayPlist="/Users/${username}/Library/LaunchAgents/homebrew.mxcl.sketchybar.plist"
+    if [ -e "$strayPlist" ]; then
+      echo "[activation] evicting stray homebrew.mxcl.sketchybar agent" >&2
+      /bin/launchctl bootout "gui/$uid/homebrew.mxcl.sketchybar" 2>/dev/null || true
+      rm -f "$strayPlist"
+    fi
+  '';
+
   # Periodic Nix GC. Determinate's daemon only GCs reactively when disk is
   # tight (min-free/max-free) -- on a large SSD that effectively never fires,
   # so generations accumulate forever. Run our own weekly cleanup instead.
