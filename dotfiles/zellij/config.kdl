@@ -9,5 +9,7 @@ theme "catppuccin-mocha"
 keybinds {
     shared {
         bind "Ctrl Alt c" { Run "claude" "--dangerously-skip-permissions"; }
+        bind "Super t" { NewTab; }
+        bind "Super p" { NewPane; }
     }
 }

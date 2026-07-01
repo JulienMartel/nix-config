@@ -15,6 +15,7 @@ window-save-state = never
 
 #zellij overwrites
 keybind = cmd+t=unbind
+keybind = cmd+p=unbind
 
 macos-icon-frame = chrome
 macos-icon-ghost-color = 333333
