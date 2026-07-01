@@ -343,9 +343,9 @@ in
   catppuccin.fzf.enable = true;
   catppuccin.lazygit.enable = true;
   catppuccin.lsd.enable = true;
-  # Zellij is managed as a raw dotfile (dotfiles/zellij/config.kdl, which already
-  # names the catppuccin-mocha built-in theme). Disable the module integration so
-  # it doesn't collide with / clobber that file.
+  # Zellij is managed as a raw dotfile (dotfiles/zellij/config.kdl, which names
+  # the Nebelung theme dropped in below). Disable the module integration so it
+  # doesn't collide with / clobber that file.
   catppuccin.zellij.enable = false;
 
   # FZF configuration
@@ -398,6 +398,12 @@ in
 
   # Dotfiles - Zellij config, layouts, and launch script
   home.file.".config/zellij/config.kdl".source = ../dotfiles/zellij/config.kdl;
+  # Nebelung theme dropped into zellij's theme dir (~/.config/zellij/themes);
+  # config.kdl's `theme "nebelung"` selects it by the theme block's name. This
+  # is the Nebelung port of zellij's built-in catppuccin-mocha (component/UI
+  # spec), rendered by whiskers in the nebelung flake.
+  home.file.".config/zellij/themes/nebelung.kdl".source =
+    "${nebelung.themes}/zellij/themes/nebelung.kdl";
   home.file.".config/zellij/layouts" = {
     source = ../dotfiles/zellij/layouts;
     recursive = true;

@@ -8,7 +8,10 @@ serialize_pane_viewport true
 copy_command "/Users/julienmartel/.config/zellij/copy-clean.pl"
 show_release_notes false
 show_startup_tips false
-theme "catppuccin-mocha"
+// Nebelung (catppuccin-mocha with the blue muted out) — the theme block lives
+// in ~/.config/zellij/themes/nebelung.kdl, dropped there by home-manager from
+// the nebelung flake. Keep this name in sync with that block's name.
+theme "nebelung"
 
 keybinds {
     shared {

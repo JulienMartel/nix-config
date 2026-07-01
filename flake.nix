@@ -21,7 +21,7 @@
     # whiskers` and the themes rebuild with `darwin-rebuild`. Follows our
     # nixpkgs + catppuccin so there's a single whiskers/nixpkgs in the closure.
     nebelung = {
-      url = "github:JulienMartel/nebelung";
+      url = "github:nebelhaus/nebelung";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.catppuccin.follows = "catppuccin";
     };
