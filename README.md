@@ -1,25 +1,27 @@
-# Nix Configuration (macOS)
+# nix-config
 
-Declarative macOS setup for an Apple Silicon Mac using [nix-darwin](https://github.com/LnL7/nix-darwin) and [home-manager](https://github.com/nix-community/home-manager): packages, GUI apps, dotfiles, shell, and system preferences, all version-controlled.
+Personal machine config for one Apple Silicon Mac (host `mbp`). This repo is a
+**thin consumer** of the public [nebelhaus](https://github.com/nebelhaus/nebelhaus)
+rice — it pulls the whole system + shell from there and adds only what's personal.
 
-> Working on this config? See [`CLAUDE.md`](./CLAUDE.md) for where things live and how to rebuild.
+> Working on this config? See [`CLAUDE.md`](./CLAUDE.md).
 
 ## Layout
 
 ```
-flake.nix                      # entry point (inputs + darwinConfigurations.mbp)
-hosts/mbp/configuration.nix    # system: packages, Homebrew casks, macOS defaults, launchd
-home/home.nix                  # user: shell, programs, dotfile wiring
-dotfiles/                      # raw configs symlinked by home.nix
-  aerospace/  sketchybar/  ghostty/  zellij/
-pkgs/                          # local packages (pounce palette + pounce-commands)
+flake.nix               # ~18 lines: nebelhaus.mkNebelhaus { username; hostname; host; }
+hosts/mbp/default.nix   # the personal layer: identity, private apps, secrets
 ```
+
+Everything else — macOS defaults, AeroSpace, SketchyBar, the shell/terminal, the
+pounce palette, the Nebelung theme — lives in the public modules, consumed via the
+`nebelhaus` flake input.
 
 ## New machine
 
 ```bash
 # 1. Install Determinate Nix
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --determinate
 . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 
 # 2. Clone
@@ -31,23 +33,26 @@ nix build .#darwinConfigurations.mbp.system
 sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp
 ```
 
-Then open a fresh terminal. Secrets (SSH/GPG keys, API tokens, `.gitcookies`) are **not** in this repo — transfer or regenerate them by hand under `~/.secrets/` and `~/.ssh`.
+Then open a fresh terminal. Secrets (SSH/GPG keys, API tokens, `.gitcookies`) are
+**not** in this repo — regenerate/transfer them by hand under `~/.secrets/` and
+`~/.ssh`. Pounce needs a one-time Accessibility approval (see the nebelhaus README).
 
 ## Daily use
 
 ```bash
-# Apply changes after editing any file
+# Apply changes after editing hosts/mbp
 nix build .#darwinConfigurations.mbp.system && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp
 
-# Update all inputs to latest, then apply
-nix flake update && sudo darwin-rebuild switch --flake .#mbp
+# Pull the latest rice/theme/pounce, then apply
+nix flake update nebelhaus && sudo darwin-rebuild switch --flake .#mbp
 
 # Rollback / inspect
 darwin-rebuild --list-generations
 darwin-rebuild --rollback
 ```
 
-Packages are pinned in `flake.lock` (on `nixpkgs-unstable`), so updates only happen when you run `nix flake update` — reproducible and reversible.
+To change the rice itself (not just this machine), edit the modules in
+`~/code/nebelhaus/nebelhaus`, push, then `nix flake update nebelhaus` here.
 
 ## Requirements
 
