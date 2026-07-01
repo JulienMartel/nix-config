@@ -61,6 +61,17 @@
         orbstack
       ];
 
+      # Dev loop for hacking on pounce: rebuild the system against the LOCAL
+      # pounce checkout (picks up uncommitted edits) instead of the pinned
+      # github input. Normal `darwin-rebuild` still uses github → reproducible.
+      # When happy: commit + push pounce, then a plain rebuild pins the new rev.
+      programs.zsh.shellAliases.rebuild-pounce = ''
+        (cd "$HOME/.config/nix" \
+          && nix build .#darwinConfigurations.mbp.system \
+               --override-input nebelhaus/pounce "path:$HOME/code/nebelhaus/pounce" \
+          && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp)
+      '';
+
       programs.git.extraConfig = {
         http.cookiefile = "${config.home.homeDirectory}/.gitcookies";
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
