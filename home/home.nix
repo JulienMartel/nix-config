@@ -210,6 +210,13 @@ in
   programs.yazi = {
     enable = true;
     enableZshIntegration = true;
+    # cd-on-exit shell wrapper name. Pinned to the legacy "yy" (the default while
+    # home.stateVersion < "26.05") to silence the migration warning. When we bump
+    # stateVersion to 26.05+, the upstream default becomes "y" — either drop this
+    # line to adopt "y", or keep it if muscle memory prefers "yy". (Only affects
+    # the interactive shell function; the newtab.sh/yazi-shell.sh floats call the
+    # `yazi` binary directly, so they're unaffected either way.)
+    shellWrapperName = "yy";
     # Show dotfiles/dotfolders in the listing.
     settings.mgr.show_hidden = true;
     # parent | current | preview. Default is [1 4 3]; match the preview column to
