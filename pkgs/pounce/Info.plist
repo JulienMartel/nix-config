@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>choose</string>
+    <string>pounce</string>
     <key>CFBundleIdentifier</key>
-    <string>com.local.choose</string>
+    <string>com.local.pounce</string>
     <key>CFBundleName</key>
-    <string>Choose</string>
+    <string>Pounce</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>

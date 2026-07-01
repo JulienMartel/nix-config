@@ -3,7 +3,7 @@
   stdenvNoCC,
   writeShellScriptBin,
   symlinkJoin,
-  choose,
+  pounce,
 }:
 
 let
@@ -20,7 +20,7 @@ let
       name = "Ports";
       description = "Kill Listening Ports";
       icon = "network";
-      script = ../choose/ports;
+      script = ../pounce/ports;
       submenu = true;
     };
     rebuild = {
@@ -104,7 +104,7 @@ let
 
   # Generate registry file content (tab-separated):
   #   name \t description \t icon \t id \t submenu(1|0)
-  # submenu=1 marks a two-step command (it re-invokes choose), so the daemon
+  # submenu=1 marks a two-step command (it re-invokes pounce), so the daemon
   # keeps the window up with a loading state instead of fading between steps.
   registryContent = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (
@@ -116,8 +116,8 @@ let
   # Wrap each command script with proper PATH
   wrapCommand =
     id: cmd:
-    writeShellScriptBin "choose-${id}" ''
-      export PATH="${choose}/bin:$PATH"
+    writeShellScriptBin "pounce-${id}" ''
+      export PATH="${pounce}/bin:$PATH"
       exec bash ${cmd.script} "$@"
     '';
 
@@ -128,35 +128,35 @@ let
   commandPaths = lib.concatStringsSep ":" (map (drv: "${drv}/bin") commandScripts);
 
   # The palette script: launcher mode merges these commands with installed apps.
-  # `choose` enumerates /Applications natively and launches apps itself, so the
+  # `pounce` enumerates /Applications natively and launches apps itself, so the
   # only thing returned to this script is a selected command ("run\t<id>").
-  paletteScript = writeShellScriptBin "choose-palette" ''
-    # Include paths to all choose-* commands and choose itself
-    export PATH="${commandPaths}:${choose}/bin:$PATH"
+  paletteScript = writeShellScriptBin "pounce-palette" ''
+    # Include paths to all pounce-* commands and pounce itself
+    export PATH="${commandPaths}:${pounce}/bin:$PATH"
 
     # Command registry is embedded at build time (name\tdescription\ticon\tid).
     REGISTRY='${registryContent}'
 
     # Launcher mode: apps are added natively; empty query shows the top 7.
-    selected=$(echo "$REGISTRY" | choose --launcher --max-empty 7 -p "Search apps & actions..." -i "magnifyingglass")
+    selected=$(echo "$REGISTRY" | pounce --launcher --max-empty 7 -p "Search apps & actions..." -i "magnifyingglass")
 
-    # App launches are handled inside choose; a command selection comes back as
+    # App launches are handled inside pounce; a command selection comes back as
     # "run\t<id>". Anything else (empty) means dismissed or an app was opened.
     if [[ -n "$selected" ]]; then
       cmd_id=$(echo "$selected" | cut -f2)
       if [[ -n "$cmd_id" ]]; then
-        exec choose-"$cmd_id"
+        exec pounce-"$cmd_id"
       fi
     fi
   '';
 
 in
 symlinkJoin {
-  name = "choose-commands";
+  name = "pounce-commands";
   paths = commandScripts ++ [ paletteScript ];
 
   meta = {
-    description = "Command palette and choose-based utilities";
+    description = "Command palette and pounce-based utilities";
     platforms = lib.platforms.darwin;
   };
 }

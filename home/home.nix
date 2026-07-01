@@ -25,8 +25,8 @@ in
   # User packages
   home.packages = with pkgs; [
     bun
-    choose
-    choose-commands
+    pounce
+    pounce-commands
     claude-code
     opencode
     fnm
@@ -390,7 +390,10 @@ in
     ../dotfiles/ghostty/config;
   # Nebelung theme dropped into ghostty's theme dir; the config's `theme =`
   # line (dotfiles/ghostty/config) selects it by filename for the dark variant.
-  home.file."Library/Application Support/com.mitchellh.ghostty/themes/nebelung".source =
+  # Ghostty anchors theme lookup to the XDG dir (~/.config/ghostty/themes),
+  # NOT the macOS Application Support dir where the config itself lives — so
+  # the theme file must land under .config even though config = above doesn't.
+  home.file.".config/ghostty/themes/nebelung".source =
     "${nebelung.themes}/ghostty/themes/catppuccin-mocha.conf";
 
   # Dotfiles - Zellij config, layouts, and launch script
@@ -431,10 +434,10 @@ in
   home.file.".config/yazi-picker/theme.toml".source =
     config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/yazi/theme.toml";
 
-  # choose picker settings — single source of truth for the command palette's
-  # options. Edit here and rebuild; choose re-reads the file on each open. Schema
-  # is intentionally small for now (parsed leniently in pkgs/choose Settings).
-  home.file.".config/choose/config.json".text = builtins.toJSON {
+  # pounce picker settings — single source of truth for the command palette's
+  # options. Edit here and rebuild; pounce re-reads the file on each open. Schema
+  # is intentionally small for now (parsed leniently in pkgs/pounce Settings).
+  home.file.".config/pounce/config.json".text = builtins.toJSON {
     windowMode = "compact"; # "default" | "compact"
     clipboard = {
       enabled = true;
@@ -444,13 +447,13 @@ in
       blacklistBundleIds = [ "com.apple.Passwords" ];
       # Auto-paste a selected entry into the previously-focused app (synthesize
       # ⌘V), Raycast-style. Needs the daemon's Accessibility grant (see the
-      # "choose daemon runs from a signed copy" gotcha in CLAUDE.md); falls back
+      # "pounce daemon runs from a signed copy" gotcha in CLAUDE.md); falls back
       # to clipboard-only when untrusted.
       autoPaste = true;
     };
   };
 
-  # Free up cmd+space for the choose palette (AeroSpace binds it) by disabling
+  # Free up cmd+space for the pounce palette (AeroSpace binds it) by disabling
   # macOS Spotlight's "Show Spotlight search" shortcut (symbolic hotkey 64).
   # Uses -dict-add so only key 64 is touched — other custom hotkeys in
   # AppleSymbolicHotKeys are left intact. Runs as the user (correct prefs domain).

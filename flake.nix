@@ -49,8 +49,8 @@
 
       # Overlay for local packages
       localOverlay = final: prev: {
-        choose = final.callPackage ./pkgs/choose { };
-        choose-commands = final.callPackage ./pkgs/choose-commands { };
+        pounce = final.callPackage ./pkgs/pounce { };
+        pounce-commands = final.callPackage ./pkgs/pounce-commands { };
       };
       pkgs = import nixpkgs {
         inherit system;
@@ -59,8 +59,8 @@
     in
     {
       packages.${system} = {
-        choose = pkgs.choose;
-        choose-commands = pkgs.choose-commands;
+        pounce = pkgs.pounce;
+        pounce-commands = pkgs.pounce-commands;
       };
 
       darwinConfigurations.${hostname} = nix-darwin.lib.darwinSystem {

@@ -28,7 +28,7 @@ struct ItemAction {
     }
 }
 
-struct ChooseItem: Identifiable {
+struct PounceItem: Identifiable {
     let id = UUID()
     let raw: String
     let title: String
@@ -40,12 +40,12 @@ struct ChooseItem: Identifiable {
     let frecencyKey: String   // stable key for usage history
     let baseBoost: Double     // recency boost for freshly-installed apps
     let group: String?        // optional section header; nil → flat (ungrouped) list
-    let submenu: Bool         // command re-invokes choose (two-step) → loading state
+    let submenu: Bool         // command re-invokes pounce (two-step) → loading state
 
     // Generic stdin line: title \t subtitle \t icon \t actions \t group
     // The trailing `group` field is optional; when any line carries one the list
     // renders with section headers (see ContentView), otherwise it stays flat.
-    static func parsePlain(_ line: String, globalIcon: String?) -> ChooseItem {
+    static func parsePlain(_ line: String, globalIcon: String?) -> PounceItem {
         let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
         let title = parts.count > 0 ? parts[0] : line
         let subtitle = parts.count > 1 && !parts[1].isEmpty ? parts[1] : nil
@@ -67,27 +67,27 @@ struct ChooseItem: Identifiable {
 
         let group = parts.count > 4 && !parts[4].isEmpty ? parts[4] : nil
 
-        return ChooseItem(raw: line, title: title, subtitle: subtitle, icon: icon,
+        return PounceItem(raw: line, title: title, subtitle: subtitle, icon: icon,
                           actions: actions, kind: .plain, payload: line,
                           frecencyKey: title, baseBoost: 0, group: group, submenu: false)
     }
 
     // Launcher command registry line: name \t description \t icon \t id \t submenu(1|0)
-    static func parseCommand(_ line: String) -> ChooseItem {
+    static func parseCommand(_ line: String) -> PounceItem {
         let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
         let title = parts.count > 0 ? parts[0] : line
         let subtitle = parts.count > 1 && !parts[1].isEmpty ? parts[1] : nil
         let icon = parts.count > 2 && !parts[2].isEmpty ? parts[2] : "sparkles"
         let id = parts.count > 3 ? parts[3] : title
         let submenu = parts.count > 4 && parts[4] == "1"
-        return ChooseItem(raw: line, title: title, subtitle: subtitle, icon: icon,
+        return PounceItem(raw: line, title: title, subtitle: subtitle, icon: icon,
                           actions: [ItemAction(key: "enter", label: "Run")],
                           kind: .command, payload: id,
                           frecencyKey: "cmd:\(id)", baseBoost: 0, group: nil, submenu: submenu)
     }
 
-    static func app(name: String, path: String, boost: Double) -> ChooseItem {
-        return ChooseItem(raw: path, title: name, subtitle: "Application",
+    static func app(name: String, path: String, boost: Double) -> PounceItem {
+        return PounceItem(raw: path, title: name, subtitle: "Application",
                           icon: "app:\(path)",
                           actions: [ItemAction(key: "enter", label: "Open"),
                                     ItemAction(key: "cmd", label: "Reveal in Finder")],
@@ -161,11 +161,11 @@ final class AppScanner {
         return 1000.0 * exp(-log(2.0) / halfLife * age)
     }
 
-    func apps() -> [ChooseItem] {
+    func apps() -> [PounceItem] {
         let fm = FileManager.default
         let now = Date().timeIntervalSince1970
         var seen = Set<String>()
-        var result: [ChooseItem] = []
+        var result: [PounceItem] = []
 
         lock.lock(); defer { lock.unlock() }
 
@@ -220,7 +220,7 @@ final class Frecency {
 
     init() {
         let dir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".local/share/choose")
+            .appendingPathComponent(".local/share/pounce")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         self.path = dir.appendingPathComponent("frecency.json")
         self.lambda = log(2.0) / (72 * 3600)
@@ -257,7 +257,7 @@ final class Frecency {
 
 // hideNow: close immediately. linger: brief fade (terminal action). loading:
 // keep the window up showing a spinner until the next request swaps in (a
-// two-step command re-invoking choose) — never a gap between steps.
+// two-step command re-invoking pounce) — never a gap between steps.
 enum Disposition { case hideNow, linger, loading }
 
 struct Commit {
@@ -275,8 +275,8 @@ struct Commit {
 enum DisplayMode { case list, clipboard, emoji, screenshots }
 
 final class DaemonState: ObservableObject {
-    @Published var items: [ChooseItem] = []
-    @Published var itemsSorted: [ChooseItem] = []   // empty-query order
+    @Published var items: [PounceItem] = []
+    @Published var itemsSorted: [PounceItem] = []   // empty-query order
     @Published var placeholderText: String = "Search..."
     @Published var globalIcon: String? = nil
     @Published var isVisible: Bool = false
@@ -398,13 +398,13 @@ final class DaemonState: ObservableObject {
         isLauncher = launcher
         self.maxEmpty = maxEmpty ?? (launcher ? 7 : Int.max)
 
-        var built: [ChooseItem] = []
+        var built: [PounceItem] = []
         if launcher {
-            built.append(contentsOf: lines.filter { !$0.isEmpty }.map { ChooseItem.parseCommand($0) })
+            built.append(contentsOf: lines.filter { !$0.isEmpty }.map { PounceItem.parseCommand($0) })
             built.append(contentsOf: AppScanner.shared.apps())
             placeholderText = placeholder ?? "Search apps & actions..."
         } else {
-            built = lines.map { ChooseItem.parsePlain($0, globalIcon: icon) }
+            built = lines.map { PounceItem.parsePlain($0, globalIcon: icon) }
             placeholderText = placeholder ?? (lines.isEmpty ? "Input..." : "Search...")
         }
         items = built
@@ -415,10 +415,10 @@ final class DaemonState: ObservableObject {
         }
     }
 
-    private func frecency(for item: ChooseItem) -> Double { frecencyScores[item.id] ?? 0 }
+    private func frecency(for item: PounceItem) -> Double { frecencyScores[item.id] ?? 0 }
 
     // Combined relevance for a typed query. nil → no match.
-    func matchScore(_ item: ChooseItem, query: [Character]) -> Double? {
+    func matchScore(_ item: PounceItem, query: [Character]) -> Double? {
         let title = Fuzzy.score(query, item.title.lowercased())
         let sub = item.subtitle.flatMap { Fuzzy.score(query, $0.lowercased()) }
         let candidates = [title, sub.map { $0 * 0.5 }].compactMap { $0 }
@@ -429,7 +429,7 @@ final class DaemonState: ObservableObject {
         return best + normFrec * 1.5 + boost
     }
 
-    func commit(_ item: ChooseItem, action: String) {
+    func commit(_ item: PounceItem, action: String) {
         frecency.record(item.frecencyKey)
         // For a two-step command, seed the loading header with its name + icon so
         // it matches the step-2 header (which arrives with the same -p / -i).
@@ -448,13 +448,13 @@ final class DaemonState: ObservableObject {
         onCommit?(Commit(clientString: "", disposition: .hideNow, appLaunch: nil))
     }
 
-    private func buildCommit(_ item: ChooseItem, action: String) -> Commit {
+    private func buildCommit(_ item: PounceItem, action: String) -> Commit {
         switch item.kind {
         case .app:
             return Commit(clientString: "", disposition: .hideNow,
                           appLaunch: (item.payload, action == "cmd"))
         case .command:
-            // Two-step commands re-invoke choose → keep the window up (loading)
+            // Two-step commands re-invoke pounce → keep the window up (loading)
             // so step 2 swaps in without a gap. Terminal commands briefly linger.
             return Commit(clientString: "run\t\(item.payload)",
                           disposition: item.submenu ? .loading : .linger, appLaunch: nil)
@@ -469,8 +469,8 @@ final class DaemonState: ObservableObject {
 
 enum SocketConfig {
     static let dir = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent(".local/share/choose").path
-    static let path = dir + "/choose.sock"
+        .appendingPathComponent(".local/share/pounce").path
+    static let path = dir + "/pounce.sock"
 }
 
 // MARK: - Settings & Layout
@@ -527,7 +527,7 @@ enum ScreenshotLayout {
     static let rowHeight: CGFloat = 64
 }
 
-// User settings, read from ~/.config/choose/config.json. Parsed leniently via
+// User settings, read from ~/.config/pounce/config.json. Parsed leniently via
 // JSONSerialization so unknown/extra keys (added by future versions) never break
 // an older binary, and any missing/malformed value falls back to a default.
 struct ClipboardSettings {
@@ -559,7 +559,7 @@ struct Settings {
 
     static var configPath: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".config/choose/config.json")
+            .appendingPathComponent(".config/pounce/config.json")
     }
 
     // Cheap enough (tiny file) to re-read per invocation, so edits take effect
@@ -628,7 +628,7 @@ enum Paste {
 enum AccessibilityHint {
     private static var marker: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".local/state/choose/.autopaste-prompted")
+            .appendingPathComponent(".local/state/pounce/.autopaste-prompted")
     }
 
     static func promptOnce() {
@@ -737,7 +737,7 @@ struct ClipEntry: Codable, Identifiable {
     var height: Int?
 }
 
-// Records pasteboard history into ~/.local/share/choose/clipboard and serves it
+// Records pasteboard history into ~/.local/share/pounce/clipboard and serves it
 // to the picker. Lives inside the long-running daemon, polling changeCount —
 // NSPasteboard has no change notification. Reading/writing the pasteboard needs
 // no special permissions.
@@ -747,7 +747,7 @@ final class ClipboardStore {
     private let dir: URL
     private let blobs: URL
     private let indexURL: URL
-    private let queue = DispatchQueue(label: "choose.clipboard")
+    private let queue = DispatchQueue(label: "pounce.clipboard")
     private var entriesCache: [ClipEntry] = []
     private var lastChangeCount: Int
 
@@ -760,7 +760,7 @@ final class ClipboardStore {
 
     private init() {
         dir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".local/share/choose/clipboard")
+            .appendingPathComponent(".local/share/pounce/clipboard")
         blobs = dir.appendingPathComponent("blobs")
         indexURL = dir.appendingPathComponent("index.json")
         lastChangeCount = NSPasteboard.general.changeCount   // ignore whatever's already there
@@ -953,14 +953,14 @@ final class EmojiStore {
 
 // MARK: - Window
 
-class ChooseWindow: NSWindow {
+class PounceWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 }
 
-// MARK: - ChooseUI (window controller shared by daemon + direct mode)
+// MARK: - PounceUI (window controller shared by daemon + direct mode)
 
-final class ChooseUI {
+final class PounceUI {
     // A resizable rounded-rect mask: a solid rounded square with cap insets so it
     // stretches to any window size without distorting the corners.
     static func roundedMask(radius: CGFloat) -> NSImage {
@@ -975,7 +975,7 @@ final class ChooseUI {
         return image
     }
 
-    let window: ChooseWindow
+    let window: PounceWindow
     let hosting: NSHostingView<ContentView>
     let state: DaemonState
 
@@ -992,7 +992,7 @@ final class ChooseUI {
         self.state = state
         self.hosting = NSHostingView(rootView: ContentView(state: state))
 
-        window = ChooseWindow(
+        window = PounceWindow(
             contentRect: NSRect(x: 0, y: 0, width: LayoutMetrics.standard.width, height: 400),
             styleMask: [.borderless, .fullSizeContentView],
             backing: .buffered, defer: false
@@ -1018,7 +1018,7 @@ final class ChooseUI {
         // layer.cornerRadius alone doesn't clip the vibrancy material or shape the
         // window shadow — a resizable rounded maskImage does both, killing the
         // square corner that pokes out behind the rounded panel.
-        blur.maskImage = ChooseUI.roundedMask(radius: 16)
+        blur.maskImage = PounceUI.roundedMask(radius: 16)
         // Pin the content to the TOP edge (fixed height, flexible bottom margin)
         // so an animated window resize reveals/covers from the bottom instead of
         // letting NSHostingView re-center the content and slide it vertically.
@@ -1056,7 +1056,7 @@ final class ChooseUI {
         if fresh {
             // Record who had focus before we steal it, so an auto-paste commit can
             // hand focus back and ⌘V into the right app. Skip our own process so a
-            // stale activation can't capture choose itself.
+            // stale activation can't capture pounce itself.
             let front = NSWorkspace.shared.frontmostApplication
             if front?.processIdentifier != NSRunningApplication.current.processIdentifier {
                 capturedApp = front
@@ -1175,7 +1175,7 @@ final class ChooseUI {
         window.orderOut(nil)
     }
 
-    // Hand focus back to the app that was frontmost before choose appeared, then
+    // Hand focus back to the app that was frontmost before pounce appeared, then
     // synthesize ⌘V once it's active. The small delay lets the activation settle
     // so the keystroke lands in the target app rather than the just-hidden window.
     private func restoreFocusAndPaste() {
@@ -1255,7 +1255,7 @@ enum Main {
     }
 }
 
-// `choose --copy-file <path>`: copy a file to the clipboard as both image and
+// `pounce --copy-file <path>`: copy a file to the clipboard as both image and
 // file reference (see Pasteboard.copyFile) and exit. Synchronous — no run loop.
 enum CopyFileMode {
     static func run(path: String) {
@@ -1284,7 +1284,7 @@ enum DaemonMode {
         app.setActivationPolicy(.accessory)
 
         let state = DaemonState()
-        let ui = ChooseUI(state: state)
+        let ui = PounceUI(state: state)
         ui.window.orderOut(nil)
 
         AppScanner.shared.warm()
@@ -1307,18 +1307,18 @@ enum DaemonMode {
             startSocketServer(state: state, ui: ui)
         }
 
-        NSLog("choose daemon started, listening on \(SocketConfig.path)")
-        NSLog("choose daemon accessibility trusted=\(AXIsProcessTrusted())")
+        NSLog("pounce daemon started, listening on \(SocketConfig.path)")
+        NSLog("pounce daemon accessibility trusted=\(AXIsProcessTrusted())")
         app.run()
     }
 
-    static func startSocketServer(state: DaemonState, ui: ChooseUI) {
+    static func startSocketServer(state: DaemonState, ui: PounceUI) {
         unlink(SocketConfig.path)
         try? FileManager.default.createDirectory(atPath: SocketConfig.dir,
                                                  withIntermediateDirectories: true)
 
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-        guard fd >= 0 else { NSLog("choose daemon: failed to create socket"); return }
+        guard fd >= 0 else { NSLog("pounce daemon: failed to create socket"); return }
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
@@ -1330,9 +1330,9 @@ enum DaemonMode {
         let addrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
         guard withUnsafePointer(to: &addr, { ptr in
             ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, addrLen) }
-        }) == 0 else { NSLog("choose daemon: failed to bind socket"); close(fd); return }
+        }) == 0 else { NSLog("pounce daemon: failed to bind socket"); close(fd); return }
 
-        guard listen(fd, 5) == 0 else { NSLog("choose daemon: failed to listen"); close(fd); return }
+        guard listen(fd, 5) == 0 else { NSLog("pounce daemon: failed to listen"); close(fd); return }
 
         while true {
             var clientAddr = sockaddr_un()
@@ -1345,7 +1345,7 @@ enum DaemonMode {
         }
     }
 
-    static func handleClient(clientFD: Int32, state: DaemonState, ui: ChooseUI) {
+    static func handleClient(clientFD: Int32, state: DaemonState, ui: PounceUI) {
         var data = Data()
         var buf = [UInt8](repeating: 0, count: 65536)
         while true {
@@ -1486,7 +1486,7 @@ enum ClientMode {
         app.setActivationPolicy(.accessory)
 
         let state = DaemonState()
-        let ui = ChooseUI(state: state)
+        let ui = PounceUI(state: state)
         state.metrics = Settings.load().metrics
         if inv.clipboard {
             state.loadClipboard(placeholder: inv.placeholder)
@@ -1551,20 +1551,20 @@ struct ContentView: View {
     // Re-bucket a priority-ordered list into section order, preserving each
     // item's incoming order within its section. (Swift's sort isn't stable, so
     // we bucket explicitly rather than sort by group index.)
-    func grouped(_ items: [ChooseItem]) -> [ChooseItem] {
+    func grouped(_ items: [PounceItem]) -> [PounceItem] {
         guard hasGroups else { return items }
-        var buckets: [String: [ChooseItem]] = [:]
+        var buckets: [String: [PounceItem]] = [:]
         for it in items { buckets[it.group ?? "", default: []].append(it) }
         return groupOrder.flatMap { buckets[$0] ?? [] }
     }
 
-    var filtered: [ChooseItem] {
-        let base: [ChooseItem]
+    var filtered: [PounceItem] {
+        let base: [PounceItem]
         if queryIsEmpty {
             base = Array(state.itemsSorted.prefix(state.maxEmpty))
         } else {
             let q = Array(state.query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
-            let scored = state.items.compactMap { item -> (ChooseItem, Double)? in
+            let scored = state.items.compactMap { item -> (PounceItem, Double)? in
                 guard let s = state.matchScore(item, query: q) else { return nil }
                 return (item, s)
             }
@@ -1582,9 +1582,9 @@ struct ContentView: View {
         return true
     }
 
-    var visible: [ChooseItem] { showList ? filtered : [] }
+    var visible: [PounceItem] { showList ? filtered : [] }
 
-    var selectedItem: ChooseItem? {
+    var selectedItem: PounceItem? {
         guard selectedIndex < visible.count else { return nil }
         return visible[selectedIndex]
     }
@@ -1594,7 +1594,7 @@ struct ContentView: View {
     // keyboard nav over `visible` skips them for free).
     enum RenderRow: Identifiable {
         case header(String)
-        case item(ChooseItem, Int)
+        case item(PounceItem, Int)
         var id: String {
             switch self {
             case .header(let g): return "header:\(g)"
@@ -2267,7 +2267,7 @@ struct GroupHeaderRow: View {
 // MARK: - ItemRow
 
 struct ItemRow: View {
-    let item: ChooseItem
+    let item: PounceItem
     let isSelected: Bool
 
     private var appIconPath: String? {

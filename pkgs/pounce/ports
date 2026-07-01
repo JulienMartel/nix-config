@@ -69,15 +69,15 @@ if [[ -z "$ports" ]]; then
     # Still show the picker for visual feedback — osascript notifications are
     # unreliable (macOS often drops them silently), so a notification alone
     # makes this look like nothing happened.
-    printf 'No listening ports found\t(nothing to kill)\txmark.circle\n' | choose
+    printf 'No listening ports found\t(nothing to kill)\txmark.circle\n' | pounce
     exit 0
 fi
 
-# Show picker. choose emits its selection as: action<TAB>title<TAB>subtitle<TAB>icon
-selected=$(echo "$ports" | choose)
+# Show picker. pounce emits its selection as: action<TAB>title<TAB>subtitle<TAB>icon
+selected=$(echo "$ports" | pounce)
 
 if [[ -n "$selected" ]]; then
-    # PID lives in the subtitle ("pid NNNN"), which is field 3 of choose's
+    # PID lives in the subtitle ("pid NNNN"), which is field 3 of pounce's
     # output (field 1 is the action, field 2 the title/":port name").
     pid=$(echo "$selected" | cut -f3 | grep -oE '[0-9]+')
 

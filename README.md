@@ -12,7 +12,7 @@ hosts/mbp/configuration.nix    # system: packages, Homebrew casks, macOS default
 home/home.nix                  # user: shell, programs, dotfile wiring
 dotfiles/                      # raw configs symlinked by home.nix
   aerospace/  sketchybar/  ghostty/  zellij/
-pkgs/                          # local packages (choose palette + choose-commands)
+pkgs/                          # local packages (pounce palette + pounce-commands)
 ```
 
 ## New machine

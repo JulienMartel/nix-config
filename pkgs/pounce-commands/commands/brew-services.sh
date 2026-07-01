@@ -49,8 +49,8 @@ if [[ -z "$services" ]]; then
     exit 0
 fi
 
-# Run choose and capture output (format: action\traw_line)
-result=$(echo "$services" | choose -p "Brew Services" -i "shippingbox")
+# Run pounce and capture output (format: action\traw_line)
+result=$(echo "$services" | pounce -p "Brew Services" -i "shippingbox")
 
 if [[ -z "$result" ]]; then
     exit 0

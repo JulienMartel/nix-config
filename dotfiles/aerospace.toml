@@ -121,7 +121,7 @@ f18 = ['mode launch', 'exec-and-forget /Users/julienmartel/.config/sketchybar/pl
 
 # cmd+space opens the command palette directly (macOS Spotlight's cmd+space is
 # disabled in Keyboard settings). A direct alternative to the caps -> space leader.
-cmd-space = 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose-palette'
+cmd-space = 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/pounce-palette'
 
 alt-f = 'fullscreen'
 
@@ -156,8 +156,8 @@ shift-down = ['volume set 0', 'mode main']
 esc = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'mode main']
 # Non-launch leader actions. v = clipboard history; e = emoji picker.
 # (palette is on cmd+space now, so the old space->palette leader is gone.)
-v = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose --clipboard', 'mode main']
-e = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/choose --emoji', 'mode main']
+v = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/pounce --clipboard', 'mode main']
+e = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /etc/profiles/per-user/julienmartel/bin/pounce --emoji', 'mode main']
 # - / = resize the focused tiled window (growing it shrinks its neighbour). The
 # first press also drops into `resize` mode so further -/= repeat without re-tapping caps.
 minus = ['exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/launch_mode.sh off', 'exec-and-forget /Users/julienmartel/.config/sketchybar/plugins/resize_mode.sh on', 'resize smart -50', 'mode resize']

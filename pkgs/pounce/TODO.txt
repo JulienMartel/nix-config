@@ -24,9 +24,9 @@ Ranking ideas (layerable, each one adds signal):
    - Bucket into ~4 time blocks (morning/afternoon/evening/night)
 
 3. Contextual signals
-   - Which app was focused when choose was invoked
+   - Which app was focused when pounce was invoked
    - Could store (frontmost_app, item_key, count)
-   - "If I'm in Xcode and open choose, I probably want Simulator"
+   - "If I'm in Xcode and open pounce, I probably want Simulator"
 
 4. Sequence patterns
    - "After opening A, I usually open B within 5 minutes"

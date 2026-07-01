@@ -63,8 +63,8 @@ log "event: prev=$prev cur=$cur_pid|$cur_name focused=$focused"
 # Only a QUIT is interesting: previous frontmost recorded and now dead.
 [ -n "$prev_pid" ] || { log "  no prev → skip"; exit 0; }
 if kill -0 "$prev_pid" 2>/dev/null; then log "  prev alive → switch, skip"; exit 0; fi
-case "$prev_name" in Choose|choose*) log "  prev is palette → skip"; exit 0 ;; esac
-case "$cur_name"  in Choose|choose*) log "  cur is palette → skip";  exit 0 ;; esac
+case "$prev_name" in Pounce|pounce*) log "  prev is palette → skip"; exit 0 ;; esac
+case "$cur_name"  in Pounce|pounce*) log "  cur is palette → skip";  exit 0 ;; esac
 
 log "  QUIT detected (prev '$prev_name' dead) → fork"
 

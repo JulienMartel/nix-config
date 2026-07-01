@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# WiFi network picker using choose
+# WiFi network picker using pounce
 # Shows saved networks and allows connecting to them
 
 INTERFACE="en0"
-LOG_FILE="/tmp/choose-wifi.log"
+LOG_FILE="/tmp/pounce-wifi.log"
 
 log() {
     echo "[$(date '+%H:%M:%S')] $*" >> "$LOG_FILE"
@@ -82,15 +82,15 @@ build_network_json() {
     echo "]"
 }
 
-# Convert JSON to choose format (name\tsubtitle\ticon)
-json_to_choose() {
+# Convert JSON to pounce format (name\tsubtitle\ticon)
+json_to_pounce() {
     jq -r '.[] | "\(.name)\t\(.subtitle)\t\(.icon)"'
 }
 
 # Check WiFi status
 if ! is_wifi_on; then
     log "WiFi is off, prompting to enable"
-    result=$(printf "Turn WiFi On\tWiFi is currently off\twifi.slash" | choose -p "WiFi")
+    result=$(printf "Turn WiFi On\tWiFi is currently off\twifi.slash" | pounce -p "WiFi")
     if [[ -n "$result" ]]; then
         networksetup -setairportpower "$INTERFACE" on
         osascript -e 'display notification "WiFi turned on" with title "WiFi"'
@@ -102,7 +102,7 @@ fi
 current=$(get_current_network)
 log "Current network: '$current'"
 
-# Build network list in choose format
+# Build network list in pounce format
 networks=""
 
 # Add disconnect option if connected
@@ -140,10 +140,10 @@ networks="$networks"$'\n'"System WiFi Settings	Scan for new networks	gear"
 log "Network list generated: $(echo "$networks" | wc -l) items"
 
 # Show picker
-selected=$(echo "$networks" | choose -p "WiFi Networks" -i "wifi")
+selected=$(echo "$networks" | pounce -p "WiFi Networks" -i "wifi")
 exit_code=$?
 
-log "Choose exit code: $exit_code"
+log "Pounce exit code: $exit_code"
 log "Selected raw: '$selected'"
 
 # Handle selection

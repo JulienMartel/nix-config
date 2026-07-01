@@ -5,7 +5,7 @@
 }:
 
 stdenvNoCC.mkDerivation {
-  pname = "choose";
+  pname = "pounce";
   version = "0.2.0";
 
   src = ./.;
@@ -15,28 +15,28 @@ stdenvNoCC.mkDerivation {
   nativeBuildInputs = [ darwin.cctools ];
 
   buildPhase = ''
-    mkdir -p Choose.app/Contents/MacOS
+    mkdir -p Pounce.app/Contents/MacOS
 
     # Use xcrun to invoke the system's Swift compiler
-    /usr/bin/xcrun swiftc -parse-as-library -o Choose.app/Contents/MacOS/choose main.swift \
+    /usr/bin/xcrun swiftc -parse-as-library -o Pounce.app/Contents/MacOS/pounce main.swift \
       -framework SwiftUI \
       -framework AppKit \
       -framework ApplicationServices \
       -O
 
-    cp Info.plist Choose.app/Contents/
+    cp Info.plist Pounce.app/Contents/
 
     # Bundle the emoji dataset (read at runtime via Bundle.main).
-    mkdir -p Choose.app/Contents/Resources
-    cp emoji.json Choose.app/Contents/Resources/
+    mkdir -p Pounce.app/Contents/Resources
+    cp emoji.json Pounce.app/Contents/Resources/
   '';
 
   installPhase = ''
     mkdir -p $out/Applications
-    cp -r Choose.app $out/Applications/
+    cp -r Pounce.app $out/Applications/
 
     mkdir -p $out/bin
-    ln -s $out/Applications/Choose.app/Contents/MacOS/choose $out/bin/choose
+    ln -s $out/Applications/Pounce.app/Contents/MacOS/pounce $out/bin/pounce
     cp ports $out/bin/ports
     chmod +x $out/bin/ports
   '';

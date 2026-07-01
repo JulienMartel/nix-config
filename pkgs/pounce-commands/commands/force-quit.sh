@@ -37,10 +37,10 @@ return emit(fg, "Applications") & emit(bg, "Background")
 EOF
 )
 
-# Build choose rows: title<TAB>subtitle<TAB>icon<TAB>action<TAB>group
-# (the trailing group column drives choose's section headers). Sort by group
+# Build pounce rows: title<TAB>subtitle<TAB>icon<TAB>action<TAB>group
+# (the trailing group column drives pounce's section headers). Sort by group
 # then name (-k1,1 -k2,2f): "Applications" sorts before "Background", and the
-# section order in choose follows first appearance, so apps render first.
+# section order in pounce follows first appearance, so apps render first.
 rows=$(echo "$raw" | sed '/^$/d' | sort -t$'\t' -k1,1 -k2,2f | \
     while IFS=$'\t' read -r group name pid; do
         [[ -z "$pid" ]] && continue
@@ -49,13 +49,13 @@ rows=$(echo "$raw" | sed '/^$/d' | sort -t$'\t' -k1,1 -k2,2f | \
     done)
 
 if [[ -z "$rows" ]]; then
-    printf 'No running processes found\t(nothing to quit)\txmark.circle\n' | choose
+    printf 'No running processes found\t(nothing to quit)\txmark.circle\n' | pounce
     exit 0
 fi
 
-# Show picker. choose emits its selection as: action<TAB>raw_line, where raw_line
+# Show picker. pounce emits its selection as: action<TAB>raw_line, where raw_line
 # is the full tab-separated row we sent (so pid is in field 3 of the output).
-selected=$(echo "$rows" | choose -p "Force Quit" -i "xmark.octagon")
+selected=$(echo "$rows" | pounce -p "Force Quit" -i "xmark.octagon")
 
 if [[ -n "$selected" ]]; then
     name=$(echo "$selected" | cut -f2)
