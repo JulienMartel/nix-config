@@ -2,6 +2,10 @@ default_layout "custom"
 pane_frames false
 scroll_buffer_size 50000
 serialize_pane_viewport true
+// Clean up grid-selections before they hit the clipboard: dedent the message
+// gutter and rejoin hard-wrapped prose, while leaving code/lists/tables intact.
+// (Script pipes the cleaned text to pbcopy itself.) See copy-clean.pl.
+copy_command "/Users/julienmartel/.config/zellij/copy-clean.pl"
 show_release_notes false
 show_startup_tips false
 theme "catppuccin-mocha"
@@ -9,7 +13,46 @@ theme "catppuccin-mocha"
 keybinds {
     shared {
         bind "Ctrl Alt c" { Run "claude" "--dangerously-skip-permissions"; }
-        bind "Super t" { NewTab; }
         bind "Super p" { NewPane; }
+
+        // yazi as a floating overlay — appears on top of the tiled claude panes,
+        // dismissed with q, leaving the spiral layout untouched.
+        //
+        // Super y  — Peek: read-only file browser rooted at the focused pane's
+        //            cwd (its repo). Live markdown/code preview; Enter pages a
+        //            file fullscreen. Pure "browse the tree / read the docs".
+        bind "Super y" {
+            Run "yazi" {
+                floating true
+                close_on_exit true
+                name "peek"
+                x "5%"; y "5%"; width "90%"; height "90%"
+            }
+        }
+        // Super Shift y — Jump: browse, quit, and the float becomes a shell in
+        //            the directory you landed on. Scratch terminal on demand.
+        bind "Super Shift y" {
+            Run "/Users/julienmartel/.config/zellij/yazi-shell.sh" {
+                floating true
+                name "shell"
+                x "5%"; y "5%"; width "90%"; height "90%"
+            }
+        }
+        // Super t — New tab in the focused pane's current dir. Bound to the plain
+        //            NewTab action (not a script) so zellij's status bar renders
+        //            the "Super + t  New Tab" hint in locked mode, mirroring
+        //            Super p → New Pane. NewTab inherits the focused pane's cwd.
+        bind "Super t" { NewTab; }
+        // Super Shift t — New tab via yazi picker: browse (floating), Enter on a
+        //            folder opens a new tab cwd'd there (auto-named after the repo),
+        //            q/Esc cancels. See dotfiles/zellij/newtab.sh + yazi-picker.
+        bind "Super Shift t" {
+            Run "/Users/julienmartel/.config/zellij/newtab.sh" {
+                floating true
+                close_on_exit true
+                name "new-tab"
+                x "5%"; y "5%"; width "90%"; height "90%"
+            }
+        }
     }
 }

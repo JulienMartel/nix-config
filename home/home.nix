@@ -6,6 +6,13 @@
   ...
 }:
 
+let
+  # Yazi preview pane: pipe code/text through `bat` (via the piper plugin) so
+  # previews match the catppuccin-themed `cat` alias — syntax colours + line
+  # numbers. piper supplies $w (pane width) and $1 (file path) to the shell.
+  batPreviewer = ''piper -- bat --color=always --paging=never --style=numbers --tabs=2 --terminal-width=$w "$1"'';
+in
+
 {
   # Static environment variables (dynamic ones that need shell evaluation
   # like $(tty) or $(cat ...) live in programs.zsh.initContent below)
@@ -24,9 +31,11 @@
     fnm
     nixfmt
     gemini-cli-bin
+    glow # markdown renderer; yazi's glow previewer shells out to it
     iina
     mdcat
     orbstack
+    fd # fast file finder; used by yazi/zoxide navigation
   ];
 
   # Zsh configuration
@@ -105,6 +114,22 @@
         zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
         zstyle ':completion:*' list-colors "''${(s.:.)LS_COLORS}"
         zstyle ':completion:*' menu no
+
+        # Auto-name the current zellij tab after the repo whenever you cd. Uses
+        # the git-root basename (so subdirs of a repo keep the repo's name), or
+        # the plain dir basename outside a repo. Fires only on an interactive cd
+        # in the focused pane — so rename-tab always targets the right tab, never
+        # a background pane racing at startup.
+        if [[ -n "$ZELLIJ" ]]; then
+          _zj_name_tab() {
+            local root name
+            root=$(git rev-parse --show-toplevel 2>/dev/null)
+            name=''${''${root:-$PWD}:t}
+            command zellij action rename-tab "$name" 2>/dev/null
+          }
+          autoload -Uz add-zsh-hook
+          add-zsh-hook chpwd _zj_name_tab
+        fi
       ''
     ];
   };
@@ -166,6 +191,96 @@
       style = "header,grid";
       tabs = "2";
     };
+  };
+
+  # Yazi file manager. Customises the preview pane:
+  #   - Markdown (.md/.mdx) renders through `glow` (formatted, not raw source)
+  #   - other text/code renders through `bat` (piped in via the piper plugin) so
+  #     previews match the catppuccin-themed `cat` alias: syntax colours + line
+  #     numbers. catppuccin themes both bat and yazi via autoEnable.
+  #   - images use ghostty's Kitty graphics protocol automatically — yazi detects
+  #     the terminal (TERM_PROGRAM=ghostty) and picks it; no config needed.
+  # The three bat rules mirror the exact mimes yazi's built-in code/json
+  # previewers claim, so JSON/JS/XML that reports as application/* (not text/*)
+  # still routes to bat: text/* covers plain source; */{xml,javascript} covers
+  # the application/ variants; application/{json,ndjson} covers JSON.
+  # prepend_previewers is evaluated top-down, first match wins, ahead of yazi's
+  # built-ins — so the glow rules MUST precede the bat rules, else Markdown (also
+  # text/*) would fall through to bat.
+  programs.yazi = {
+    enable = true;
+    enableZshIntegration = true;
+    # Show dotfiles/dotfolders in the listing.
+    settings.mgr.show_hidden = true;
+    plugins = {
+      glow = pkgs.yaziPlugins.glow;
+      piper = pkgs.yaziPlugins.piper;
+    };
+    settings.plugin.prepend_previewers = [
+      {
+        name = "*.md";
+        run = "glow";
+      }
+      {
+        name = "*.mdx";
+        run = "glow";
+      }
+      {
+        mime = "text/*";
+        run = batPreviewer;
+      }
+      {
+        mime = "*/{xml,javascript,x-wine-extension-ini}";
+        run = batPreviewer;
+      }
+      {
+        mime = "application/{json,ndjson}";
+        run = batPreviewer;
+      }
+    ];
+    # Opening a file (Enter) pages it fullscreen in the same pane, then returns
+    # to yazi — this is a reading surface, not an editor. Markdown renders through
+    # glow; everything else through the catppuccin-themed bat.
+    settings.opener = {
+      read = [
+        {
+          run = ''glow -p "$@"'';
+          block = true;
+          desc = "glow";
+        }
+      ];
+      pager = [
+        {
+          run = ''bat --style=full --paging=always "$@"'';
+          block = true;
+          desc = "bat";
+        }
+      ];
+    };
+    # yazi's open.rules match on `url` (a filename glob) or `mime` — NOT `name`
+    # (that's the previewers' key). Using `name` here is a hard TOML parse error
+    # ("at least one of `url` or `mime` must be specified") that makes yazi throw
+    # away this whole config and fall back to preset settings.
+    settings.open.rules = [
+      {
+        url = "*.md";
+        use = "read";
+      }
+      {
+        url = "*.mdx";
+        use = "read";
+      }
+      {
+        url = "*";
+        use = "pager";
+      }
+    ];
+  };
+
+  # zoxide — frecency `cd`, and the `z` jump inside yazi's new-tab / jump pickers.
+  programs.zoxide = {
+    enable = true;
+    enableZshIntegration = true;
   };
 
   # Catppuccin theming. `catppuccin.flavor` is the single source of truth -
@@ -242,6 +357,33 @@
     source = ../dotfiles/zellij/launch.sh;
     executable = true;
   };
+  # yazi ⇄ zellij glue scripts, launched as floating panes by the Super-Shift-y
+  # (jump-to-shell) and Super-t (new-tab picker) keybinds in config.kdl.
+  home.file.".config/zellij/yazi-shell.sh" = {
+    source = ../dotfiles/zellij/yazi-shell.sh;
+    executable = true;
+  };
+  home.file.".config/zellij/newtab.sh" = {
+    source = ../dotfiles/zellij/newtab.sh;
+    executable = true;
+  };
+  # copy_command filter (config.kdl): dedents the message gutter and rejoins
+  # hard-wrapped prose on copy, so terminal selections paste cleanly elsewhere.
+  home.file.".config/zellij/copy-clean.pl" = {
+    source = ../dotfiles/zellij/copy-clean.pl;
+    executable = true;
+  };
+  # Dedicated yazi config for the Super-Shift-t new-tab picker (newtab.sh points
+  # YAZI_CONFIG_HOME here) so its Enter=pick / q=cancel keymap stays isolated from
+  # the main ~/.config/yazi used by the Super-y peek browser. theme.toml is
+  # symlinked to the main config's so the picker inherits catppuccin (single
+  # source of truth: catppuccin.flavor). The main theme.toml points syntect at an
+  # absolute ~/.config/yazi/Catppuccin-mocha.tmTheme, so sharing just theme.toml
+  # is enough — no need to copy the tmTheme.
+  home.file.".config/yazi-picker/yazi.toml".source = ../dotfiles/yazi/picker/yazi.toml;
+  home.file.".config/yazi-picker/keymap.toml".source = ../dotfiles/yazi/picker/keymap.toml;
+  home.file.".config/yazi-picker/theme.toml".source =
+    config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/yazi/theme.toml";
 
   # choose picker settings — single source of truth for the command palette's
   # options. Edit here and rebuild; choose re-reads the file on each open. Schema

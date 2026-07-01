@@ -1,4 +1,4 @@
-# Config for the Super-t "new tab" directory picker — a throwaway yazi instance
+# Config for the Super-Shift-t "new tab" directory picker — a throwaway yazi instance
 # launched by newtab.sh with YAZI_CONFIG_HOME pointed here. Kept separate from
 # the main ~/.config/yazi so the picker-only keymap (see keymap.toml: Enter picks
 # a dir, q cancels) doesn't leak into the Super-y peek/read browser, which shares
