@@ -15,6 +15,25 @@ The rice itself lives in sibling repos (clone under `~/code/nebelhaus/`):
 - **[pounce](https://github.com/nebelhaus/pounce)** — the command-palette app.
 - **[nebelung](https://github.com/nebelhaus/nebelung)** — the theme.
 
+## Am I in the right repo? (routing)
+
+**This repo (`~/.config/nix`) owns only THIS MACHINE's personal layer** — apps,
+identity, secrets, host tweaks. The rice itself lives elsewhere.
+
+| Want to change… | Repo |
+|---|---|
+| this machine's apps / identity / secrets / host tweaks | `~/.config/nix` ← **you are here** |
+| the rice: macOS defaults, tiling (prowl), bar (sill), shell (hearth), security (collar) | `~/code/nebelhaus/nebelhaus` |
+| the pounce palette app or its commands | `~/code/nebelhaus/pounce` |
+| colors / the theme palette | `~/code/nebelhaus/nebelung` |
+
+> **Claude: enforce this.** If a request targets a different repo than the one
+> whose files you're in, STOP and say so before editing — e.g. "That's a bar
+> tweak; it lives in the rice at `~/code/nebelhaus/nebelhaus/modules/sill`. Want
+> me to switch to that repo?" Don't make the change in the wrong place. After the
+> owning repo is edited + pushed, the consumer here pulls it via
+> `nix flake update <input>` + rebuild.
+
 ## Rebuild (after any change)
 
 ```bash
@@ -35,6 +54,22 @@ errors are verbose; read from the *bottom* up for the actual cause.
 | **Pounce** (the app or its commands)               | edit `~/code/nebelhaus/pounce`, test with `rebuild-pounce` (see below), push, then `nix flake update nebelhaus` |
 
 To pull the latest rice + theme + pounce: `nix flake update nebelhaus` then rebuild.
+
+## Theme / colors
+
+Colors aren't defined here — the source of truth is the
+[nebelung](https://github.com/nebelhaus/nebelung) flake (whiskers palette +
+`name → #hex` map), which `nebelhaus` consumes to theme every tool. To recolor:
+edit the palette in `~/code/nebelhaus/nebelung`, push, `nix flake update nebelung`
+in `nebelhaus`, push, then `nix flake update nebelhaus` here + rebuild. One palette
+edit re-colors everything at once. For fast hue-tuning, skip the push/relock loop
+and override against the local checkout:
+
+```bash
+nix build .#darwinConfigurations.mbp.system \
+  --override-input nebelhaus/nebelung "path:$HOME/code/nebelhaus/nebelung" \
+&& sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp
+```
 
 ## Pounce dev loop
 
