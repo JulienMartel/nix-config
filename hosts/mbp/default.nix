@@ -66,13 +66,14 @@
         opencode
         gemini-cli-bin
         orbstack
-      ];
 
-      # The workshop CLI (~/code/nebelhaus): status / try / ship / rebuild for
-      # the whole family. `haus try switch` supersedes rebuild-pounce (it
-      # overrides ALL the local checkouts, not just pounce); the old alias
-      # stays for muscle memory.
-      programs.zsh.shellAliases.haus = "$HOME/code/nebelhaus/haus";
+        # The workshop CLI (~/code/nebelhaus): status / try / ship / rebuild
+        # for the whole rice family. A real command on PATH (not an alias) so
+        # it works from scripts, other shells, and non-interactive contexts;
+        # `haus try switch` supersedes rebuild-pounce (it overrides ALL the
+        # local checkouts, not just pounce).
+        (writeShellScriptBin "haus" ''exec "$HOME/code/nebelhaus/haus" "$@"'')
+      ];
 
       # Dev loop for hacking on pounce: rebuild the system against the LOCAL
       # pounce checkout (picks up uncommitted edits) instead of the pinned
