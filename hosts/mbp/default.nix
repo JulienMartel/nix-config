@@ -98,7 +98,7 @@
         ];
       };
 
-      programs.git.extraConfig = {
+      programs.git.settings = {
         http.cookiefile = "${config.home.homeDirectory}/.gitcookies";
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
       };
