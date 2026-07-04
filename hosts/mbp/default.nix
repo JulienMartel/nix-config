@@ -72,6 +72,17 @@
           && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp)
       '';
 
+      # Text expansion (the old Raycast "@@" snippet, nix-style). Needs a
+      # one-time Accessibility grant in System Settings; a nixpkgs bump that
+      # changes espanso's store path may require re-granting.
+      services.espanso = {
+        enable = true;
+        configs.default.show_icon = false; # no menu bar icon
+        matches.default.matches = [
+          { trigger = "@@"; replace = "julienbmartel@gmail.com"; }
+        ];
+      };
+
       programs.git.extraConfig = {
         http.cookiefile = "${config.home.homeDirectory}/.gitcookies";
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
