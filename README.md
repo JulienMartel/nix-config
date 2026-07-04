@@ -51,8 +51,10 @@ darwin-rebuild --list-generations
 darwin-rebuild --rollback
 ```
 
-To change the rice itself (not just this machine), edit the modules in
-`~/code/nebelhaus/nebelhaus`, push, then `nix flake update nebelhaus` here.
+To change the rice itself (not just this machine), work in the
+[workshop](https://github.com/nebelhaus/workshop) at `~/code/nebelhaus`: edit
+the module repos there, `haus try` to test against the local checkouts without
+pushing, then `haus ship` to push and ripple the lock updates back here.
 
 ## Requirements
 

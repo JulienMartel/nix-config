@@ -68,6 +68,12 @@
         orbstack
       ];
 
+      # The workshop CLI (~/code/nebelhaus): status / try / ship / rebuild for
+      # the whole family. `haus try switch` supersedes rebuild-pounce (it
+      # overrides ALL the local checkouts, not just pounce); the old alias
+      # stays for muscle memory.
+      programs.zsh.shellAliases.haus = "$HOME/code/nebelhaus/haus";
+
       # Dev loop for hacking on pounce: rebuild the system against the LOCAL
       # pounce checkout (picks up uncommitted edits) instead of the pinned
       # github input. Normal `darwin-rebuild` still uses github → reproducible.
