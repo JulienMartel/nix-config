@@ -18,6 +18,18 @@
         "type": "github"
       }
     },
+    "catppuccin-userstyles-export": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-l6UOMhd5hEenS7k7XYamC6KVLywd4dQdToYL69Shuyo=",
+        "type": "file",
+        "url": "https://github.com/catppuccin/userstyles/releases/download/all-userstyles-export/import.json"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://github.com/catppuccin/userstyles/releases/download/all-userstyles-export/import.json"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -50,11 +62,11 @@
         "pounce": "pounce"
       },
       "locked": {
-        "lastModified": 1783257127,
-        "narHash": "sha256-sA3AojI575IGY1seRbiTihOdNFJjV78WQQFlkD5DI50=",
+        "lastModified": 1783259168,
+        "narHash": "sha256-8Y1eaJ52o3Un+i2D+xeSx2T2ARidhE/WQ+ESbbMFV50=",
         "owner": "nebelhaus",
         "repo": "nebelhaus",
-        "rev": "a0cde229ac3500378b35c626e449b042bd88adba",
+        "rev": "3cbd76e38e41b3010959a5fc8ffe821b520e15d7",
         "type": "github"
       },
       "original": {
@@ -69,17 +81,18 @@
           "nebelhaus",
           "catppuccin"
         ],
+        "catppuccin-userstyles-export": "catppuccin-userstyles-export",
         "nixpkgs": [
           "nebelhaus",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1783257119,
-        "narHash": "sha256-qTTmeyEHEvMKNWxHcgE7aJcJOGltVoYSWggdiujE2oQ=",
+        "lastModified": 1783259153,
+        "narHash": "sha256-6okgwr4j7IBPhC3Yl2nmeAMDvqbXexibYuJqR2Hc+S4=",
         "owner": "nebelhaus",
         "repo": "nebelung",
-        "rev": "12d986db064886c5b269454ca0f5a00d711024fc",
+        "rev": "7b2697de3a7e57ed672e081ab1f04e85cf47dc47",
         "type": "github"
       },
       "original": {
@@ -172,11 +185,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783257124,
-        "narHash": "sha256-AMSZPxoI/P5AybysnvWcgbeUlV/48mswENlZlSJBBeY=",
+        "lastModified": 1783259166,
+        "narHash": "sha256-zG/iM6XRwQUUug+uNeaQwQyxrxPjR0kTq0NqDeP2psc=",
         "owner": "nebelhaus",
         "repo": "pounce",
-        "rev": "aeb67d9d087794916734d2c1c3e930836eec961b",
+        "rev": "f075e7edd3ec28dafea5bed81eec8f80d7581027",
         "type": "github"
       },
       "original": {
