@@ -102,6 +102,25 @@
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
       };
 
+      home.file."Library/Application Support/Zen/distribution/policies.json".text = builtins.toJSON {
+        policies = {
+          ExtensionSettings = {
+            "{7a7a4a92-a2a0-41d1-9fd7-1e92480d612d}" = {
+              installation_mode = "force_installed";
+              install_url = "https://addons.mozilla.org/firefox/downloads/latest/styl-us/latest.xpi";
+            };
+          };
+        };
+      };
+
+      home.activation.stylusNebelung =
+        lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          if [ -d "$HOME/Library/Application Support/Zen" ]; then
+             echo "→ Stylus (Zen): to apply the nebelung palette to your userstyles, import the generated JSON:"
+             echo "    ${nebelung.themes}/stylus/nebelung-stylus.json"
+          fi
+        '';
+
       # Obsidian: paint the vault with Nebelung. The theme is a nebelung *port*
       # (a CSS snippet overriding Obsidian's --color-* vars); we DON'T use the
       # Catppuccin community theme — it re-introduces the blue Nebelung strips
