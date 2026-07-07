@@ -62,11 +62,11 @@
         "pounce": "pounce"
       },
       "locked": {
-        "lastModified": 1783423298,
-        "narHash": "sha256-k7SLy51VIpeU20xD8jGM5kwbTrMBM+3BY7k+BFrI3YQ=",
+        "lastModified": 1783424927,
+        "narHash": "sha256-cuxozbIAcyZcyxPdw1Lk7pzxOcXDl7UAcD6K9z3zzlY=",
         "owner": "nebelhaus",
         "repo": "nebelhaus",
-        "rev": "ef556bad30c1a12655699542ae7e675a8e066316",
+        "rev": "a03a7f101afdb87159e80044fdd2656a4452f129",
         "type": "github"
       },
       "original": {
