@@ -35,7 +35,6 @@
     "claude"
     "cursor"
     "elgato-control-center"
-    "figma"
     "font-hack-nerd-font"
     "font-jetbrains-mono-nerd-font"
     "framer"
