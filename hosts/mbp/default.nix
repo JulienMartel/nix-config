@@ -16,8 +16,9 @@
   # The Super-Shift-t "new tab" picker opens on just these instead of all of $HOME.
   nebelhaus.hearth.newTabDirs = [
     "m"
-    "code"
-    ".config"
+    "code/nebelhaus"
+    "code/qnap-mediastack"
+    ".config/nix"
   ];
 
   # Editor: keep the terminal default (hx) for $EDITOR, but open the Nix config
