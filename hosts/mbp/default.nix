@@ -114,9 +114,11 @@
     }
   ];
 
-  # My personal SketchyBar items (off in the rice default): the Elgato key light
-  # toggle and the Harvest timer pill (reads ~/.config/sketchybar/harvest_secrets.sh).
+  # My personal SketchyBar items (off in the rice default): the agent-pane status
+  # paw (fed by the Claude hooks wired below), the Elgato key light toggle, and
+  # the Harvest timer pill (reads ~/.config/sketchybar/harvest_secrets.sh).
   nebelhaus.sill.plugins = [
+    "agents"
     "elgato"
     "harvest"
   ];
@@ -317,30 +319,39 @@
           fi
         '';
 
-      # Claude Code — reinstate the worktree-relocation hooks in settings.json.
-      # Super-c / `⌘C` (rice: hearth/zellij) spawns `claude --worktree`; these
-      # WorktreeCreate/WorktreeRemove hooks hand the create/remove off to `haus`
-      # so worktrees land under ~/.cache/claude-worktrees instead of inside the
-      # repo. The haus path is personal (the workshop lives at ~/code/nebelhaus),
-      # so this belongs in the host, NOT the generic rice — the rice's pathless
-      # claudeCodePermissionMode correctly stays there. Same jq-merge-one-key,
-      # never-own-the-file trick: Claude rewrites settings.json as grants/plugins
-      # change, so we merge only our two keys and preserve the rest. jq is pinned
-      # from the store because activation runs with a bare PATH.
-      home.activation.claudeCodeWorktreeHooks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      # Claude Code — reinstate our hooks in settings.json on every rebuild.
+      #  • WorktreeCreate/WorktreeRemove: Super-c / `⌘C` (rice: hearth/zellij)
+      #    spawns `claude --worktree`; these hand the create/remove off to `haus`
+      #    so worktrees land under ~/.cache/claude-worktrees instead of inside the
+      #    repo. The haus path is personal (the workshop lives at ~/code/nebelhaus).
+      #  • UserPromptSubmit/Notification/Stop/SessionEnd: feed the `agents` bar
+      #    paw (nebelhaus.sill.plugins) — each fires agents-hook.sh from inside the
+      #    agent's pane, self-reporting its state (working/waiting/idle) + subscribe
+      #    target. Personal because it points at the sketchybar plugin path.
+      # All of it lives in the host, NOT the generic rice (the rice's pathless
+      # claudeCodePermissionMode correctly stays there). Same jq-merge-only-our-keys,
+      # never-own-the-file trick — Claude rewrites settings.json as grants/plugins
+      # change, so we preserve the rest. jq is pinned from the store because
+      # activation runs with a bare PATH.
+      home.activation.claudeCodeHooks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run sh -c '
           settings="$0"
           haus="$1"
+          hook="$2"
           mkdir -p "''${settings%/*}"
           tmp="$settings.hm-seed"
           if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
           ${pkgs.jq}/bin/jq \
             ".hooks.WorktreeCreate = [{hooks:[{type:\"command\",command:\"''${haus} wt-create\"}]}]
-             | .hooks.WorktreeRemove = [{hooks:[{type:\"command\",command:\"''${haus} wt-remove\"}]}]" \
+             | .hooks.WorktreeRemove = [{hooks:[{type:\"command\",command:\"''${haus} wt-remove\"}]}]
+             | .hooks.UserPromptSubmit = [{hooks:[{type:\"command\",command:\"''${hook} working\"}]}]
+             | .hooks.Notification = [{hooks:[{type:\"command\",command:\"''${hook} waiting\"}]}]
+             | .hooks.Stop = [{hooks:[{type:\"command\",command:\"''${hook} idle\"}]}]
+             | .hooks.SessionEnd = [{hooks:[{type:\"command\",command:\"''${hook} remove\"}]}]" \
             "$base" > "$tmp"
           mv "$tmp" "$settings"
           rm -f "$tmp.base"
-        ' "$HOME/.claude/settings.json" "$HOME/code/nebelhaus/haus"
+        ' "$HOME/.claude/settings.json" "$HOME/code/nebelhaus/haus" "$HOME/.config/sketchybar/plugins/agents-hook.sh"
       '';
 
       # Secrets + tooling that shouldn't live in the public rice.
