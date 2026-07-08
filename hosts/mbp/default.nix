@@ -20,6 +20,12 @@
     ".config"
   ];
 
+  # Editor: keep the terminal default (hx) for $EDITOR, but open the Nix config
+  # folder in Cursor from the palette/bar, and keep the Helix file-association
+  # hijack (double-click json/md/ts/… → Helix) that the rice used to force on.
+  nebelhaus.hearth.guiEditor = "com.todesktop.230313mzl4w4u92"; # Cursor bundle id
+  nebelhaus.hearth.hijackFileAssociations = true;
+
   # ---- app roster ----
   # My personal launcher: which app owns which AeroSpace workspace + leader key.
   # This ONE list drives the tiling launcher, the SketchyBar pills, and the
