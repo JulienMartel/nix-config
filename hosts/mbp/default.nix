@@ -33,7 +33,7 @@
 
     ## Working in a git worktree
 
-    My super+c zellij hotkey (`Ctrl Alt c`) spawns Claude panes as `claude --worktree`:
+    My super+c (`⌘C`) zellij hotkey spawns Claude panes as `claude --worktree`:
     each session gets its own checkout on a `worktree-<name>` branch, branched from the
     repo's local HEAD, living OUTSIDE the repo (under `~/.cache/claude-worktrees/`). The
     `WorktreeCreate`/`WorktreeRemove` hooks are wired globally, so **any** repo I open can
@@ -217,7 +217,7 @@
         '';
 
       # Claude Code — reinstate the worktree-relocation hooks in settings.json.
-      # `Ctrl Alt c` (rice: hearth/zellij) spawns `claude --worktree`; these
+      # Super-c / `⌘C` (rice: hearth/zellij) spawns `claude --worktree`; these
       # WorktreeCreate/WorktreeRemove hooks hand the create/remove off to `haus`
       # so worktrees land under ~/.cache/claude-worktrees instead of inside the
       # repo. The haus path is personal (the workshop lives at ~/code/nebelhaus),
