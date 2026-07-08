@@ -216,6 +216,32 @@
           fi
         '';
 
+      # Claude Code — reinstate the worktree-relocation hooks in settings.json.
+      # `Ctrl Alt c` (rice: hearth/zellij) spawns `claude --worktree`; these
+      # WorktreeCreate/WorktreeRemove hooks hand the create/remove off to `haus`
+      # so worktrees land under ~/.cache/claude-worktrees instead of inside the
+      # repo. The haus path is personal (the workshop lives at ~/code/nebelhaus),
+      # so this belongs in the host, NOT the generic rice — the rice's pathless
+      # claudeCodePermissionMode correctly stays there. Same jq-merge-one-key,
+      # never-own-the-file trick: Claude rewrites settings.json as grants/plugins
+      # change, so we merge only our two keys and preserve the rest. jq is pinned
+      # from the store because activation runs with a bare PATH.
+      home.activation.claudeCodeWorktreeHooks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run sh -c '
+          settings="$0"
+          haus="$1"
+          mkdir -p "''${settings%/*}"
+          tmp="$settings.hm-seed"
+          if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
+          ${pkgs.jq}/bin/jq \
+            ".hooks.WorktreeCreate = [{hooks:[{type:\"command\",command:\"''${haus} wt-create\"}]}]
+             | .hooks.WorktreeRemove = [{hooks:[{type:\"command\",command:\"''${haus} wt-remove\"}]}]" \
+            "$base" > "$tmp"
+          mv "$tmp" "$settings"
+          rm -f "$tmp.base"
+        ' "$HOME/.claude/settings.json" "$HOME/code/nebelhaus/haus"
+      '';
+
       # Secrets + tooling that shouldn't live in the public rice.
       programs.zsh.initContent = lib.mkAfter ''
         export GEMINI_API_KEY="$(cat ~/.secrets/google-api-key)"
