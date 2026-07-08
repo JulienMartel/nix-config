@@ -20,6 +20,70 @@
     ".config"
   ];
 
+  # Claude Code's global memory (~/.claude/CLAUDE.md) — how I like to work across
+  # every repo. Personal, so it lives here in the host; the rice just provides the
+  # nebelhaus.claude.globalMd plumbing (hearth writes the file when set). Keep it
+  # short and universal — repo-specific rules belong in each project's own CLAUDE.md.
+  nebelhaus.claude.globalMd = ''
+    # CLAUDE.md — global
+
+    Personal defaults for how I (julienmartel) like to work, across every repo. Kept
+    deliberately short and universal — repo-specific detail lives in each project's own
+    CLAUDE.md, not here.
+
+    ## Working in a git worktree
+
+    My super+c zellij hotkey (`Ctrl Alt c`) spawns Claude panes as `claude --worktree`:
+    each session gets its own checkout on a `worktree-<name>` branch, branched from the
+    repo's local HEAD, living OUTSIDE the repo (under `~/.cache/claude-worktrees/`). The
+    `WorktreeCreate`/`WorktreeRemove` hooks are wired globally, so **any** repo I open can
+    be worktree'd — not just nebelhaus.
+
+    **Detect it:** `git rev-parse --git-common-dir` points outside your toplevel → you're
+    in a linked worktree.
+
+    **Etiquette when you're in a worktree** (i.e. the detection above says you are):
+    - Commit on your `worktree-*` branch as usual.
+    - Don't merge into `main` yourself, and don't touch the main checkout's files —
+      merging is my call, done from the main checkout.
+    - When done, tell me the branch name. The worktree dies with the pane; the branch
+      survives until merged.
+
+    This etiquette is worktree-specific. Sometimes I open a plain (non-worktree)
+    session directly on `main` for a small one-off — usually when no worktrees are
+    active. In that mode, working on and committing to `main` directly is fine and
+    expected; the "don't touch main" rule only binds when you're actually in a worktree.
+
+    ## How I ship
+
+    **Ship by default, sized to the change — but only in repos I own solo** (my personal
+    infra: nebelhaus family, qnap-mediastack, ~/.config/nix, and the like). In shared or
+    client repos, default to caution: prepare the change, then ask before pushing.
+
+    In a solo repo:
+    - **Small change** (bugfix, typo, config/theme tweak, version bump, docs): commit,
+      verify, and ship in the same turn without asking. A verified fix left uncommitted,
+      unpushed, or undeployed is a bug, not a finished task.
+    - **Big or risky change** (new feature, refactor, anything hard to roll back, anything
+      a user could feel break): verify it works, then stop and ask before shipping. Once
+      approved, drive it all the way to shipped — don't stop at "the diff is ready."
+    - **Releases / user-facing publishes are always gated.** Propose one after shipping
+      user-facing changes, but never tag/publish unprompted.
+    - When unsure which bucket a change is in, ask.
+
+    ## How I verify
+
+    **Verify by actually running it**, not by eyeballing the diff. Testing in prod is
+    acceptable house style for my personal infra — build it, run it, observe the real
+    behavior. Prefer a project's own run/verify skill if it has one.
+
+    ## Keeping docs honest
+
+    If you find something in a CLAUDE.md, README, or docs file that's wrong or stale, fix
+    it in the same change — don't just work around it. Keep these files short; push detail
+    into the matching docs file rather than growing the top-level one.
+  '';
+
   # A system CLI not in den's baseline.
   environment.systemPackages = [ pkgs.biome ];
 
