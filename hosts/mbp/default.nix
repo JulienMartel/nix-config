@@ -20,6 +20,101 @@
     ".config"
   ];
 
+  # ---- app roster ----
+  # My personal launcher: which app owns which AeroSpace workspace + leader key.
+  # This ONE list drives the tiling launcher, the SketchyBar pills, and the
+  # pounce cheatsheet (the rice ships only a neutral terminal+browser default).
+  # Casks stay in homebrew.casks below (so cask = null here — no double-declare);
+  # Music/Passwords are system apps, Things is App Store, Swather is a cask.
+  nebelhaus.prowl.apps = [
+    {
+      key = "t";
+      name = "Ghostty";
+      workspace = "T";
+      appId = "com.mitchellh.ghostty";
+      barIcon = ":ghostty:";
+      label = "Ghostty (Terminal)";
+    }
+    {
+      key = "n";
+      name = "Obsidian";
+      workspace = "N";
+      appId = "md.obsidian";
+      barIcon = ":obsidian:";
+      label = "Obsidian";
+    }
+    {
+      key = "r";
+      name = "Things3";
+      workspace = "R";
+      appId = "com.culturedcode.ThingsMac";
+      barIcon = ":things:";
+      label = "Things3";
+    }
+    {
+      key = "s";
+      name = "Slack";
+      workspace = "S";
+      appId = "com.tinyspeck.slackmacgap";
+      barIcon = ":slack:";
+      label = "Slack";
+    }
+    {
+      key = "b";
+      name = "Zen";
+      workspace = "B";
+      appId = "app.zen-browser.zen";
+      barIcon = ":zen_browser:";
+      label = "Zen (Browser)";
+    }
+    {
+      key = "m";
+      name = "Music";
+      workspace = "M";
+      appId = "com.apple.Music";
+      barIcon = ":music:";
+      label = "Music";
+    }
+    {
+      key = "h";
+      name = "Swather";
+      workspace = "H";
+      appId = "com.swather.app";
+      # Swather has no app-font glyph — fa-hourglass (U+F254) in the Nerd Font.
+      barIcon = builtins.fromJSON ''"\uf254"'';
+      label = "Swather";
+    }
+    {
+      key = "c";
+      name = "Claude";
+      workspace = "C";
+      appId = "com.anthropic.claudefordesktop";
+      barIcon = ":claude:";
+      label = "Claude";
+    }
+    {
+      key = "d";
+      name = "Notion Calendar";
+      workspace = "D";
+      appId = "com.cron.electron";
+      barIcon = ":calendar:";
+      label = "Notion Calendar";
+    }
+    {
+      key = "p";
+      name = "Passwords";
+      # Launcher-only: opens/focuses in the current workspace, no pill/auto-assign.
+      label = "Passwords";
+    }
+  ];
+
+  # My personal SketchyBar items (off in the rice default): the Elgato key light
+  # toggle and the Harvest timer pill (reads ~/.config/sketchybar/harvest_secrets.sh).
+  nebelhaus.sill.plugins = [
+    "elgato"
+    "harvest"
+  ];
+
   # Claude Code's global memory (~/.claude/CLAUDE.md) — how I like to work across
   # every repo. Personal, so it lives here in the host; the rice just provides the
   # nebelhaus.claude.globalMd plumbing (hearth writes the file when set). Keep it
