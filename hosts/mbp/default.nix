@@ -21,10 +21,10 @@
     ".config/nix"
   ];
 
-  # Editor: keep the terminal default (hx) for $EDITOR, but open the Nix config
-  # folder in Cursor from the palette/bar, and keep the Helix file-association
-  # hijack (double-click json/md/ts/… → Helix) that the rice used to force on.
-  nebelhaus.hearth.guiEditor = "com.todesktop.230313mzl4w4u92"; # Cursor bundle id
+  # Editor: Helix (hx) everywhere. $EDITOR/$VISUAL are hx by default; the "Nix
+  # Config" palette/bar action opens ~/.config/nix in a new Helix terminal tab
+  # (hearth.guiEditor now defaults to "hx"), and the file-association hijack
+  # routes double-clicked json/md/ts/… to Helix too. No Cursor anywhere.
   nebelhaus.hearth.hijackFileAssociations = true;
 
   # ---- theme ----
@@ -205,7 +205,6 @@
   homebrew.casks = [
     "cap"
     "claude"
-    "cursor"
     "elgato-control-center"
     "font-hack-nerd-font"
     "font-jetbrains-mono-nerd-font"
