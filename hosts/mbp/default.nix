@@ -27,6 +27,10 @@
   nebelhaus.hearth.guiEditor = "com.todesktop.230313mzl4w4u92"; # Cursor bundle id
   nebelhaus.hearth.hijackFileAssociations = true;
 
+  # ---- theme ----
+  # The "orbits" Nebelung wallpaper (palette rings on a dark base).
+  nebelhaus.theme.wallpaper = "orbits";
+
   # ---- app roster ----
   # My personal launcher: which app owns which AeroSpace workspace + leader key.
   # This ONE list drives the tiling launcher, the SketchyBar pills, and the
