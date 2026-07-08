@@ -24,4 +24,11 @@ fi
 # Persist PATH for the session so subsequent Claude tool calls can find nix
 echo "export PATH=\"/nix/var/nix/profiles/default/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
 
+# Nix's own fetcher (flake inputs from github/cache.nixos.org) tunnels through
+# the agent proxy, which re-terminates TLS — point Nix at the proxy CA or every
+# fetch fails verification.
+if [ -f /root/.ccr/ca-bundle.crt ]; then
+  echo "export NIX_SSL_CERT_FILE=/root/.ccr/ca-bundle.crt" >> "$CLAUDE_ENV_FILE"
+fi
+
 echo "Nix $(nix --version) ready."
