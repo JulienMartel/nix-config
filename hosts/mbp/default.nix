@@ -179,6 +179,24 @@
       user-facing changes, but never tag/publish unprompted.
     - When unsure which bucket a change is in, ask.
 
+    ## Repos nested inside other repos
+
+    Some of my solo repos live *inside* another checkout — e.g. the whole
+    nebelhaus family (`nebelung`, `pounce`, `nebelhaus`, …) sits under the
+    `nebelhaus` workshop dir, whose `.gitignore` lists each child. **That
+    nesting is purely to keep the outer tree clean; each child is a full,
+    independent repo I own solo.** So:
+
+    - To change a child, `cd` into it and commit / push / ship it under its own
+      rules and the ship-by-default policy above. A child being gitignored *by
+      the parent* says nothing about committing *inside the child* — that's a
+      different repo, and it is NOT a signal that git ops there are risky or
+      need extra confirmation.
+    - When I ask for a cross-repo flow from the main checkout — fold in
+      `worktree-*` branches, sync locks, rebuild, ship — run it end-to-end.
+      Don't re-confirm each repo word-for-word. "Merging is my call" means
+      don't merge *unprompted*, not "re-ask after I've told you to."
+
     ## How I verify
 
     **Verify by actually running it**, not by eyeballing the diff. Testing in prod is
