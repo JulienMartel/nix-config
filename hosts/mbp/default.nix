@@ -257,9 +257,9 @@
         # The workshop CLI (~/code/nebelhaus): status / try / ship / rebuild
         # for the whole rice family. A real command on PATH (not an alias) so
         # it works from scripts, other shells, and non-interactive contexts;
-        # `haus try switch` supersedes rebuild-pounce (it overrides ALL the
+        # `bench try switch` supersedes rebuild-pounce (it overrides ALL the
         # local checkouts, not just pounce).
-        (writeShellScriptBin "haus" ''exec "$HOME/code/nebelhaus/haus" "$@"'')
+        (writeShellScriptBin "bench" ''exec "$HOME/code/nebelhaus/bench" "$@"'')
       ];
 
       # Dev loop for hacking on pounce: rebuild the system against the LOCAL
@@ -343,9 +343,9 @@
 
       # Claude Code — reinstate our hooks in settings.json on every rebuild.
       #  • WorktreeCreate/WorktreeRemove: Super-c / `⌘C` (rice: hearth/zellij)
-      #    spawns `claude --worktree`; these hand the create/remove off to `haus`
+      #    spawns `claude --worktree`; these hand the create/remove off to `bench`
       #    so worktrees land under ~/.cache/claude-worktrees instead of inside the
-      #    repo. The haus path is personal (the workshop lives at ~/code/nebelhaus).
+      #    repo. The bench path is personal (the workshop lives at ~/code/nebelhaus).
       #  • UserPromptSubmit/Notification/Stop/SessionEnd: feed the `agents` bar
       #    paw (nebelhaus.sill.plugins) — each fires agents-hook.sh from inside the
       #    agent's pane, self-reporting its state (working/waiting/idle) + subscribe
@@ -358,14 +358,14 @@
       home.activation.claudeCodeHooks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run sh -c '
           settings="$0"
-          haus="$1"
+          bench="$1"
           hook="$2"
           mkdir -p "''${settings%/*}"
           tmp="$settings.hm-seed"
           if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
           ${pkgs.jq}/bin/jq \
-            ".hooks.WorktreeCreate = [{hooks:[{type:\"command\",command:\"''${haus} wt-create\"}]}]
-             | .hooks.WorktreeRemove = [{hooks:[{type:\"command\",command:\"''${haus} wt-remove\"}]}]
+            ".hooks.WorktreeCreate = [{hooks:[{type:\"command\",command:\"''${bench} wt-create\"}]}]
+             | .hooks.WorktreeRemove = [{hooks:[{type:\"command\",command:\"''${bench} wt-remove\"}]}]
              | .hooks.UserPromptSubmit = [{hooks:[{type:\"command\",command:\"''${hook} working\"}]}]
              | .hooks.Notification = [{hooks:[{type:\"command\",command:\"''${hook} waiting\"}]}]
              | .hooks.Stop = [{hooks:[{type:\"command\",command:\"''${hook} idle\"}]}]
@@ -373,7 +373,7 @@
             "$base" > "$tmp"
           mv "$tmp" "$settings"
           rm -f "$tmp.base"
-        ' "$HOME/.claude/settings.json" "$HOME/code/nebelhaus/haus" "$HOME/.config/sketchybar/plugins/agents-hook.sh"
+        ' "$HOME/.claude/settings.json" "$HOME/code/nebelhaus/bench" "$HOME/.config/sketchybar/plugins/agents-hook.sh"
       '';
 
       # Secrets + tooling that shouldn't live in the public rice.
