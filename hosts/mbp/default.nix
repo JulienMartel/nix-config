@@ -250,7 +250,22 @@
     { config, lib, pkgs, nebelung, ... }:
     {
       home.packages = with pkgs; [
-        claude-code
+        # Claude Code, minus its hard-coded sleep blocker: on macOS the agent
+        # silently spawns `caffeinate -i -t 300` (renewed while it works; no
+        # setting to disable it). Shadow caffeinate with a no-op on claude's
+        # PATH only — everything else, including pounce's caffeinate command,
+        # still gets the real /usr/bin/caffeinate. Sleep stays manual.
+        (symlinkJoin {
+          name = "claude-code-no-caffeinate";
+          paths = [ claude-code ];
+          nativeBuildInputs = [ makeBinaryWrapper ];
+          postBuild = ''
+            rm "$out/bin/claude"
+            makeBinaryWrapper "${claude-code}/bin/claude" "$out/bin/claude" \
+              --inherit-argv0 \
+              --prefix PATH : "${writeShellScriptBin "caffeinate" "exit 0"}/bin"
+          '';
+        })
         gemini-cli-bin
         orbstack
 
