@@ -266,7 +266,6 @@
               --prefix PATH : "${writeShellScriptBin "caffeinate" "exit 0"}/bin"
           '';
         })
-        chatgpt
         gemini-cli-bin
         orbstack
 
