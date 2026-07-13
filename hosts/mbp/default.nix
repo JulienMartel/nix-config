@@ -358,9 +358,13 @@
 
       # Claude Code — reinstate our hooks in settings.json on every rebuild.
       #  • WorktreeCreate/WorktreeRemove: Super-c / `⌘C` (rice: hearth/zellij)
-      #    spawns `claude --worktree`; these hand the create/remove off to `bench`
+      #    spawns `claude --worktree`; these hand the create/remove off to `wt`
       #    so worktrees land under ~/.cache/claude-worktrees instead of inside the
-      #    repo. The bench path is personal (the workshop lives at ~/code/nebelhaus).
+      #    repo — and so closing a pane never loses uncommitted work (wt parks it
+      #    on the branch first) and stays resumable (`wt` to list, `wt <name>` to
+      #    reopen). `wt` itself ships in the rice (nebelhaus/modules/den); we just
+      #    point the hooks at its system path here (Claude owns settings.json, so
+      #    hook wiring is the host's job — same as the sketchybar hooks below).
       #  • UserPromptSubmit/Notification/Stop/SessionEnd: feed the `agents` bar
       #    paw (nebelhaus.sill.plugins) — each fires agents-hook.sh from inside the
       #    agent's pane, self-reporting its state (working/waiting/idle) + subscribe
@@ -373,14 +377,14 @@
       home.activation.claudeCodeHooks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run sh -c '
           settings="$0"
-          bench="$1"
+          wtbin="$1"
           hook="$2"
           mkdir -p "''${settings%/*}"
           tmp="$settings.hm-seed"
           if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
           ${pkgs.jq}/bin/jq \
-            ".hooks.WorktreeCreate = [{hooks:[{type:\"command\",command:\"''${bench} wt-create\"}]}]
-             | .hooks.WorktreeRemove = [{hooks:[{type:\"command\",command:\"''${bench} wt-remove\"}]}]
+            ".hooks.WorktreeCreate = [{hooks:[{type:\"command\",command:\"''${wtbin} create\"}]}]
+             | .hooks.WorktreeRemove = [{hooks:[{type:\"command\",command:\"''${wtbin} remove\"}]}]
              | .hooks.UserPromptSubmit = [{hooks:[{type:\"command\",command:\"''${hook} working\"}]}]
              | .hooks.Notification = [{hooks:[{type:\"command\",command:\"''${hook} waiting\"}]}]
              | .hooks.Stop = [{hooks:[{type:\"command\",command:\"''${hook} idle\"}]}]
@@ -388,7 +392,7 @@
             "$base" > "$tmp"
           mv "$tmp" "$settings"
           rm -f "$tmp.base"
-        ' "$HOME/.claude/settings.json" "$HOME/code/nebelhaus/bench" "$HOME/.config/sketchybar/plugins/agents-hook.sh"
+        ' "$HOME/.claude/settings.json" "/run/current-system/sw/bin/wt" "$HOME/.config/sketchybar/plugins/agents-hook.sh"
       '';
 
       # Secrets + tooling that shouldn't live in the public rice.
