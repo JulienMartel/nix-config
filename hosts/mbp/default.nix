@@ -119,6 +119,13 @@
     }
   ];
 
+  # Machine-editable roster + install lists, appended to by the pounce "Install
+  # App" command (search Homebrew → add to roster / just install → rebuild). The
+  # command owns these files; the hand-written list above is still the base and
+  # the two concatenate. Both are git-tracked so the flake can read them.
+  nebelhaus.prowl.rosterFile = ../../roster.json;
+  nebelhaus.homebrew.installsFile = ../../installs.json;
+
   # My personal SketchyBar items (off in the rice default): the agent-pane status
   # paw (fed by the Claude hooks wired below), the Elgato key light toggle, and
   # the Harvest timer pill (reads ~/.config/sketchybar/harvest_secrets.sh).
