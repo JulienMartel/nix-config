@@ -126,6 +126,12 @@
   nebelhaus.prowl.rosterFile = ../../roster.json;
   nebelhaus.homebrew.installsFile = ../../installs.json;
 
+  # Fully declarative Homebrew: a rebuild uninstalls (and zaps the data of) any
+  # cask/brew not declared above. Every app I keep is now listed, so the only
+  # thing this reaps is genuine cruft. Adding an undeclared app by hand and
+  # forgetting to list it means it's gone on the next rebuild — that's the deal.
+  nebelhaus.homebrew.cleanup = "zap";
+
   # My personal SketchyBar items (off in the rice default): the agent-pane status
   # paw (fed by the Claude hooks wired below), the Elgato key light toggle, and
   # the Harvest timer pill (reads ~/.config/sketchybar/harvest_secrets.sh).
@@ -242,9 +248,11 @@
     "notion-calendar"
     "obsidian"
     "pear-devs/pear/pear-desktop"
+    "postman" # adopted so cleanup="zap" keeps it (was hand-installed via the pounce Install App command)
     "protonvpn"
     "qfinder-pro"
     "slack"
+    "spotify" # adopted so cleanup="zap" keeps it (was hand-installed)
     "tailscale-app"
     "zen"
   ];
