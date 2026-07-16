@@ -248,11 +248,9 @@
     "notion-calendar"
     "obsidian"
     "pear-devs/pear/pear-desktop"
-    "postman" # adopted so cleanup="zap" keeps it (was hand-installed via the pounce Install App command)
     "protonvpn"
     "qfinder-pro"
     "slack"
-    "spotify" # adopted so cleanup="zap" keeps it (was hand-installed)
     "tailscale-app"
     "zen"
   ];
