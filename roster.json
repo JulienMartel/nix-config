@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "key": "a",
+    "name": "Postman",
+    "cask": "postman",
+    "label": "Postman",
+    "workspace": "A",
+    "appId": "com.postmanlabs.mac"
+  }
+]
