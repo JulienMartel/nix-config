@@ -410,6 +410,37 @@
         ' "$HOME/.claude/settings.json" "/run/current-system/sw/bin/wt" "$HOME/.config/sketchybar/plugins/agents-hook.sh"
       '';
 
+      # Claude Code — pre-approve the commands auto mode keeps escalating to a
+      # prompt. The rice's claudeCodePermissionMode sets defaultMode = "auto":
+      # edits + safe reads run unattended, but `gh …`, `git worktree add/remove`,
+      # pushes and the like still stop for a yes/no — and those are exactly the
+      # agent-worktree flow's bread and butter (wt, bench, and everyday git/gh).
+      # So allowlist them here. Personal, NOT the public rice: how loose an
+      # agent's leash is is a per-user call, and `git:*`/`gh:*` are broad. We
+      # UNION into whatever grants Claude has already written (never clobber its
+      # list) — same merge-our-keys / never-own-the-file trick as the hooks
+      # above; auto mode's own background safety checks still apply on top.
+      home.activation.claudeCodePermissionAllow = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run sh -c '
+          settings="$0"
+          mkdir -p "''${settings%/*}"
+          tmp="$settings.hm-seed"
+          if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
+          ${pkgs.jq}/bin/jq \
+            ".permissions.allow = ((.permissions.allow // []) + [
+                \"Bash(git:*)\",
+                \"Bash(git worktree:*)\",
+                \"Bash(gh:*)\",
+                \"Bash(bench:*)\",
+                \"Bash(wt:*)\",
+                \"Bash(haus:*)\"
+             ] | unique)" \
+            "$base" > "$tmp"
+          mv "$tmp" "$settings"
+          rm -f "$tmp.base"
+        ' "$HOME/.claude/settings.json"
+      '';
+
       # Secrets + tooling that shouldn't live in the public rice.
       programs.zsh.initContent = lib.mkAfter ''
         export GEMINI_API_KEY="$(cat ~/.secrets/google-api-key)"
