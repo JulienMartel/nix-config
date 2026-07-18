@@ -157,6 +157,16 @@
 
     **Etiquette when you're in a worktree** (i.e. the detection above says you are):
     - Commit on your `worktree-*` branch as usual.
+    - **Building/verifying is always allowed — you have standing permission, in
+      default mode, to build without asking.** A build (`bench try`, `nix build`,
+      a project's own run/verify skill) is read-only toward every checkout and
+      never activates anything, so it's exactly what a worktree is for — don't
+      stop at "the diff is ready" when you could have built it. This holds even
+      when the build compiles a **child** repo from a parent dir's worktree
+      session (e.g. a workshop worktree building the nebelhaus family, or any
+      `bench try` that pulls in a sibling repo): the child's checkout is only
+      read, not mutated, so go ahead. Only *activation* (`bench try switch`,
+      `darwin-rebuild switch`) and *shipping* stay off-limits from a worktree.
     - Don't merge into `main` yourself, and don't touch the main checkout's files —
       merging is my call, done from the main checkout.
     - When done, tell me the branch name. The worktree dies with the pane; the branch
