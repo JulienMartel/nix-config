@@ -53,8 +53,10 @@ darwin-rebuild --rollback
 
 To change the rice itself (not just this machine), work in the
 [workshop](https://github.com/nebelhaus/workshop) at `~/code/nebelhaus`: edit
-the module repos there, `haus try` to test against the local checkouts without
-pushing, then `haus ship` to push and ripple the lock updates back here.
+the module repos there, `bench try` to test against the local checkouts without
+pushing, then `bench ship` to push and ripple the lock updates back here.
+(`bench` is the workshop's cross-repo CLI — formerly named `haus`, which now
+refers only to the rice's own single-machine CLI.)
 
 ## Requirements
 

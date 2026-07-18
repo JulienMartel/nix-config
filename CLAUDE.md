@@ -16,10 +16,13 @@ the [workshop](https://github.com/nebelhaus/workshop)):
 - **[pounce](https://github.com/nebelhaus/pounce)** — the command-palette app.
 - **[nebelung](https://github.com/nebelhaus/nebelung)** — the theme.
 
-The workshop's `haus` CLI (aliased in the shell) drives the cross-repo flow:
-`haus status` (what's stale where), `haus try [switch]` (build/run this machine
-against the LOCAL checkouts — test without pushing), `haus ship` (push + ripple
-the lock updates), `haus rebuild` (plain pinned rebuild).
+The workshop's `bench` CLI (aliased in the shell; `bench` was formerly named
+`haus`) drives the cross-repo flow: `bench status` (what's stale where),
+`bench try [switch]` (build/run this machine against the LOCAL checkouts — test
+without pushing), `bench ship` (push + ripple the lock updates), `bench rebuild`
+(plain pinned rebuild). Don't confuse it with `haus` — that name now belongs to
+the rice's own end-user CLI (`haus rebuild`/`update`/`rollback`/`doctor`/…),
+which drives THIS machine only and knows nothing about the workshop.
 
 ## Am I in the right repo? (routing)
 
@@ -56,11 +59,12 @@ errors are verbose; read from the *bottom* up for the actual cause.
 | A personal app (cask/brew), for this machine only  | `hosts/mbp/default.nix` → `homebrew.casks`/`brews` |
 | Your identity (git name/email/signing, pounce cert)| `hosts/mbp/default.nix` → `nebelhaus.git.*` / `nebelhaus.pounce.signingIdentity` |
 | A personal package / secret / private alias        | `hosts/mbp/default.nix` → `home-manager.users.${username}` |
-| **The rice** (system defaults, WM, bar, shell, theming) | edit the module in `~/code/nebelhaus/nebelhaus`, test with `haus try`, commit, then `haus ship` |
-| **Pounce** (the app or its commands)               | edit `~/code/nebelhaus/pounce`, test with `haus try` (or `rebuild-pounce`), commit, then `haus ship` |
+| **The rice** (system defaults, WM, bar, shell, theming) | edit the module in `~/code/nebelhaus/nebelhaus`, test with `bench try`, commit, then `bench ship` |
+| **Pounce** (the app or its commands)               | edit `~/code/nebelhaus/pounce`, test with `bench try` (or `rebuild-pounce`), commit, then `bench ship` |
 
-To pull the latest rice + theme + pounce: `nix flake update nebelhaus` then
-rebuild (or `haus pull && haus rebuild`).
+To pull the latest rice + theme + pounce: `haus update` (the rice CLI: pulls
+the latest rice and rebuilds), or by hand `nix flake update nebelhaus` then
+rebuild.
 
 ## Theme / colors
 
@@ -68,8 +72,8 @@ Colors aren't defined here — the source of truth is the
 [nebelung](https://github.com/nebelhaus/nebelung) flake (whiskers palette +
 `name → #hex` map), which `nebelhaus` consumes to theme every tool. One palette
 edit re-colors everything at once. To recolor: edit the palette in
-`~/code/nebelhaus/nebelung`, judge it with `haus try switch` (no pushing), then
-commit and `haus ship` — it pushes nebelung, ripples the lock updates through
+`~/code/nebelhaus/nebelung`, judge it with `bench try switch` (no pushing), then
+commit and `bench ship` — it pushes nebelung, ripples the lock updates through
 pounce and nebelhaus, and updates this repo's lock.
 
 ## Pounce dev loop
