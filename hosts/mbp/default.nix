@@ -13,14 +13,6 @@
   nebelhaus.git.signingKey = "6F7BD6F43A7C1420";
   nebelhaus.pounce.signingIdentity = "DE2FB6DF7E66864C5F254DACF0AFC1B00685BA5D";
 
-  # The Super-Shift-t "new tab" picker opens on just these instead of all of $HOME.
-  nebelhaus.hearth.newTabDirs = [
-    "m"
-    "code/nebelhaus"
-    "code/qnap-mediastack"
-    ".config/nix"
-  ];
-
   # Editor: Helix (hx) everywhere. $EDITOR/$VISUAL are hx by default; the "Nix
   # Config" palette/bar action opens ~/.config/nix in a new Helix terminal tab
   # (hearth.guiEditor now defaults to "hx"), and the file-association hijack
