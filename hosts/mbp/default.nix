@@ -124,6 +124,15 @@
   # forgetting to list it means it's gone on the next rebuild — that's the deal.
   nebelhaus.homebrew.cleanup = "zap";
 
+  # Keep declared casks current on THIS machine (rice default stays off, so the
+  # rest of the family keeps reproducible rebuilds). upgrade → a rebuild upgrades
+  # outdated casks instead of pinning to whatever brew first installed; autoUpdate
+  # → `brew update` first so it sees the newest versions. Together: date-released
+  # family apps like trill self-update on every rebuild. Tradeoff I'm accepting
+  # here: my rebuilds chase upstream latest and aren't perfectly reproducible.
+  nebelhaus.homebrew.upgrade = true;
+  nebelhaus.homebrew.autoUpdate = true;
+
   # My personal SketchyBar items (off in the rice default): the agent-pane status
   # paw (fed by the Claude hooks wired below), the Elgato key light toggle, and
   # the Harvest timer pill (reads ~/.config/sketchybar/harvest_secrets.sh).
