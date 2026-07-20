@@ -31,7 +31,8 @@
   # This ONE list drives the tiling launcher, the SketchyBar pills, and the
   # pounce cheatsheet (the rice ships only a neutral terminal+browser default).
   # Casks stay in homebrew.casks below (so cask = null here — no double-declare);
-  # Music/Passwords are system apps, Things is App Store, Swather is a cask.
+  # Passwords is a system app, Trill ships as a cask via the rice's trill module,
+  # Things is App Store, Swather is a cask.
   nebelhaus.prowl.apps = [
     {
       key = "t";
@@ -75,11 +76,11 @@
     }
     {
       key = "m";
-      name = "Music";
+      name = "Trill";
       workspace = "M";
-      appId = "com.apple.Music";
-      barIcon = ":music:";
-      label = "Music";
+      appId = "com.nebelhaus.trill";
+      barIcon = ":messages:";
+      label = "Trill (Messages)";
     }
     {
       key = "h";
