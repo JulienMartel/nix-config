@@ -11,7 +11,10 @@
   nebelhaus.git.name = "Julien Martel";
   nebelhaus.git.email = "julienbmartel@gmail.com";
   nebelhaus.git.signingKey = "6F7BD6F43A7C1420";
-  nebelhaus.pounce.signingIdentity = "DE2FB6DF7E66864C5F254DACF0AFC1B00685BA5D";
+  # Developer ID by NAME (not SHA): the DR anchors the stable team OU, so the
+  # Accessibility grant survives cert renewals, and it's the same identity the
+  # Homebrew build ships with. `security find-identity -v -p codesigning`.
+  nebelhaus.pounce.signingIdentity = "Developer ID Application: JULIEN BERNARD MARTEL (88M28542LQ)";
 
   # Editor: Helix (hx) everywhere. $EDITOR/$VISUAL are hx by default; the "Nix
   # Config" palette/bar action opens ~/.config/nix in a new Helix terminal tab
