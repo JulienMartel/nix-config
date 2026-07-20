@@ -187,17 +187,25 @@
       already exist and never activates anything. (`bench ship` specifically
       operates on the *main* checkouts, so it ripples merged/released work
       downstream; it does not push your unmerged `worktree-*` branch.)
-    - Don't merge your own `worktree-*` branch into `main` yourself, and don't
-      touch the main checkout's files — merging is my call, done from the main
-      checkout. Shipping isn't merging: `bench ship` pushes committed state and
-      bumps locks, it never folds your branch into main.
-    - When done, tell me the branch name. The worktree dies with the pane; the branch
-      survives until merged.
+    - **Land your work through a PR — never a direct push or a local `git merge`
+      into `main`.** When the branch is ready, push it and open a PR (`gh pr
+      create`) against `main`. Don't `git merge` your `worktree-*` branch into
+      `main` yourself, don't push to `main` directly, and don't touch the main
+      checkout's files — parallel agents pushing/merging straight to main have
+      clobbered each other's commits, and a PR is conflict-detected and atomic,
+      so nothing gets silently overwritten. Merging the PR is my call, done on
+      GitHub — the PR is how you *propose* the merge, not how you skip it.
+      Shipping isn't merging: `bench ship` pushes committed state and bumps
+      locks, it never folds your branch into main.
+    - When done, push the branch, open the PR, and tell me the PR link. The
+      worktree dies with the pane; the branch + PR survive until merged.
 
     This etiquette is worktree-specific. Sometimes I open a plain (non-worktree)
     session directly on `main` for a small one-off — usually when no worktrees are
     active. In that mode, working on and committing to `main` directly is fine and
-    expected; the "don't touch main" rule only binds when you're actually in a worktree.
+    expected; the "don't touch main" and PR-to-land rules only bind when you're
+    actually in a worktree — they exist to stop *parallel* agents from clobbering
+    each other, which a lone editor on main can't do.
 
     ## How I ship
 
@@ -229,10 +237,12 @@
       the parent* says nothing about committing *inside the child* — that's a
       different repo, and it is NOT a signal that git ops there are risky or
       need extra confirmation.
-    - When I ask for a cross-repo flow from the main checkout — fold in
-      `worktree-*` branches, sync locks, rebuild, ship — run it end-to-end.
-      Don't re-confirm each repo word-for-word. "Merging is my call" means
-      don't merge *unprompted*, not "re-ask after I've told you to."
+    - When I ask for a cross-repo flow from the main checkout — merge the open
+      `worktree-*` PRs, sync locks, rebuild, ship — run it end-to-end. Land each
+      branch by merging its **PR** (`gh pr merge`), never a local `git merge` +
+      push to `main` — the PR is what stops two agents' branches from clobbering
+      each other. Don't re-confirm each repo word-for-word. "Merging is my call"
+      means don't merge *unprompted*, not "re-ask after I've told you to."
 
     ## How I verify
 
