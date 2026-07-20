@@ -201,12 +201,25 @@
       `main` yourself, don't push to `main` directly, and don't touch the main
       checkout's files — parallel agents pushing/merging straight to main have
       clobbered each other's commits, and a PR is conflict-detected and atomic,
-      so nothing gets silently overwritten. Merging the PR is my call, done on
-      GitHub — the PR is how you *propose* the merge, not how you skip it.
-      Shipping isn't merging: `bench ship` pushes committed state and bumps
-      locks, it never folds your branch into main.
-    - When done, push the branch, open the PR, and tell me the PR link. The
-      worktree dies with the pane; the branch + PR survive until merged.
+      so nothing gets silently overwritten. Merging the PR is my call — but
+      **"my call" means don't merge *unprompted*, not "never merge."** When I
+      explicitly tell you to land it (`/ship`, "ship it", "merge and clean up"),
+      that IS the go-ahead: merge with `gh pr merge` (still never a local merge
+      or direct push — the PR's atomicity is the point). Absent that, stop at
+      "PR open." Shipping isn't merging: `bench ship` pushes committed state and
+      bumps locks, it never folds your branch into main.
+    - **When I say ship/land/merge, `/ship` finishes the whole job** (see the
+      ship skill): merge the PR, then clean up every worktree *this session*
+      spun up — a session often hand-creates a sibling-repo worktree for
+      out-of-repo work, and those aren't auto-reaped, so merge their PRs too and
+      `git worktree remove` them. When it's all landed and nothing ≥3/5 needs my
+      attention (don't wait on CI unless that's the point), `/ship` may close
+      this pane with `zellij action close-pane -p "$ZELLIJ_PANE_ID"` (target the
+      pane id, not whatever's focused); closing reaps the merged branch via the
+      `wt` hook.
+    - When done, push the branch, open the PR, and — if I didn't say ship — tell
+      me the PR link. The worktree dies with the pane; the branch + PR survive
+      until merged.
 
     This etiquette is worktree-specific. Sometimes I open a plain (non-worktree)
     session directly on `main` for a small one-off — usually when no worktrees are
