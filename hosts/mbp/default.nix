@@ -179,9 +179,18 @@
       session (e.g. a workshop worktree building the nebelhaus family, or any
       `bench try` that pulls in a sibling repo): the child's checkout is only
       read, not mutated, so go ahead. Only *activation* (`bench try switch`,
-      `darwin-rebuild switch`) and *shipping* stay off-limits from a worktree.
-    - Don't merge into `main` yourself, and don't touch the main checkout's files —
-      merging is my call, done from the main checkout.
+      `darwin-rebuild switch`) stays off-limits from a worktree — activating
+      changes this machine's running state, which is a main-checkout job.
+    - **Pushing already-committed work is fine from a worktree.** You have my
+      standing permission, in default mode, to run a repo's push/ship step (e.g.
+      `bench ship`) from a worktree without asking — it only pushes commits that
+      already exist and never activates anything. (`bench ship` specifically
+      operates on the *main* checkouts, so it ripples merged/released work
+      downstream; it does not push your unmerged `worktree-*` branch.)
+    - Don't merge your own `worktree-*` branch into `main` yourself, and don't
+      touch the main checkout's files — merging is my call, done from the main
+      checkout. Shipping isn't merging: `bench ship` pushes committed state and
+      bumps locks, it never folds your branch into main.
     - When done, tell me the branch name. The worktree dies with the pane; the branch
       survives until merged.
 
