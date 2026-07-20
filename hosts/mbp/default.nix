@@ -137,14 +137,15 @@
   nebelhaus.homebrew.upgrade = true;
   nebelhaus.homebrew.autoUpdate = true;
 
-  # My personal SketchyBar items (off in the rice default): the agent-pane status
-  # paw (fed by the Claude hooks wired below), the Elgato key light toggle, and
-  # the Harvest timer pill (reads ~/.config/sketchybar/harvest_secrets.sh).
-  nebelhaus.sill.plugins = [
-    "agents"
-    "elgato"
-    "harvest"
-  ];
+  # My personal SketchyBar pills, switched on atop the rice default (core pills
+  # stay on, the rest off): the agent-pane status paw (fed by the Claude hooks
+  # wired below), the Elgato key light toggle, and the Harvest timer pill (reads
+  # ~/.config/sketchybar/harvest_secrets.sh).
+  nebelhaus.sill.items = {
+    agents = true;
+    elgato = true;
+    harvest = true;
+  };
 
   # Claude Code's global memory (~/.claude/CLAUDE.md) — how I like to work across
   # every repo. Personal, so it lives here in the host; the rice just provides the
