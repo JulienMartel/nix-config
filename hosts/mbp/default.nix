@@ -169,6 +169,13 @@
     in a linked worktree.
 
     **Etiquette when you're in a worktree** (i.e. the detection above says you are):
+    - **Committing, pushing, and opening the PR are standing permission — just
+      do all three, never ask first.** The default answer to "want me to commit
+      / push / open a PR?" is always yes, so don't ask the question — do the
+      work and report the PR link. The ONLY thing that waits for me is *merging*
+      the PR (see below); everything up to and including "PR is open" is yours to
+      drive unprompted, in default mode. A verified change left uncommitted,
+      unpushed, or without a PR is an unfinished task, not a finished one.
     - Commit on your `worktree-*` branch as usual.
     - **Building/verifying is always allowed — you have standing permission, in
       default mode, to build without asking.** A build (`bench try`, `nix build`,
