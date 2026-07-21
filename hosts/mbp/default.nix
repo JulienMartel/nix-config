@@ -318,22 +318,48 @@
     { config, lib, pkgs, nebelung, ... }:
     {
       home.packages = with pkgs; [
-        # Claude Code, minus its hard-coded sleep blocker: on macOS the agent
-        # silently spawns `caffeinate -i -t 300` (renewed while it works; no
-        # setting to disable it). Shadow caffeinate with a no-op on claude's
-        # PATH only — everything else, including pounce's caffeinate command,
-        # still gets the real /usr/bin/caffeinate. Sleep stays manual.
-        (symlinkJoin {
-          name = "claude-code-no-caffeinate";
-          paths = [ claude-code ];
-          nativeBuildInputs = [ makeBinaryWrapper ];
-          postBuild = ''
-            rm "$out/bin/claude"
-            makeBinaryWrapper "${claude-code}/bin/claude" "$out/bin/claude" \
-              --inherit-argv0 \
-              --prefix PATH : "${writeShellScriptBin "caffeinate" "exit 0"}/bin"
-          '';
-        })
+        # Claude Code, minus two annoyances it has no settings for:
+        #
+        # 1. The permission-mode footer line ("⏵⏵ auto mode on (shift+tab to
+        #    cycle)") under the custom statusline — with 4 panes per tab those
+        #    rows add up. declutter-claude-footer.py patches the JS source
+        #    embedded in the bun-compiled binary so the line renders as null;
+        #    its regexes pin code structure, not minified names, and FAIL THE
+        #    BUILD (match count ≠ 2) if a claude-code update reshapes the
+        #    footer — so a bump can break here; see the script header for how
+        #    to re-derive. autoSignDarwinBinariesHook re-signs the patched
+        #    Mach-O during fixup (unsigned = SIGKILL on Apple Silicon), and
+        #    the package's own versionCheckPhase proves the result still runs.
+        #
+        # 2. The hard-coded sleep blocker: on macOS the agent silently spawns
+        #    `caffeinate -i -t 300` (renewed while it works). Shadow
+        #    caffeinate with a no-op on claude's PATH only — everything else,
+        #    including pounce's caffeinate command, still gets the real
+        #    /usr/bin/caffeinate. Sleep stays manual.
+        (
+          let
+            claude-code-defootered = claude-code.overrideAttrs (old: {
+              nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
+                python3
+                darwin.autoSignDarwinBinariesHook # re-sign the patched Mach-O in fixup
+              ];
+              postInstall = (old.postInstall or "") + ''
+                python3 ${./declutter-claude-footer.py} "$out/bin/.claude-wrapped"
+              '';
+            });
+          in
+          symlinkJoin {
+            name = "claude-code-no-caffeinate";
+            paths = [ claude-code-defootered ];
+            nativeBuildInputs = [ makeBinaryWrapper ];
+            postBuild = ''
+              rm "$out/bin/claude"
+              makeBinaryWrapper "${claude-code-defootered}/bin/claude" "$out/bin/claude" \
+                --inherit-argv0 \
+                --prefix PATH : "${writeShellScriptBin "caffeinate" "exit 0"}/bin"
+            '';
+          }
+        )
         gemini-cli-bin
         orbstack
 
