@@ -47,14 +47,15 @@
         "nix-darwin": "nix-darwin",
         "nix-index-database": "nix-index-database",
         "nixpkgs": "nixpkgs_2",
-        "pounce": "pounce"
+        "pounce": "pounce",
+        "trill": "trill"
       },
       "locked": {
-        "lastModified": 1784783767,
-        "narHash": "sha256-Kbecb9XuQDVLn/rQgvI82YDbIj2IPww/p6QlQE0MJIk=",
+        "lastModified": 1784794971,
+        "narHash": "sha256-gQdQQYxVNQL1exTsPReudMRQH+q0PrPPVnRW3xt7eEE=",
         "owner": "nebelhaus",
         "repo": "nebelhaus",
-        "rev": "027037f847da1069c16f1bdec5dfda1ce064aeb7",
+        "rev": "508cdf0d685762c1f608de6df44c088dbd1fb9e8",
         "type": "github"
       },
       "original": {
@@ -75,11 +76,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784457963,
-        "narHash": "sha256-FOZ4jQJrL5MFUz450CO93hWFFxk+3QzbJv4Jrj6LUtY=",
+        "lastModified": 1784791360,
+        "narHash": "sha256-EbetohKOF9kbvLckooOyEx7Xyq3p1C0dthyPsFItgqM=",
         "owner": "nebelhaus",
         "repo": "nebelung",
-        "rev": "cdbacfd8c48c5f8fd1e712b6e241c6c38485c0a5",
+        "rev": "b38e135462d33d7ed7f595b6545871156e0768cb",
         "type": "github"
       },
       "original": {
@@ -172,11 +173,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784779469,
-        "narHash": "sha256-fin73pshwE6fj/XQcL5W2h9t4PutS9QvNH9d3gIkLRc=",
+        "lastModified": 1784794968,
+        "narHash": "sha256-Xk5NSkZrZu0JXT5jQzsApcdMUE+3+uRbzrTAuvMvYEo=",
         "owner": "nebelhaus",
         "repo": "pounce",
-        "rev": "f35b5bb8d182df2a5e3051992542e5db1fd21f39",
+        "rev": "c7c69b4010b613c2865e082a3bf948054cb75816",
         "type": "github"
       },
       "original": {
@@ -188,6 +189,27 @@
     "root": {
       "inputs": {
         "nebelhaus": "nebelhaus"
+      }
+    },
+    "trill": {
+      "inputs": {
+        "nixpkgs": [
+          "nebelhaus",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1784792133,
+        "narHash": "sha256-9Bnbw9LI3k9aU+w9yugfCOdZYcVO1OK6PS4ac53XuZ8=",
+        "owner": "nebelhaus",
+        "repo": "trill",
+        "rev": "54ec5721d274ebf84e0bb43f79d2166a3c970508",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nebelhaus",
+        "repo": "trill",
+        "type": "github"
       }
     }
   },
