@@ -51,11 +51,11 @@
         "trill": "trill"
       },
       "locked": {
-        "lastModified": 1784808434,
-        "narHash": "sha256-fskJBv4eC5S7Lfv6fOIsUItF5aLd06/ZamudFs5c+MM=",
+        "lastModified": 1784808878,
+        "narHash": "sha256-8mp5oO9HDmtYdXUP7bXSPTtapHwMvM+gQvNi0QaCzTE=",
         "owner": "nebelhaus",
         "repo": "nebelhaus",
-        "rev": "ffe4b2c455614ba020f5fbc531cd7a08f79a2dab",
+        "rev": "5ae5ff9f33d7f7e4126bf70261e30d7bb0b0ebdc",
         "type": "github"
       },
       "original": {
@@ -215,11 +215,11 @@
         "prebuilt": "prebuilt"
       },
       "locked": {
-        "lastModified": 1784807765,
-        "narHash": "sha256-ehpnVdZsiacYE99jkomYLr0pS3pnSnHDTgaWkiEcUeM=",
+        "lastModified": 1784808271,
+        "narHash": "sha256-CutG5S+bxVFzC/71Kpdh5Itr0mSYfA1KgZ0qn1w65Qo=",
         "owner": "nebelhaus",
         "repo": "trill",
-        "rev": "3369de7615c9e87e1174136e42a48df5c1637f64",
+        "rev": "06d869fac87d01da8175705520ba685aa95e65f0",
         "type": "github"
       },
       "original": {
