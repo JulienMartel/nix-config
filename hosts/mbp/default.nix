@@ -22,6 +22,19 @@
   # routes double-clicked json/md/ts/… to Helix too. No Cursor anywhere.
   nebelhaus.hearth.hijackFileAssociations = true;
 
+  # ---- text expansion ----
+  # The old Raycast "@@" snippet, now a rice option (nebelhaus.snippets → espanso
+  # via the Espanso.app cask). Runs the SIGNED app bundle, not a nix-store binary,
+  # so the one-time Accessibility grant survives reboots + nixpkgs bumps and the
+  # espanso troubleshooting window stops popping up at login.
+  nebelhaus.snippets = {
+    enable = true;
+    matches = [
+      { trigger = "@@"; replace = "julienbmartel@gmail.com"; }
+      { trigger = "##"; replace = "2044302465"; }
+    ];
+  };
+
   # ---- theme ----
   # The "orbits" Nebelung wallpaper (palette rings on a dark base).
   nebelhaus.theme.wallpaper = "orbits";
@@ -382,17 +395,8 @@
           && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp)
       '';
 
-      # Text expansion (the old Raycast "@@" snippet, nix-style). Needs a
-      # one-time Accessibility grant in System Settings; a nixpkgs bump that
-      # changes espanso's store path may require re-granting.
-      services.espanso = {
-        enable = true;
-        configs.default.show_icon = false; # no menu bar icon
-        matches.default.matches = [
-          { trigger = "@@"; replace = "julienbmartel@gmail.com"; }
-          { trigger = "##"; replace = "2044302465"; }
-        ];
-      };
+      # Text expansion moved up to nebelhaus.snippets (darwin level) — the rice
+      # option now owns espanso, via the signed Espanso.app cask.
 
       programs.git.settings = {
         http.cookiefile = "${config.home.homeDirectory}/.gitcookies";
