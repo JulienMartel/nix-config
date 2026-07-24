@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "key": "x",
+    "name": "ChatGPT",
+    "cask": "chatgpt",
+    "label": "ChatGPT",
+    "barIcon": ":codex:",
+    "workspace": "X",
+    "appId": "com.openai.codex"
+  }
+]
