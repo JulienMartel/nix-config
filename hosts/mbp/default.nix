@@ -39,6 +39,12 @@
   # The "orbits" Nebelung wallpaper (palette rings on a dark base).
   nebelhaus.theme.wallpaper = "orbits";
 
+  # Obsidian stores its theme per vault. Keep the notes vault on the full
+  # Nebelung theme and retire the old palette-only CSS snippet.
+  nebelhaus.hearth.obsidianVaults = [
+    "Library/Mobile Documents/iCloud~md~obsidian/Documents/notes"
+  ];
+
   # ---- app roster ----
   # My personal launcher: which app owns which AeroSpace workspace + leader key.
   # This ONE list drives the tiling launcher, the SketchyBar pills, and the
@@ -419,38 +425,6 @@
           if [ -d "$HOME/Library/Application Support/Zen" ]; then
              echo "→ Stylus (Zen): to apply the nebelung palette to your userstyles, import the generated JSON:"
              echo "    ${nebelung.themes}/stylus/nebelung-stylus.json"
-          fi
-        '';
-
-      # Obsidian: paint the vault with Nebelung. The theme is a nebelung *port*
-      # (a CSS snippet overriding Obsidian's --color-* vars); we DON'T use the
-      # Catppuccin community theme — it re-introduces the blue Nebelung strips
-      # out, and a snippet can't reliably override a full theme's own rules.
-      # So: Default theme + this snippet.
-      #
-      # The vault lives in iCloud, so we COPY the snippet (a store symlink would
-      # sync as a dangling link to other devices) rather than link it. Obsidian
-      # owns appearance.json (rewrites it on any settings change), so we don't
-      # freeze it — jq patches it in place, idempotently, each rebuild:
-      # Default theme, dark mode, snippet enabled. Everything stays writable.
-      #
-      # Requires the obsidian port to be present in the pinned nebelung input;
-      # until `nix flake update nebelung` (in nebelhaus) propagates it, the
-      # `-f` guard makes this a no-op instead of a failed rebuild.
-      home.activation.obsidianNebelung =
-        lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          vault="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/notes/.obsidian"
-          snippet="${nebelung.themes}/obsidian/nebelung.css"
-          if [ -d "$vault" ] && [ -f "$snippet" ]; then
-            run mkdir -p "$vault/snippets"
-            run install -m 0644 "$snippet" "$vault/snippets/nebelung.css"
-            app="$vault/appearance.json"
-            [ -f "$app" ] || echo '{}' > "$app"
-            tmp="$(mktemp)"
-            ${pkgs.jq}/bin/jq \
-              '.cssTheme = "" | .theme = "obsidian"
-               | .enabledCssSnippets = ((.enabledCssSnippets // []) + ["nebelung"] | unique)' \
-              "$app" > "$tmp" && run mv "$tmp" "$app"
           fi
         '';
 
