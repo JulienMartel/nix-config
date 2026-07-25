@@ -48,61 +48,76 @@
 
   # ---- app roster ----
   # My personal launcher: which app owns which AeroSpace workspace + leader key.
-  # This ONE list drives the tiling launcher, the SketchyBar pills, and the
-  # pounce cheatsheet (the rice ships only a neutral terminal+browser default).
-  # Casks stay in homebrew.casks below (so cask = null here — no double-declare);
-  # Passwords is a system app, Trill ships as a cask via the rice's trill module,
-  # Things is App Store, Swather is a cask.
-  nebelhaus.prowl.apps = [
-    {
+  # This keyed map drives the tiling launcher, SketchyBar pills, and pounce
+  # cheatsheet. Stable ids let pounce-generated package modules and this host
+  # compose or override one app at a time.
+  #
+  # Most casks stay in homebrew.casks below, so cask = null avoids declaring
+  # them twice. ChatGPT came from pounce Install App and owns its cask here;
+  # Passwords is a system app, Things is App Store, and Trill ships via the rice.
+  nebelhaus.apps = {
+    ghostty = {
+      order = 10;
       key = "t";
       name = "Ghostty";
       workspace = "T";
       appId = "com.mitchellh.ghostty";
       barIcon = ":ghostty:";
       label = "Ghostty (Terminal)";
-    }
-    {
+      cask = null;
+    };
+    obsidian = {
+      order = 20;
       key = "n";
       name = "Obsidian";
       workspace = "N";
       appId = "md.obsidian";
       barIcon = ":obsidian:";
       label = "Obsidian";
-    }
-    {
+      cask = null;
+    };
+    things = {
+      order = 30;
       key = "r";
       name = "Things3";
       workspace = "R";
       appId = "com.culturedcode.ThingsMac";
       barIcon = ":things:";
       label = "Things3";
-    }
-    {
+      cask = null;
+    };
+    slack = {
+      order = 40;
       key = "s";
       name = "Slack";
       workspace = "S";
       appId = "com.tinyspeck.slackmacgap";
       barIcon = ":slack:";
       label = "Slack";
-    }
-    {
+      cask = null;
+    };
+    zen = {
+      order = 50;
       key = "b";
       name = "Zen";
       workspace = "B";
       appId = "app.zen-browser.zen";
       barIcon = ":zen_browser:";
       label = "Zen (Browser)";
-    }
-    {
+      cask = null;
+    };
+    trill = {
+      order = 60;
       key = "m";
       name = "Trill";
       workspace = "M";
       appId = "com.nebelhaus.trill";
       barIcon = ":messages:";
       label = "Trill (Messages)";
-    }
-    {
+      cask = null;
+    };
+    swather = {
+      order = 70;
       key = "h";
       name = "Swather";
       workspace = "H";
@@ -110,37 +125,47 @@
       # Swather has no app-font glyph — fa-hourglass (U+F254) in the Nerd Font.
       barIcon = builtins.fromJSON ''"\uf254"'';
       label = "Swather";
-    }
-    {
+      cask = null;
+    };
+    claude = {
+      order = 80;
       key = "c";
       name = "Claude";
       workspace = "C";
       appId = "com.anthropic.claudefordesktop";
       barIcon = ":claude:";
       label = "Claude";
-    }
-    {
+      cask = null;
+    };
+    notion-calendar = {
+      order = 90;
       key = "d";
       name = "Notion Calendar";
       workspace = "D";
       appId = "com.cron.electron";
       barIcon = ":calendar:";
       label = "Notion Calendar";
-    }
-    {
+      cask = null;
+    };
+    passwords = {
+      order = 100;
       key = "p";
       name = "Passwords";
       # Launcher-only: opens/focuses in the current workspace, no pill/auto-assign.
       label = "Passwords";
-    }
-  ];
-
-  # Machine-editable roster + install lists, appended to by the pounce "Install
-  # App" command (search Homebrew → add to roster / just install → rebuild). The
-  # command owns these files; the hand-written list above is still the base and
-  # the two concatenate. Both are git-tracked so the flake can read them.
-  nebelhaus.prowl.rosterFile = ../../roster.json;
-  nebelhaus.homebrew.installsFile = ../../installs.json;
+      cask = null;
+    };
+    chatgpt = {
+      order = 110;
+      key = "x";
+      name = "ChatGPT";
+      workspace = "X";
+      appId = "com.openai.codex";
+      barIcon = ":codex:";
+      label = "ChatGPT";
+      cask = "chatgpt";
+    };
+  };
 
   # Fully declarative Homebrew: a rebuild uninstalls (and zaps the data of) any
   # cask/brew not declared above. Every app I keep is now listed, so the only
