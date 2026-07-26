@@ -192,6 +192,12 @@
     harvest = true;
   };
 
+  # Bar follows the display: top on the built-in (tucked under the notch),
+  # bottom whenever an external is attached — i.e. bottom when docked to the
+  # Studio Display, top on the go. Flips live on dock/undock via sill's
+  # display_change hook; no rebuild needed to move it.
+  nebelhaus.sill.position = "auto";
+
   # Claude Code's global memory (~/.claude/CLAUDE.md) — how I like to work across
   # every repo. Personal, so it lives here in the host; the rice just provides the
   # nebelhaus.claude.globalMd plumbing (hearth writes the file when set). Keep it
