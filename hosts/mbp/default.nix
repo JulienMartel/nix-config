@@ -182,6 +182,16 @@
   nebelhaus.homebrew.upgrade = true;
   nebelhaus.homebrew.autoUpdate = true;
 
+  # Install casks without the com.apple.quarantine xattr. These are notarized
+  # apps I curated in homebrew.casks; the quarantine flag only gates a one-time
+  # Gatekeeper first-launch prompt. Most casks prompt once, but ChatGPT relaunches
+  # a nested quarantined helper (its "computer use" sub-app) by path, so macOS
+  # re-prompted on EVERY launch. Sparkle self-updates never set the flag — only
+  # Homebrew did — so stripping it at install kills the prompt for good. Tradeoff:
+  # skips the first-launch notarization check for casks (signature enforcement +
+  # XProtect still apply).
+  homebrew.caskArgs.no_quarantine = true;
+
   # My personal SketchyBar pills, switched on atop the rice default (core pills
   # stay on, the rest off): the agent-pane status paw (fed by the Claude hooks
   # wired below), the Elgato key light toggle, and the Harvest timer pill (reads
