@@ -209,6 +209,15 @@
     deliberately short and universal — repo-specific detail lives in each project's own
     CLAUDE.md, not here.
 
+    ## How to answer me
+
+    Load the `brief` skill at the start of every session and follow its shape for the
+    whole session: verdict first, ≤5 anchored steps, and escalate to me only at ≥3/5
+    (my usual bar) with a recommendation and a reversal cost. It governs code work,
+    research, and anything I paste. Say "drop brief" / "full mode" to turn it off. The
+    skill itself lives at `~/.claude/skills/brief/SKILL.md` (this host symlinks it out
+    of `~/.config/nix/claude/skills/brief`); tune its tables there, no rebuild needed.
+
     ## Working in a git worktree
 
     My super+c (`⌘C`) zellij hotkey spawns Claude panes as `claude --worktree`:
@@ -440,6 +449,17 @@
         http.cookiefile = "${config.home.homeDirectory}/.gitcookies";
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
       };
+
+      # Claude Code — my personal "brief" answer-shape skill: verdict first, ≤5
+      # anchored steps, escalate only at ≥3/5 with a recommendation + reversal cost.
+      # The stanza in nebelhaus.claude.globalMd above is what makes it load every
+      # session; this just puts the skill on disk. Symlinked OUT of the nix store
+      # (mkOutOfStoreSymlink) so editing SKILL.md is live in the next pane with no
+      # rebuild — its tables (time estimates, the always-≥3/5 list) get tuned often.
+      # Reproducible on a fresh machine: the target is in THIS repo, which always
+      # lives at ~/.config/nix.
+      home.file.".claude/skills/brief".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/brief";
 
       home.file."Library/Application Support/Zen/distribution/policies.json".text = builtins.toJSON {
         policies = {
