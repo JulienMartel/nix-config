@@ -475,6 +475,16 @@
       home.file.".claude/skills/brief".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/brief";
 
+      # Claude Code — my generic "ship" skill (the repo-agnostic fallback: PR →
+      # merge → clean up → report; never opens/closes a zellij pane). Repos with
+      # their own scoped ship skill win over this one. Same out-of-store symlink
+      # pattern as brief, for the same reason (edit SKILL.md, live next pane).
+      # NOTE: on the FIRST rebuild after this lands, remove the old hand-placed
+      # dir so the symlink can take over — `rm -rf ~/.claude/skills/ship` — since
+      # there's no home-manager backupFileExtension to move it aside.
+      home.file.".claude/skills/ship".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/ship";
+
       home.file."Library/Application Support/Zen/distribution/policies.json".text = builtins.toJSON {
         policies = {
           ExtensionSettings = {
