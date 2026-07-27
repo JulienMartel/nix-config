@@ -192,14 +192,16 @@
   # XProtect still apply).
   homebrew.caskArgs.no_quarantine = true;
 
-  # My personal SketchyBar pills, switched on atop the rice default (core pills
-  # stay on, the rest off): the agent-pane status paw (fed by the Claude hooks
-  # wired below), the Elgato key light toggle, and the Harvest timer pill (reads
-  # ~/.config/sketchybar/harvest_secrets.sh).
+  # My personal SketchyBar pills, tuned atop the rice default: switch on the
+  # agent-pane status paw (fed by the Claude hooks wired below), the Elgato key
+  # light toggle, and the caffeinate keep-awake controller; switch off the
+  # default-on weather and wifi core pills.
   nebelhaus.sill.items = {
     agents = true;
     elgato = true;
-    harvest = true;
+    caffeinate = true;
+    weather = false;
+    wifi = false;
   };
 
   # Bar follows the display: top on the built-in (tucked under the notch),
