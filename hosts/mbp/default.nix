@@ -273,10 +273,11 @@
       spun up — a session often hand-creates a sibling-repo worktree for
       out-of-repo work, and those aren't auto-reaped, so merge their PRs too and
       `git worktree remove` them. When it's all landed and nothing ≥3/5 needs my
-      attention (don't wait on CI unless that's the point), `/ship` may close
-      this pane with `zellij action close-pane -p "$ZELLIJ_PANE_ID"` (target the
-      pane id, not whatever's focused); closing reaps the merged branch via the
-      `wt` hook.
+      attention (don't wait on CI unless that's the point), `/ship` reports and
+      stops. It does **not** close this pane or open a new one — I open and close
+      my own panes (see "Don't drive my multiplexer" below). The current worktree
+      isn't reaped here (you're still in it); it's cleaned up when I close the
+      pane myself (the `wt` remove hook) or by a later `wt reap`.
     - When done, push the branch, open the PR, and — if I didn't say ship — tell
       me the PR link. The worktree dies with the pane; the branch + PR survive
       until merged.
@@ -324,6 +325,17 @@
       push to `main` — the PR is what stops two agents' branches from clobbering
       each other. Don't re-confirm each repo word-for-word. "Merging is my call"
       means don't merge *unprompted*, not "re-ask after I've told you to."
+
+    ## Don't drive my multiplexer
+
+    **Don't open or close zellij panes/tabs for me — mostly.** I manage my own
+    panes: opening a pane, spawning a "landing" pane, or closing the one you're
+    in is obtrusive and I don't want it as a default (it's how `/ship` used to
+    end — that's gone). If a task genuinely needs a pane (e.g. I explicitly ask
+    you to launch something in one), ask first or tell me the command to run
+    myself. When you need to do a main-checkout-only thing from a worktree (like
+    activating after a ship), `cd` to the main checkout and run it in place —
+    don't spawn a pane to carry it.
 
     ## How I verify
 
@@ -462,6 +474,16 @@
       # lives at ~/.config/nix.
       home.file.".claude/skills/brief".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/brief";
+
+      # Claude Code — my generic "ship" skill (the repo-agnostic fallback: PR →
+      # merge → clean up → report; never opens/closes a zellij pane). Repos with
+      # their own scoped ship skill win over this one. Same out-of-store symlink
+      # pattern as brief, for the same reason (edit SKILL.md, live next pane).
+      # NOTE: on the FIRST rebuild after this lands, remove the old hand-placed
+      # dir so the symlink can take over — `rm -rf ~/.claude/skills/ship` — since
+      # there's no home-manager backupFileExtension to move it aside.
+      home.file.".claude/skills/ship".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/ship";
 
       home.file."Library/Application Support/Zen/distribution/policies.json".text = builtins.toJSON {
         policies = {
