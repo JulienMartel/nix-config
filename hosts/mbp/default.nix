@@ -370,7 +370,7 @@
     "zen"
   ];
   # App Store-only (no cask; mas can't reliably install on modern macOS):
-  #   Dropover (1355679052) · Things (904280696) · Xcode (497799835)
+  #   Things (904280696) · Xcode (497799835)
   # Install by hand; System Settings → App Store → automatic updates keeps them current.
 
   # ---- personal home layer: extra packages, private git config, secrets ----
