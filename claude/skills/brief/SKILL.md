@@ -132,13 +132,13 @@ Estimate in the units of my loop. Tune these numbers as they drift:
 
 | | |
 |---|---|
-| `bench try` (warm) | ~2 min |
-| `bench try` (cold / nixpkgs moved) | ~10 min |
-| `bench try switch` | ~3 min + pane restart |
+| `bench try` (warm) | ~1 min |
+| `bench try` (cold / nixpkgs moved) | ~5 min |
+| `bench try switch` | ~1 min + pane restart |
 | `zscratch` iteration | ~15 s |
-| `bench ship` ripple | ~1 min per hop |
-| `bench release` → homebrew live | ~5–10 min of CI |
-| "a session" | one Claude pane, one branch, one PR |
+| `bench ship` ripple | ~1 min |
+| `bench release` → homebrew live | ~1 min command, ~5–10 min of CI |
+| "a session" | one Claude pane, out of one branch (usually a worktree) but can create more worktrees/branches from there on the same repo or sister repos, almost always one PR per branch |
 
 ## When the shape relaxes
 
