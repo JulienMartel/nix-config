@@ -369,9 +369,11 @@
     "tailscale-app"
     "zen"
   ];
-  # App Store-only (no cask; mas can't reliably install on modern macOS):
+  # App Store-only (no cask). mas can't sign in or first-acquire apps on modern
+  # macOS (Apple removed the API); it only reinstalls/upgrades apps already bought
+  # via the App Store GUI — so acquire these by hand once:
   #   Things (904280696) · Xcode (497799835)
-  # Install by hand; System Settings → App Store → automatic updates keeps them current.
+  # System Settings → App Store → automatic updates keeps them current thereafter.
 
   # ---- personal home layer: extra packages, private git config, secrets ----
   home-manager.users.${username} =
