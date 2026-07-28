@@ -167,6 +167,18 @@
     };
   };
 
+  # Non-app leader actions. Tap Caps (the leader), then Return → Things3's Quick
+  # Entry panel. The app roster above maps letters → open an app; this maps a key
+  # → a command, for actions that aren't "launch an app". `enter` is free in launch
+  # mode (the rice asserts it doesn't collide with a roster letter or a built-in).
+  nebelhaus.keys.leaderExtras = [
+    {
+      key = "enter";
+      command = "osascript -e 'tell application \"Things3\" to show quick entry panel'";
+      caption = "Things Quick Entry";
+    }
+  ];
+
   # Fully declarative Homebrew: a rebuild uninstalls (and zaps the data of) any
   # cask/brew not declared above. Every app I keep is now listed, so the only
   # thing this reaps is genuine cruft. Adding an undeclared app by hand and
