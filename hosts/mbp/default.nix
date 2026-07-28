@@ -37,6 +37,10 @@
   };
 
   # ---- theme ----
+  # Accent: pink instead of the rice default (mauve). Machine-local — the palette
+  # itself is unchanged; this just picks which whiskers hue everything keys off.
+  nebelhaus.theme.accent = "pink";
+
   # The "orbits" Nebelung wallpaper (palette rings on a dark base).
   nebelhaus.theme.wallpaper = "orbits";
 
