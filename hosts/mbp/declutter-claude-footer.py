@@ -22,10 +22,11 @@ dense feature-flagged one and the normal one), so four patches total:
      overflow hidden a zero-height box occupies zero terminal rows, so mode +
      tasks + link chips + hints all vanish visually.
 
-  2. The empty-state early return, `return <fn>()?<jsx>(<Text>,{children:" "})
-     :null` (the placeholder-line reservation), gets its condition overwritten
-     in place with a same-length always-false expression, so the idle blank
-     line renders as null.
+  2. The empty-state placeholder, `<var>=<fn>()?<jsx>(<Text>,{children:" "})
+     :null` (the placeholder-line reservation; an assignment as of CC 2.1.220,
+     formerly a `return`), gets its condition overwritten in place with a
+     same-length always-false expression, so the idle blank line renders as
+     null.
 
 We patch the JS source that bun embeds as plain text inside the compiled binary
 (verified empirically that the embedded source — not a bytecode cache — is what
@@ -36,12 +37,14 @@ Anchors pin code STRUCTURE, not minified identifier names (which change every
 release): the object-literal prop keys `height`/`overflow`/`children` and the
 `{children:" "}` placeholder are Ink API names and stay stable; the `children:[`
 (array) vs `children:<jsx>(` (single child) distinction is what separates our
-two content rows from the unrelated spinner box, and the leading `return `
-separates the two footer placeholders from the custom-statusline container's
-own `:<fn>()?" ":null` fallback. If a claude-code update reshapes the footer
-either match count moves off 2 and this script exits non-zero — failing the nix
-build loudly instead of silently bringing the row back. To re-derive: search
-the binary for 'overflow:"hidden",children:[' and 'children:" "}):null'.
+two content rows from the unrelated spinner box, and the leading `=`
+(assignment) separates the two footer placeholders from the custom-statusline
+container's own fallback, whose identical `...jsx(<Text>,{children:" "}):null`
+tail is instead preceded by `:` (a ternary else-branch). If a claude-code
+update reshapes the footer either match count moves off 2 and this script exits
+non-zero — failing the nix build loudly instead of silently bringing the row
+back. To re-derive: search the binary for 'overflow:"hidden",children:[' and
+'children:" "}):null'.
 
 Usage: declutter-claude-footer.py <path-to-claude-binary>
 """
@@ -69,13 +72,15 @@ for m in row.finditer(bytes(data)):
     data[h : h + len(b"height:1")] = b"height:0"
     rows += 1
 
-# 2. The idle placeholder reservation: `return <fn>()?<jsx>(<Text>,
-#    {children:" "}):null`. Overwrite the condition with a same-length
-#    always-false expression so the blank line renders as null. The leading
-#    `return ` distinguishes these from the custom-statusline container's own
-#    `:<fn>()?" ":null` fallback (an else-branch, not a statement).
+# 2. The idle placeholder reservation: `<var>=<fn>()?<jsx>.jsx(<Text>,
+#    {children:" "}):null` (an assignment; CC ≤2.1.195 wrote it as a `return`).
+#    Overwrite the condition with a same-length always-false expression so the
+#    blank line renders as null. The leading `=` (assignment) distinguishes
+#    these two footer placeholders from the custom-statusline container's own
+#    `:<fn>()?<jsx>.jsx(<Text>,{children:" "}):null` fallback, whose identical
+#    jsx tail is instead preceded by `:` (a ternary else-branch).
 reservation = re.compile(
-    rb"return ((?:%s)\(\))\?(?:%s)\.jsx\((?:%s),\{children:\" \"\}\):null"
+    rb"=((?:%s)\(\))\?(?:%s)\.jsx\((?:%s),\{children:\" \"\}\):null"
     % (ident, ident, ident)
 )
 reservations = 0
