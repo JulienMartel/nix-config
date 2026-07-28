@@ -461,12 +461,12 @@
         gemini-cli-bin
         orbstack
 
-        # The workshop CLI (~/code/nebelhaus): status / try / ship / rebuild
+        # The workshop CLI (~/code/workshop): status / try / ship / rebuild
         # for the whole rice family. A real command on PATH (not an alias) so
         # it works from scripts, other shells, and non-interactive contexts;
         # `bench try switch` supersedes rebuild-pounce (it overrides ALL the
         # local checkouts, not just pounce).
-        (writeShellScriptBin "bench" ''exec "$HOME/code/nebelhaus/bench" "$@"'')
+        (writeShellScriptBin "bench" ''exec "$HOME/code/workshop/bench" "$@"'')
       ];
 
       # Dev loop for hacking on pounce: rebuild the system against the LOCAL
@@ -476,7 +476,7 @@
       programs.zsh.shellAliases.rebuild-pounce = ''
         (cd "$HOME/.config/nix" \
           && nix build .#darwinConfigurations.mbp.system \
-               --override-input nebelhaus/pounce "path:$HOME/code/nebelhaus/pounce" \
+               --override-input nebelhaus/pounce "path:$HOME/code/workshop/pounce" \
           && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp)
       '';
 
