@@ -206,7 +206,16 @@
   # Homebrew did — so stripping it at install kills the prompt for good. Tradeoff:
   # skips the first-launch notarization check for casks (signature enforcement +
   # XProtect still apply).
-  homebrew.caskArgs.no_quarantine = true;
+  #
+  # Delivered as HOMEBREW_CASK_OPTS, not `homebrew.caskArgs.no_quarantine`:
+  # Homebrew 6 dropped `--no-quarantine` as a `brew install` flag (the env var is
+  # the only path left — see cask_opts_quarantine? in env_config.rb). caskArgs
+  # writes `cask_args no_quarantine: true` into the Brewfile, and brew bundle
+  # turns that into `brew install --no_quarantine`, which now aborts with
+  # "invalid option" — so EVERY new cask install failed the whole `brew bundle`
+  # step of a rebuild. Already-installed casks were unaffected, which is why this
+  # only surfaced the first time a cask was added.
+  homebrew.onActivation.extraEnv.HOMEBREW_CASK_OPTS = "--no-quarantine";
 
   # My personal SketchyBar pills, tuned atop the rice default: switch on the
   # agent-pane status paw (fed by the Claude hooks wired below), the Elgato key
