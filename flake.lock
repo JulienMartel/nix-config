@@ -52,11 +52,11 @@
         "trill": "trill"
       },
       "locked": {
-        "lastModified": 1785246085,
-        "narHash": "sha256-HwVCS3dt7siFRj+DZ7E1LeAh8vjtSJIy8TFdlBSkxew=",
+        "lastModified": 1785325723,
+        "narHash": "sha256-edc4Yyi6Yzklf6jJXmYDa5cUv00Wtc1wyFVf6NPf5JI=",
         "owner": "nebelhaus",
         "repo": "nebelhaus",
-        "rev": "679501d153308316026b7f95cfd686533abc7546",
+        "rev": "5484d2665f6a056ffce50786f42f47a2179ea739",
         "type": "github"
       },
       "original": {
