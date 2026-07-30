@@ -218,11 +218,14 @@
   homebrew.onActivation.extraEnv.HOMEBREW_CASK_OPTS = "--no-quarantine";
 
   # My personal SketchyBar pills, tuned atop the rice default: switch on the
-  # agent-pane status paw (fed by the Claude hooks wired below), the Elgato key
-  # light toggle, and the caffeinate keep-awake controller; switch off the
-  # default-on weather and wifi core pills.
+  # agent-pane status paw (fed by the Claude hooks wired below), the Claude
+  # usage gauge (5-hour · weekly, fed by the same statusLine the rice already
+  # points at `claude-statusline`), the Elgato key light toggle, and the
+  # caffeinate keep-awake controller; switch off the default-on weather and
+  # wifi core pills.
   nebelhaus.sill.items = {
     agents = true;
+    claudeUsage = true;
     elgato = true;
     caffeinate = true;
     weather = false;
