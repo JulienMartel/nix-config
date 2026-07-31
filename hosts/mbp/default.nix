@@ -234,12 +234,15 @@
   # wifi core pills.
   nebelhaus.sill.items = {
     agents = true;
-    claudeUsage = true;
+    aiUsage = true;
     elgato = true;
     caffeinate = true;
     weather = false;
     wifi = false;
   };
+
+  nebelhaus.sill.battery.hideOver = 80;
+  nebelhaus.sill.clock.mode = "compact";
 
   # Bar follows the display: top on the built-in (tucked under the notch),
   # bottom whenever an external is attached — i.e. bottom when docked to the
