@@ -17,13 +17,6 @@
   # Refresh with `security find-identity -v -p codesigning` after cert renewal.
   nebelhaus.pounce.signingIdentity = "4D2693E75A214534ACE299861AE7FC3086573136";
 
-  # Pounce shortcut: ⌥⇧L opens every URL from the focused Claude pane's
-  # full transcript (falling back to zellij scrollback).
-  nebelhaus.pounce.items."cmd:links" = {
-    hotkey = "opt+shift+l";
-    caption = "Links from focused Claude transcript";
-  };
-
   # Editor: Helix (hx) everywhere. $EDITOR/$VISUAL are hx by default; the "Nix
   # Config" palette/bar action opens ~/.config/nix in a new Helix terminal tab
   # (hearth.guiEditor now defaults to "hx"), and the file-association hijack
