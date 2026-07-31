@@ -17,12 +17,10 @@
   # Refresh with `security find-identity -v -p codesigning` after cert renewal.
   nebelhaus.pounce.signingIdentity = "4D2693E75A214534ACE299861AE7FC3086573136";
 
-  # Pounce-owned leader sequence: ⌥Space, then L opens every URL from the
-  # focused Claude pane's full transcript (falling back to zellij scrollback).
-  # Keep this machine-local: the command is part of the rice, but reserving a
-  # global chord for a Claude-specific workflow is personal policy.
+  # Pounce shortcut: ⌥⇧L opens every URL from the focused Claude pane's
+  # full transcript (falling back to zellij scrollback).
   nebelhaus.pounce.items."cmd:links" = {
-    hotkey = "opt+space l";
+    hotkey = "opt+shift+l";
     caption = "Links from focused Claude transcript";
   };
 
