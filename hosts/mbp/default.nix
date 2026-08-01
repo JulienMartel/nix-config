@@ -23,6 +23,19 @@
   # routes double-clicked json/md/ts/… to Helix too. No Cursor anywhere.
   nebelhaus.hearth.hijackFileAssociations = true;
 
+  # ---- coding agents ----
+  # Codex on top of the rice's default pair. There is an authed account and a
+  # session history under ~/.codex, but no `codex` on PATH — it was installed
+  # outside Nix once and went away, which is exactly the state that made
+  # `agents.default = "codex"` a dead pane rather than an error. Listing it
+  # here is what installs it; `agents.default` is asserted to be a member, so
+  # switching the default is now a rebuild-time decision, not a discovery.
+  nebelhaus.agents.clients = [
+    "claude"
+    "codex"
+    "opencode"
+  ];
+
   # ---- text expansion ----
   # The old Raycast "@@" snippet, now a rice option (nebelhaus.snippets → espanso
   # via the Espanso.app cask). Runs the SIGNED app bundle, not a nix-store binary,
@@ -396,6 +409,67 @@
   # A system CLI not in den's baseline.
   environment.systemPackages = [ pkgs.biome ];
 
+  # ---- Claude Code, patched, as an OVERLAY rather than a package ----
+  # The rice installs the clients named in `nebelhaus.agents.clients` and
+  # references `pkgs.claude-code` to do it. So this cannot be a second
+  # derivation in home.packages, where it used to live: two builds shipping
+  # `bin/claude` collide in one profile. Redefining `claude-code` itself means
+  # the rice's own reference resolves to the patched build, there is exactly
+  # one `claude` on PATH, and any future consumer of `pkgs.claude-code` inherits
+  # the patch for free. `useGlobalPkgs` is on, so this reaches home-manager too.
+  #
+  # Two annoyances Claude Code has no settings for:
+  #
+  # 1. The permission-mode footer line ("⏵⏵ auto mode on (shift+tab to
+  #    cycle)") under the custom statusline — with 4 panes per tab those
+  #    rows add up. declutter-claude-footer.py patches the JS source
+  #    embedded in the bun-compiled binary so the line renders as null;
+  #    its regexes pin code structure, not minified names, and FAIL THE
+  #    BUILD (match count ≠ 2) if a claude-code update reshapes the
+  #    footer — so a bump can break here; see the script header for how
+  #    to re-derive. autoSignDarwinBinariesHook re-signs the patched
+  #    Mach-O during fixup (unsigned = SIGKILL on Apple Silicon), and
+  #    the package's own versionCheckPhase proves the result still runs.
+  #
+  # 2. The hard-coded sleep blocker: on macOS the agent silently spawns
+  #    `caffeinate -i -t 300` (renewed while it works). Shadow
+  #    caffeinate with a no-op on claude's PATH only — everything else,
+  #    including pounce's caffeinate command, still gets the real
+  #    /usr/bin/caffeinate. Sleep stays manual.
+  nixpkgs.overlays = [
+    (final: prev: {
+      claude-code =
+        let
+          # `prev`, never `final` — overriding a package in terms of itself is
+          # infinite recursion, not a patch.
+          defootered = prev.claude-code.overrideAttrs (old: {
+            nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
+              prev.python3
+              prev.darwin.autoSignDarwinBinariesHook # re-sign the patched Mach-O in fixup
+            ];
+            postInstall = (old.postInstall or "") + ''
+              python3 ${./declutter-claude-footer.py} "$out/bin/.claude-wrapped"
+            '';
+          });
+        in
+        prev.symlinkJoin {
+          name = "claude-code-no-caffeinate";
+          paths = [ defootered ];
+          nativeBuildInputs = [ prev.makeBinaryWrapper ];
+          postBuild = ''
+            rm "$out/bin/claude"
+            makeBinaryWrapper "${defootered}/bin/claude" "$out/bin/claude" \
+              --inherit-argv0 \
+              --prefix PATH : "${prev.writeShellScriptBin "caffeinate" "exit 0"}/bin"
+          '';
+          # symlinkJoin invents its own (empty) meta, which would drop the
+          # platform list the rice's agents.clients assertion reads and the
+          # license the unfree check reads. Carry the real one through.
+          inherit (prev.claude-code) meta;
+        };
+    })
+  ];
+
   # ---- personal apps (den ships ghostty; prowl aerospace; sill sketchybar) ----
   homebrew.taps = [ "pear-devs/pear" ];
   homebrew.brews = [
@@ -435,48 +509,10 @@
     { config, lib, pkgs, nebelung, ... }:
     {
       home.packages = with pkgs; [
-        # Claude Code, minus two annoyances it has no settings for:
-        #
-        # 1. The permission-mode footer line ("⏵⏵ auto mode on (shift+tab to
-        #    cycle)") under the custom statusline — with 4 panes per tab those
-        #    rows add up. declutter-claude-footer.py patches the JS source
-        #    embedded in the bun-compiled binary so the line renders as null;
-        #    its regexes pin code structure, not minified names, and FAIL THE
-        #    BUILD (match count ≠ 2) if a claude-code update reshapes the
-        #    footer — so a bump can break here; see the script header for how
-        #    to re-derive. autoSignDarwinBinariesHook re-signs the patched
-        #    Mach-O during fixup (unsigned = SIGKILL on Apple Silicon), and
-        #    the package's own versionCheckPhase proves the result still runs.
-        #
-        # 2. The hard-coded sleep blocker: on macOS the agent silently spawns
-        #    `caffeinate -i -t 300` (renewed while it works). Shadow
-        #    caffeinate with a no-op on claude's PATH only — everything else,
-        #    including pounce's caffeinate command, still gets the real
-        #    /usr/bin/caffeinate. Sleep stays manual.
-        (
-          let
-            claude-code-defootered = claude-code.overrideAttrs (old: {
-              nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
-                python3
-                darwin.autoSignDarwinBinariesHook # re-sign the patched Mach-O in fixup
-              ];
-              postInstall = (old.postInstall or "") + ''
-                python3 ${./declutter-claude-footer.py} "$out/bin/.claude-wrapped"
-              '';
-            });
-          in
-          symlinkJoin {
-            name = "claude-code-no-caffeinate";
-            paths = [ claude-code-defootered ];
-            nativeBuildInputs = [ makeBinaryWrapper ];
-            postBuild = ''
-              rm "$out/bin/claude"
-              makeBinaryWrapper "${claude-code-defootered}/bin/claude" "$out/bin/claude" \
-                --inherit-argv0 \
-                --prefix PATH : "${writeShellScriptBin "caffeinate" "exit 0"}/bin"
-            '';
-          }
-        )
+        # Claude Code is NOT here — the rice installs it from
+        # `nebelhaus.agents.clients`, and the overlay above is what makes that
+        # copy the patched one. gemini-cli has no agents.clients entry (it is
+        # not a `wt` client), so it stays a plain package.
         gemini-cli-bin
         orbstack
 
