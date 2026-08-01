@@ -564,6 +564,16 @@
       home.file.".claude/skills/ship".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/ship";
 
+      # Claude Code — "/park": set the working tree aside as a `wip:` commit via
+      # `wt park`, never `git stash`. The stash stack lives in the shared .git dir,
+      # so every agent worktree of a repo AND the main checkout pop the same one —
+      # parallel agents have popped each other's entries into trees that never asked
+      # for them. The rule is in my global CLAUDE.md; this skill is the door an agent
+      # actually walks through, and covers `/unpark` (including its refusal to rewind
+      # an already-pushed wip commit). Same out-of-store symlink pattern as above.
+      home.file.".claude/skills/park".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
+
       home.file."Library/Application Support/Zen/distribution/policies.json".text = builtins.toJSON {
         policies = {
           ExtensionSettings = {
