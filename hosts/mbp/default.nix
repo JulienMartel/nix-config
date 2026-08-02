@@ -63,6 +63,15 @@
   # The "orbits" Nebelung wallpaper (palette rings on a dark base).
   nebelhaus.theme.wallpaper = "orbits";
 
+  # ---- desktop ----
+  # No icons on the desktop. The files stay in ~/Desktop — this only stops Finder
+  # from drawing them, so the wallpaper (and whatever prowl tiles on top of it) is
+  # all that's ever behind the windows. Side effect of the same switch: the desktop
+  # is no longer clickable, so clicking through to bare wallpaper doesn't activate
+  # Finder any more. The rice's own finder defaults (den) don't touch this key, so
+  # nothing to override — plain assignment.
+  system.defaults.finder.CreateDesktop = false;
+
   # Obsidian stores its theme per vault. Keep the notes vault on the full
   # Nebelung theme and retire the old palette-only CSS snippet.
   nebelhaus.hearth.obsidianVaults = [
