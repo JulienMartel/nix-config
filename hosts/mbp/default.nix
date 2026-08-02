@@ -83,18 +83,14 @@
   #
   # `order` only sorts the launcher half (cheatsheet rows, pill row), so the
   # install-only entries below leave it at its default.
-  nebelhaus.apps = {
+  nebelhaus.roster = {
     # ---- the launcher ----
-    ghostty = {
-      order = 10;
-      key = "t";
-      name = "Ghostty";
-      workspace = "T";
-      appId = "com.mitchellh.ghostty";
-      barIcon = ":ghostty:";
-      label = "Ghostty (Terminal)";
-      # No cask: den installs the terminal the rice is themed for.
-    };
+    # ghostty isn't here: den declares its name + cask, prowl its key, workspace,
+    # icon and label, and every one of those defaults is what I'd have typed. An
+    # entry only appears below where I want something the rice didn't already
+    # decide — which is why zen is one line.
+    zen.order = 50;
+
     obsidian = {
       order = 20;
       key = "n";
@@ -128,25 +124,14 @@
       label = "Slack";
       cask = "slack";
     };
-    zen = {
-      order = 50;
-      key = "b";
-      name = "Zen";
-      workspace = "B";
-      appId = "app.zen-browser.zen";
-      barIcon = ":zen_browser:";
-      label = "Zen (Browser)";
-      cask = "zen";
-    };
+    # name, appId and "who installs it" come from nebelhaus.trill; this is only
+    # the tiling half.
     trill = {
       order = 60;
       key = "m";
-      name = "Trill";
       workspace = "M";
-      appId = "com.nebelhaus.trill";
       barIcon = ":messages:";
       label = "Trill (Messages)";
-      # No cask: nebelhaus.trill installs the notarized app from the rice.
     };
     swather = {
       order = 70;
@@ -157,7 +142,7 @@
       # Swather has no app-font glyph — fa-hourglass (U+F254) in the Nerd Font.
       barIcon = builtins.fromJSON ''"\uf254"'';
       label = "Swather";
-      # Installed by hand — no cask, no formula. The entry is the launcher key.
+      # No source field: I installed this one by hand, so nothing declares it.
     };
     claude = {
       order = 80;
@@ -184,7 +169,6 @@
       key = "p";
       name = "Passwords";
       # Launcher-only: opens/focuses in the current workspace, no pill/auto-assign.
-      # A macOS system app, so nothing installs it.
       label = "Passwords";
     };
     chatgpt = {
@@ -271,6 +255,8 @@
     gcloud-cli = {
       cask = "gcloud-cli";
     };
+    # Also sill's, when the calendar pill is on — same id, so the definitions
+    # merge instead of installing it twice.
     ical-buddy = {
       brew = "ical-buddy";
     };
@@ -600,7 +586,7 @@
   homebrew.taps = [ "pear-devs/pear" ];
 
   # No homebrew.casks / homebrew.brews / home.packages list down here any more:
-  # every one of those entries moved into nebelhaus.apps above, which is the
+  # every one of those entries moved into nebelhaus.roster above, which is the
   # point of the change. The rice's own modules still contribute their casks
   # (ghostty, aerospace, sketchybar, espanso) — those aren't mine to list.
 
@@ -629,7 +615,7 @@
       ...
     }:
     {
-      # home.packages lives in nebelhaus.apps now (gemini-cli, orbstack, bench —
+      # home.packages lives in nebelhaus.roster now (gemini-cli, orbstack, bench —
       # `scope = "user"` puts them right back here). One list for what this
       # machine has, whether it's a cask, a formula or a Nixpkgs package.
 
