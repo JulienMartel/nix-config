@@ -44,8 +44,14 @@
   nebelhaus.snippets = {
     enable = true;
     matches = [
-      { trigger = "@@"; replace = "julienbmartel@gmail.com"; }
-      { trigger = "##"; replace = "2044302465"; }
+      {
+        trigger = "@@";
+        replace = "julienbmartel@gmail.com";
+      }
+      {
+        trigger = "##";
+        replace = "2044302465";
+      }
     ];
   };
 
@@ -506,7 +512,13 @@
 
   # ---- personal home layer: extra packages, private git config, secrets ----
   home-manager.users.${username} =
-    { config, lib, pkgs, nebelung, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      nebelung,
+      ...
+    }:
     {
       home.packages = with pkgs; [
         # Claude Code is NOT here — the rice installs it from
@@ -585,13 +597,24 @@
         };
       };
 
-      home.activation.stylusNebelung =
-        lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          if [ -d "$HOME/Library/Application Support/Zen" ]; then
-             echo "→ Stylus (Zen): to apply the nebelung palette to your userstyles, import the generated JSON:"
-             echo "    ${nebelung.themes}/stylus/nebelung-stylus.json"
-          fi
-        '';
+      # Stylus is the one nebelung port with no file to drop: the userstyle lives
+      # inside the extension's own storage, so all we can do is hand you a JSON
+      # to import by hand. That makes this a ONE-TIME instruction — and it used
+      # to print on every single rebuild, which is how a real instruction turns
+      # into wallpaper. Announce it only when there's something new to import:
+      # the JSON's store path changes exactly when the palette does, so the last
+      # path we announced is the whole state this needs.
+      home.activation.stylusNebelung = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        stylusJson="${nebelung.themes}/stylus/nebelung-stylus.json"
+        stylusStamp="$HOME/.local/state/nebelhaus/stylus-announced"
+        if [ -d "$HOME/Library/Application Support/Zen" ] \
+           && [ "$(cat "$stylusStamp" 2>/dev/null || true)" != "$stylusJson" ]; then
+           echo "→ Stylus (Zen): to apply the nebelung palette to your userstyles, import the generated JSON:"
+           echo "    $stylusJson"
+           $DRY_RUN_CMD mkdir -p "$(dirname "$stylusStamp")"
+           printf '%s\n' "$stylusJson" | $DRY_RUN_CMD tee "$stylusStamp" >/dev/null
+        fi
+      '';
 
       # Claude Code — reinstate our hooks in settings.json on every rebuild.
       #  • WorktreeCreate/WorktreeRemove: Super-c / `⌘C` (rice: hearth/zellij)
