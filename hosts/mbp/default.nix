@@ -69,26 +69,28 @@
     "Library/Mobile Documents/iCloud~md~obsidian/Documents/notes"
   ];
 
-  # ---- app roster ----
-  # My personal launcher: which app owns which AeroSpace workspace + leader key.
-  # This keyed map drives the tiling launcher, SketchyBar pills, and pounce
-  # cheatsheet. Stable ids let pounce-generated package modules and this host
-  # compose or override one app at a time.
+  # ---- everything this machine has ----
+  # ONE list. It used to be three — this roster (launcher keys + workspaces),
+  # homebrew.casks/brews (the install), and home.packages — so an app was
+  # declared twice and every entry carried a `cask = null` whose only meaning
+  # was "declared over there instead". Now each entry names its own source, and
+  # WHICH FIELDS it sets is what the entry means:
   #
-  # Most casks stay in homebrew.casks below, so cask = null avoids declaring
-  # them twice. ChatGPT came from pounce Install App and owns its cask here;
-  # Passwords is a system app, Things is App Store, and Trill ships via the rice.
-  nebelhaus.apps = {
-    ghostty = {
-      order = 10;
-      key = "t";
-      name = "Ghostty";
-      workspace = "T";
-      appId = "com.mitchellh.ghostty";
-      barIcon = ":ghostty:";
-      label = "Ghostty (Terminal)";
-      cask = null;
-    };
+  #   key         → on the Caps-Lock launcher + the pounce cheatsheet
+  #   workspace   → owns an AeroSpace workspace + a SketchyBar pill
+  #   neither     → just installed: nothing bound, nothing drawn
+  #   cask / brew / package / appStoreId → where it comes from
+  #
+  # `order` only sorts the launcher half (cheatsheet rows, pill row), so the
+  # install-only entries below leave it at its default.
+  nebelhaus.roster = {
+    # ---- the launcher ----
+    # ghostty isn't here: den declares its name + cask, prowl its key, workspace,
+    # icon and label, and every one of those defaults is what I'd have typed. An
+    # entry only appears below where I want something the rice didn't already
+    # decide — which is why zen is one line.
+    zen.order = 50;
+
     obsidian = {
       order = 20;
       key = "n";
@@ -97,7 +99,7 @@
       appId = "md.obsidian";
       barIcon = ":obsidian:";
       label = "Obsidian";
-      cask = null;
+      cask = "obsidian";
     };
     things = {
       order = 30;
@@ -107,7 +109,10 @@
       appId = "com.culturedcode.ThingsMac";
       barIcon = ":things:";
       label = "Things3";
-      cask = null;
+      # Paid App Store app. mas cannot purchase, so appStore.install (off
+      # below) would skip it with a warning — the id is here to record what to
+      # buy back on a fresh machine, not to promise an unattended install.
+      appStoreId = 904280696;
     };
     slack = {
       order = 40;
@@ -117,27 +122,16 @@
       appId = "com.tinyspeck.slackmacgap";
       barIcon = ":slack:";
       label = "Slack";
-      cask = null;
+      cask = "slack";
     };
-    zen = {
-      order = 50;
-      key = "b";
-      name = "Zen";
-      workspace = "B";
-      appId = "app.zen-browser.zen";
-      barIcon = ":zen_browser:";
-      label = "Zen (Browser)";
-      cask = null;
-    };
+    # name, appId and "who installs it" come from nebelhaus.trill; this is only
+    # the tiling half.
     trill = {
       order = 60;
       key = "m";
-      name = "Trill";
       workspace = "M";
-      appId = "com.nebelhaus.trill";
       barIcon = ":messages:";
       label = "Trill (Messages)";
-      cask = null;
     };
     swather = {
       order = 70;
@@ -148,7 +142,7 @@
       # Swather has no app-font glyph — fa-hourglass (U+F254) in the Nerd Font.
       barIcon = builtins.fromJSON ''"\uf254"'';
       label = "Swather";
-      cask = null;
+      # No source field: I installed this one by hand, so nothing declares it.
     };
     claude = {
       order = 80;
@@ -158,7 +152,7 @@
       appId = "com.anthropic.claudefordesktop";
       barIcon = ":claude:";
       label = "Claude";
-      cask = null;
+      cask = "claude";
     };
     notion-calendar = {
       order = 90;
@@ -168,7 +162,7 @@
       appId = "com.cron.electron";
       barIcon = ":calendar:";
       label = "Notion Calendar";
-      cask = null;
+      cask = "notion-calendar";
     };
     passwords = {
       order = 100;
@@ -176,7 +170,6 @@
       name = "Passwords";
       # Launcher-only: opens/focuses in the current workspace, no pill/auto-assign.
       label = "Passwords";
-      cask = null;
     };
     chatgpt = {
       order = 110;
@@ -187,6 +180,120 @@
       barIcon = ":codex:";
       label = "ChatGPT";
       cask = "chatgpt";
+    };
+
+    # ---- apps I don't launch by keyboard ----
+    # No key → no leader letter, no cheatsheet row, no pill. Still declared,
+    # which with homebrew.cleanup = "zap" below is the whole difference between
+    # "installed" and "deleted on the next rebuild".
+    cap = {
+      name = "Cap";
+      cask = "cap";
+    };
+    elgato-control-center = {
+      name = "Elgato Control Center";
+      cask = "elgato-control-center";
+    };
+    framer = {
+      name = "Framer";
+      cask = "framer";
+    };
+    google-chrome = {
+      name = "Google Chrome";
+      cask = "google-chrome";
+    };
+    insomnia = {
+      name = "Insomnia";
+      cask = "insomnia";
+    };
+    legcord = {
+      name = "Legcord";
+      cask = "legcord";
+    };
+    loom = {
+      name = "Loom";
+      cask = "loom";
+    };
+    pear-desktop = {
+      name = "Pear Desktop";
+      cask = "pear-devs/pear/pear-desktop";
+    };
+    protonvpn = {
+      name = "ProtonVPN";
+      cask = "protonvpn";
+    };
+    qfinder-pro = {
+      name = "QFinder Pro";
+      cask = "qfinder-pro";
+    };
+    tailscale = {
+      name = "Tailscale";
+      cask = "tailscale-app";
+    };
+    orbstack = {
+      name = "OrbStack";
+      package = pkgs.orbstack;
+    };
+    # Free, so it's the one App Store app mas could actually fetch on its own
+    # if appStore.install were ever turned on.
+    xcode = {
+      name = "Xcode";
+      appStoreId = 497799835;
+    };
+
+    # ---- not apps at all ----
+    # Fonts and CLIs have no bundle, no window, no icon, so every launcher field
+    # stays null and only the source is set. They live here anyway: the point of
+    # one list is that nothing is declared somewhere else merely for not being
+    # clickable.
+    font-hack = {
+      cask = "font-hack-nerd-font";
+    };
+    font-jetbrains-mono = {
+      cask = "font-jetbrains-mono-nerd-font";
+    };
+    gcloud-cli = {
+      cask = "gcloud-cli";
+    };
+    # Also sill's, when the calendar pill is on — same id, so the definitions
+    # merge instead of installing it twice.
+    ical-buddy = {
+      brew = "ical-buddy";
+    };
+    gogcli = {
+      brew = "gogcli";
+    };
+    # The CLI only — nebelhaus.appStore.install stays off and masApps is
+    # intentionally unused (see the note there), so this is for `mas list` /
+    # `mas upgrade` by hand.
+    mas = {
+      brew = "mas";
+    };
+    gemini-cli = {
+      # No agents.clients entry: gemini isn't a `wt` client, just a package.
+      package = pkgs.gemini-cli-bin;
+    };
+    # Claude Code is deliberately NOT here — the rice installs it from
+    # nebelhaus.agents.clients, and the overlay below is what makes that copy
+    # the patched one. A second derivation shipping bin/claude would collide in
+    # the same profile.
+
+    # ---- system scope ----
+    # environment.systemPackages rather than my user profile: on PATH for root,
+    # for launchd jobs, and for non-login shells.
+    biome = {
+      package = pkgs.biome;
+      scope = "system";
+    };
+    bench = {
+      # Stays user-scope (the default): it's my tool, and the per-user profile
+      # is already on PATH for scripts and non-login shells.
+      # The workshop CLI (~/code/workshop): status / try / ship / rebuild for
+      # the whole rice family. A real command on PATH (not an alias) so it works
+      # from scripts, other shells, and non-interactive contexts; `bench try
+      # switch` supersedes rebuild-pounce (it overrides ALL the local checkouts,
+      # not just pounce).
+      package = pkgs.writeShellScriptBin "bench" ''exec "$HOME/code/workshop/bench" "$@"'';
     };
   };
 
@@ -412,9 +519,6 @@
     into the matching docs file rather than growing the top-level one.
   '';
 
-  # A system CLI not in den's baseline.
-  environment.systemPackages = [ pkgs.biome ];
-
   # ---- Claude Code, patched, as an OVERLAY rather than a package ----
   # The rice installs the clients named in `nebelhaus.agents.clients` and
   # references `pkgs.claude-code` to do it. So this cannot be a second
@@ -476,39 +580,30 @@
     })
   ];
 
-  # ---- personal apps (den ships ghostty; prowl aerospace; sill sketchybar) ----
+  # The tap pear-desktop comes from. Taps are the one Homebrew thing the roster
+  # doesn't model — a cask names its tap inline (see pear-desktop above), but
+  # the tap itself still has to be registered once.
   homebrew.taps = [ "pear-devs/pear" ];
-  homebrew.brews = [
-    "ical-buddy"
-    "gogcli"
-    "mas" # the CLI only — masApps is intentionally unused (it hangs)
-  ];
-  homebrew.casks = [
-    "cap"
-    "claude"
-    "elgato-control-center"
-    "font-hack-nerd-font"
-    "font-jetbrains-mono-nerd-font"
-    "framer"
-    "gcloud-cli"
-    "google-chrome"
-    "insomnia"
-    "legcord"
-    "loom"
-    "notion-calendar"
-    "obsidian"
-    "pear-devs/pear/pear-desktop"
-    "protonvpn"
-    "qfinder-pro"
-    "slack"
-    "tailscale-app"
-    "zen"
-  ];
-  # App Store-only (no cask). mas can't sign in or first-acquire apps on modern
-  # macOS (Apple removed the API); it only reinstalls/upgrades apps already bought
-  # via the App Store GUI — so acquire these by hand once:
-  #   Things (904280696) · Xcode (497799835)
-  # System Settings → App Store → automatic updates keeps them current thereafter.
+
+  # No homebrew.casks / homebrew.brews / home.packages list down here any more:
+  # every one of those entries moved into nebelhaus.roster above, which is the
+  # point of the change. The rice's own modules still contribute their casks
+  # (ghostty, aerospace, sketchybar, espanso) — those aren't mine to list.
+
+  # The App Store stays manual on this machine (nebelhaus.appStore.install is
+  # off by default). What that costs, precisely, having checked it against
+  # mas 7 rather than assuming:
+  #   • mas has no `signin` — sign in once in App Store.app, per machine.
+  #   • mas CANNOT buy a paid app, ever. Things (904280696) is a purchase.
+  #   • mas CAN fetch a free app it's never seen: `mas get` works for Xcode
+  #     (497799835). (`mas install` is the narrower one — already-purchased
+  #     only — and is what the old note here conflated it with.)
+  #   • Both need root since macOS 13, which is exactly why homebrew.masApps
+  #     hangs: brew bundle runs `mas install` as me, mas stops for a password,
+  #     and a rebuild has no terminal to show it in. The rice's activation path
+  #     is already root, so turning appStore.install on would work — I just
+  #     don't want a rebuild touching my Apple ID.
+  # System Settings → App Store → automatic updates keeps them current.
 
   # ---- personal home layer: extra packages, private git config, secrets ----
   home-manager.users.${username} =
@@ -520,21 +615,9 @@
       ...
     }:
     {
-      home.packages = with pkgs; [
-        # Claude Code is NOT here — the rice installs it from
-        # `nebelhaus.agents.clients`, and the overlay above is what makes that
-        # copy the patched one. gemini-cli has no agents.clients entry (it is
-        # not a `wt` client), so it stays a plain package.
-        gemini-cli-bin
-        orbstack
-
-        # The workshop CLI (~/code/workshop): status / try / ship / rebuild
-        # for the whole rice family. A real command on PATH (not an alias) so
-        # it works from scripts, other shells, and non-interactive contexts;
-        # `bench try switch` supersedes rebuild-pounce (it overrides ALL the
-        # local checkouts, not just pounce).
-        (writeShellScriptBin "bench" ''exec "$HOME/code/workshop/bench" "$@"'')
-      ];
+      # home.packages lives in nebelhaus.roster now (gemini-cli, orbstack, bench —
+      # `scope = "user"` puts them right back here). One list for what this
+      # machine has, whether it's a cask, a formula or a Nixpkgs package.
 
       # Dev loop for hacking on pounce: rebuild the system against the LOCAL
       # pounce checkout (picks up uncommitted edits) instead of the pinned
