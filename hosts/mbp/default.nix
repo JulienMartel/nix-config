@@ -417,31 +417,28 @@
       unpushed, or without a PR is an unfinished task, not a finished one.
     - Commit on your `worktree-*` branch as usual.
     - **Building/verifying is always allowed — you have standing permission, in
-      default mode, to build without asking.** A build (`bench try`, `nix build`,
-      a project's own run/verify skill) is read-only toward every checkout and
-      never activates anything, so it's exactly what a worktree is for — don't
-      stop at "the diff is ready" when you could have built it. This holds even
-      when the build compiles a **child** repo from a parent dir's worktree
-      session (e.g. a workshop worktree building the nebelhaus family, or any
-      `bench try` that pulls in a sibling repo): the child's checkout is only
-      read, not mutated, so go ahead. Only *activation* (`bench try switch`,
-      `darwin-rebuild switch`) stays off-limits **to you** from a worktree — not
-      because worktree code is unsafe to activate (I do it myself, routinely, to
-      feel one branch alone; `bench try switch` works fine from a worktree), but
-      because activation is machine-wide and serial: five parallel agents each
-      with a good reason to switch would silently overwrite one another. So
-      build with `bench try`, then hand me the exact command — `bench try
-      switch` from a pane in your worktree — and let me run it. `bench` enforces
-      this itself and will refuse you by name; if I've explicitly asked you to
-      activate, that refusal names the override (`BENCH_AGENT_SWITCH=1`) and you
-      should use it rather than ask again. Whatever gets activated, `bench
-      status` reports it until `bench rebuild` puts the pinned build back.
+      default mode, to build without asking.** A build (`nix build`, a project's
+      own run/verify skill) is read-only toward every checkout and never
+      activates anything, so it's exactly what a worktree is for — don't stop at
+      "the diff is ready" when you could have built it. This holds even when the
+      build compiles a **child** repo from a parent dir's worktree session: the
+      child's checkout is only read, not mutated, so go ahead. Only *activation*
+      — anything that switches this machine's running state, `darwin-rebuild
+      switch` and the wrappers around it — stays off-limits **to you** from a
+      worktree. Not because worktree code is unsafe to activate (I do it myself,
+      routinely, to feel one branch alone), but because activation is
+      machine-wide and serial: five parallel agents each with a good reason to
+      switch would silently overwrite one another. So build, then hand me the
+      exact command to run from a pane in your worktree and let me run it. Where
+      a repo's own tooling enforces this, it refuses you by name and its
+      refusal/CLAUDE.md names the override — if I've explicitly asked you to
+      activate, use that override rather than asking again.
     - **Pushing already-committed work is fine from a worktree.** You have my
-      standing permission, in default mode, to run a repo's push/ship step (e.g.
-      `bench ship`) from a worktree without asking — it only pushes commits that
-      already exist and never activates anything. (`bench ship` specifically
-      operates on the *main* checkouts, so it ripples merged/released work
-      downstream; it does not push your unmerged `worktree-*` branch.)
+      standing permission, in default mode, to run a repo's push/ship step from
+      a worktree without asking — it only pushes commits that already exist and
+      never activates anything. (A repo's ship step may operate on the *main*
+      checkouts to ripple merged/released work downstream; it does not push your
+      unmerged `worktree-*` branch.)
     - **Land your work through a PR — never a direct push or a local `git merge`
       into `main`.** When the branch is ready, push it and open a PR (`gh pr
       create`) against `main`. Don't `git merge` your `worktree-*` branch into
@@ -453,8 +450,8 @@
       explicitly tell you to land it (`/ship`, "ship it", "merge and clean up"),
       that IS the go-ahead: merge with `gh pr merge` (still never a local merge
       or direct push — the PR's atomicity is the point). Absent that, stop at
-      "PR open." Shipping isn't merging: `bench ship` pushes committed state and
-      bumps locks, it never folds your branch into main.
+      "PR open." Shipping isn't merging: a repo's ship step pushes committed
+      state (and bumps locks), it never folds your branch into main.
     - **When I say ship/land/merge, `/ship` finishes the whole job** (see the
       ship skill): merge the PR, then clean up every worktree *this session*
       spun up — a session often hand-creates a sibling-repo worktree for
