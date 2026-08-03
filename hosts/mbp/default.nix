@@ -629,6 +629,44 @@
       nebelung,
       ...
     }:
+    let
+      # ---- pounce: opt-in command plugins ----
+      # pounce's optional plugins (pkgs/pounce-commands/optional) ship OFF —
+      # each assumes a tool, a service or an account. The rice installs
+      # pounce-commands with the default `plugins = []`, so turning one on is
+      # the host's job. This list IS the switch; everything below is plumbing.
+      #
+      #   audio       switch sound output / input device
+      #   bluetooth   connect & disconnect paired devices (AirPods…)
+      #   caffeinate  keep the Mac awake (also what the sill caffeinate pill drives)
+      #   docker      start / stop / restart containers, tail logs (OrbStack here)
+      #   github      jump to my PRs, review requests, issues, repos
+      #   perplexity  type a question → a fresh perplexity.ai thread in the browser
+      #   spotify     play / pause / skip / shuffle, copy song link
+      #   ssh         pick a host from ~/.ssh/config and connect
+      #   tailscale   connect toggle, copy my / any peer's tailnet IP
+      #
+      # Their CLI deps (switchaudio-osx, blueutil, gh) already come from the
+      # rice, which adds pounce-commands.allPluginDeps to the profile whether
+      # or not a plugin is enabled — so nothing here has to carry them.
+      pouncePlugins = [
+        "audio"
+        "bluetooth"
+        "caffeinate"
+        "docker"
+        "github"
+        "perplexity"
+        "spotify"
+        "ssh"
+        "tailscale"
+      ];
+
+      # One store copy of pounce-commands built with exactly those plugins. We
+      # symlink the individual scripts out of it (below) rather than adding the
+      # package to home.packages, which would collide with the rice's own
+      # pounce-commands on every shared command filename.
+      pouncePluginPkg = pkgs.pounce-commands.override { plugins = pouncePlugins; };
+    in
     {
       # home.packages lives in nebelhaus.roster now (gemini-cli, orbstack, bench —
       # `scope = "user"` puts them right back here). One list for what this
@@ -643,6 +681,49 @@
           && nix build .#darwinConfigurations.mbp.system \
                --override-input nebelhaus/pounce "path:$HOME/code/workshop/pounce" \
           && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp)
+      '';
+
+      # The enabled plugins (see pouncePlugins above), dropped into
+      # ~/.config/pounce/commands — the last and highest-precedence dir pounce
+      # discovers at runtime, so an enabled plugin behaves exactly like a
+      # built-in and is still shadowable by a hand-written script of the same
+      # name. xdg.configFile rather than home.file for the same reason the rice
+      # uses it: a dynamic attrset can't merge with the static
+      # `home.file."…".source` attr-paths in this file.
+      #
+      # Declarative on purpose. This dir spent months holding these same eight
+      # scripts as HAND-MADE symlinks into ~/code/nebelhaus/pounce, and all
+      # eight went dangling the day that checkout moved to ~/code/workshop —
+      # silently, because a command whose file won't read simply doesn't appear
+      # in the palette. Nothing announced the loss; the rows just stopped being
+      # there. Store paths can't rot that way.
+      xdg.configFile = lib.listToAttrs (
+        map (
+          p:
+          lib.nameValuePair "pounce/commands/${p}.sh" {
+            source = "${pouncePluginPkg}/share/pounce/commands/${p}.sh";
+          }
+        ) pouncePlugins
+      );
+
+      # …and reap what the old hand-made symlinks left behind. Any dangling
+      # link in that dir is by definition a plugin pointing at a checkout that
+      # moved or went away, and home-manager REFUSES to link over an existing
+      # unmanaged path — so without this the first rebuild after this lands
+      # dies on eight "would be clobbered" errors. Ordered before
+      # checkLinkTargets (home-manager's own collision check) so it runs early
+      # enough to matter. Only ever removes BROKEN links: a real file or a live
+      # symlink someone put there on purpose is left alone.
+      home.activation.pounceCommandsReapDangling = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+        run sh -c '
+          dir="$0"
+          [ -d "$dir" ] || exit 0
+          for link in "$dir"/*; do
+            [ -L "$link" ] && [ ! -e "$link" ] || continue
+            echo "→ pounce: removing dangling command symlink $link"
+            rm -f "$link"
+          done
+        ' "$HOME/.config/pounce/commands"
       '';
 
       # Text expansion moved up to nebelhaus.snippets (darwin level) — the rice
