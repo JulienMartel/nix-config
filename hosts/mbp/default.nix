@@ -425,8 +425,17 @@
       session (e.g. a workshop worktree building the nebelhaus family, or any
       `bench try` that pulls in a sibling repo): the child's checkout is only
       read, not mutated, so go ahead. Only *activation* (`bench try switch`,
-      `darwin-rebuild switch`) stays off-limits from a worktree — activating
-      changes this machine's running state, which is a main-checkout job.
+      `darwin-rebuild switch`) stays off-limits **to you** from a worktree — not
+      because worktree code is unsafe to activate (I do it myself, routinely, to
+      feel one branch alone; `bench try switch` works fine from a worktree), but
+      because activation is machine-wide and serial: five parallel agents each
+      with a good reason to switch would silently overwrite one another. So
+      build with `bench try`, then hand me the exact command — `bench try
+      switch` from a pane in your worktree — and let me run it. `bench` enforces
+      this itself and will refuse you by name; if I've explicitly asked you to
+      activate, that refusal names the override (`BENCH_AGENT_SWITCH=1`) and you
+      should use it rather than ask again. Whatever gets activated, `bench
+      status` reports it until `bench rebuild` puts the pinned build back.
     - **Pushing already-committed work is fine from a worktree.** You have my
       standing permission, in default mode, to run a repo's push/ship step (e.g.
       `bench ship`) from a worktree without asking — it only pushes commits that
