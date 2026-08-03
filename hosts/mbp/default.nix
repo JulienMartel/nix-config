@@ -645,6 +645,30 @@
           && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp)
       '';
 
+      # ---- pounce: opt-in command plugins ----
+      # pounce's optional plugins (pkgs/pounce-commands/optional) ship OFF —
+      # each assumes a tool, service or account. The rice installs
+      # pounce-commands with the default `plugins = []` (it only drags their
+      # CLI deps in via allPluginDeps), so turning one on is the host's job:
+      # put the script in ~/.config/pounce/commands, the last and
+      # highest-precedence dir pounce discovers at runtime.
+      #
+      # The source is a store copy of pounce-commands built with just this
+      # plugin — we symlink the ONE file out of it rather than adding the whole
+      # package to home.packages, which would collide with the rice's own
+      # pounce-commands on every shared command filename.
+      #
+      # Declarative on purpose: this dir used to hold eight hand-made symlinks
+      # into ~/code/nebelhaus/pounce, and every one of them went dangling the
+      # day that checkout moved to ~/code/workshop — silently, since a
+      # command that fails to read just doesn't appear in the palette.
+      #
+      # perplexity: type a question → a fresh perplexity.ai thread in the
+      # default browser. No API key, no app, no CLI — the plugin is a URL.
+      home.file.".config/pounce/commands/perplexity.sh".source = "${
+        pkgs.pounce-commands.override { plugins = [ "perplexity" ]; }
+      }/share/pounce/commands/perplexity.sh";
+
       # Text expansion moved up to nebelhaus.snippets (darwin level) — the rice
       # option now owns espanso, via the signed Espanso.app cask.
 
