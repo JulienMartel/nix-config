@@ -18,6 +18,27 @@
         "type": "github"
       }
     },
+    "holt": {
+      "inputs": {
+        "nixpkgs": [
+          "nebelhaus",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1785791115,
+        "narHash": "sha256-PBB3KXRRu4Tim3UkOvQzD4D8p3e8hJuv5QrcaoiuoAo=",
+        "owner": "nebelhaus",
+        "repo": "holt",
+        "rev": "0bf96a67ea9bc4a15b71093bdaac878b4850d50f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nebelhaus",
+        "repo": "holt",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -42,6 +63,7 @@
     "nebelhaus": {
       "inputs": {
         "catppuccin": "catppuccin",
+        "holt": "holt",
         "home-manager": "home-manager",
         "nebelung": "nebelung",
         "nix-darwin": "nix-darwin",
@@ -52,11 +74,11 @@
         "trill": "trill"
       },
       "locked": {
-        "lastModified": 1785791272,
-        "narHash": "sha256-lREuDLkEppB4hlsQDDzNPuwwoRdLfLJl9vE0M4x9WfQ=",
+        "lastModified": 1785792402,
+        "narHash": "sha256-wjl7TPYyPhizj7ar3eV9XiGKKsBxOGSMAGeHxpZIcVU=",
         "owner": "nebelhaus",
         "repo": "nebelhaus",
-        "rev": "7b6b7c81fb25e8653639884908c437ee45f28e02",
+        "rev": "655e07784916af617b452cd9400749cfca14b380",
         "type": "github"
       },
       "original": {
@@ -171,11 +193,11 @@
         "prebuilt": "prebuilt"
       },
       "locked": {
-        "lastModified": 1785783021,
-        "narHash": "sha256-FhPUtvw6qYdErkGKP5kfxKOMpBy/oBnK8bay9rR2fnY=",
+        "lastModified": 1785791437,
+        "narHash": "sha256-NhdTveiWJ4PxbMEYH7f65/yh5VZw6DHMFIr6pAjfcHQ=",
         "owner": "nebelhaus",
         "repo": "perch",
-        "rev": "623f01e790af04e9e8f4623b532067deb5c0eb4a",
+        "rev": "884a72ddfde3141668ac637ce37a5976e6eefd49",
         "type": "github"
       },
       "original": {
