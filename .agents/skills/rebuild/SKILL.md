@@ -1,12 +1,18 @@
 ---
-description: Build and switch this nix-darwin config; diagnose the error if the build fails
+name: rebuild
+description: >-
+  Build and switch this nix-darwin config (host `mbp`, this repo), and diagnose the error
+  if the build fails. Use when I say /rebuild, "rebuild", "apply this", "switch", or after
+  any edit to the host file that should reach the running system. Pass `build` to build
+  only and stop before switching.
 argument-hint: "[build]  (pass 'build' to build only, skipping the switch)"
 allowed-tools: Bash(export PATH=*), Bash(nix build:*), Bash(darwin-rebuild switch:*), Bash(sudo darwin-rebuild switch:*), Bash(nix flake check:*), Read
 ---
 
 Rebuild the nix-darwin configuration for host `mbp` from this repo (`~/.config/nix`).
 
-Arguments: `$ARGUMENTS`
+Arguments: `$ARGUMENTS` (the invoking client may pass these as plain trailing text
+instead of substituting the variable — read it either way).
 - If the argument is `build`, do the build step only and STOP before switching (a dry check).
 - Otherwise, build and then switch.
 

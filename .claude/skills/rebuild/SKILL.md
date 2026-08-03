@@ -1,0 +1,1 @@
+../../../.agents/skills/rebuild/SKILL.md
