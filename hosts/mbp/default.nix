@@ -714,6 +714,71 @@
       # gh-dash is one of the accent-matrix ports (all 14 accents per flavor);
       # nebelhaus.theme.accent picks the one the rest of the rice is wearing.
       ghDashTheme = "${nbRoot}/gh-dash/themes/${nbTheme.flavor}/catppuccin-${nbTheme.flavor}-${nbTheme.accent}.yml";
+
+      # ---- gh-dash: the binary, wearing the house mark ----
+      # gh-dash draws a logo + its version in the top-right of the tabs row, and
+      # NEITHER is configurable: the mark is a Go const (`constants.Logo`) and its
+      # colour a package-level literal (`context.LogoColor`, a hardcoded cyan
+      # #00F9FB that no theme file can reach). Read the whole config schema
+      # looking for a `logo:` key before concluding this — there isn't one. So a
+      # source patch is the only door, and it's a cheap one: gh-dash is a small
+      # Go build with nothing machine-specific in it.
+      #
+      #   1+2. The two rows of the logo → "haus", set in gh-dash's OWN half-block
+      #        letterforms (its stock mark spells "dash" the same way, so the H
+      #        and the A are literally its glyphs re-used). Deliberately the same
+      #        11 columns wide, because tabs.go sizes the tab carousel as
+      #        `ScreenWidth - lipgloss.Width(logo)` — a wider mark silently eats
+      #        a tab.
+      #   3. `context.LogoColor` → the theme's SecondaryText, which the nebelung
+      #      include below sets to the accent. Pointing at the THEME instead of
+      #      substituting a hex is what makes the mark track
+      #      nebelhaus.theme.{flavor,accent,contrast} for free — no palette
+      #      plumbing up here, and no second place to update when the accent
+      #      changes. The version string beside it drops to FaintText so the
+      #      accent reads as the mark and not as a version number.
+      #
+      # --replace-fail, not --replace: a gh-dash bump that redraws its logo or
+      # renames that colour var breaks the BUILD, loudly, instead of quietly
+      # reverting the dashboard to stock cyan. Same bargain as the Claude footer
+      # patch — a patch you can't see fail isn't a patch, it's a coin flip.
+      #
+      # One thing deliberately NOT wired into this override, with the reason kept
+      # so nobody has to rediscover it: gh-dash has a FOURTH view — the local
+      # repo's branches, each with its PR and checks — behind an `FF_REPO_VIEW`
+      # env-var feature flag, and it looked like the git-side twin of the agent
+      # HUD (holt's branches, seen from GitHub). It is not usable yet, in two
+      # distinct ways, both measured on 4.25.2 rather than guessed:
+      #
+      #   1. Flag on, cwd outside a git repo → gh-dash doesn't degrade, it EXITS
+      #      on startup with `FATA … failed parsing config file … not a git
+      #      repository`. The message is a lie about which thing failed (ui.go
+      #      reuses one `showError` closure for the config parse and for the
+      #      git-remote lookup), and it means `gh-dash` from ~ simply quits.
+      #      Survivable — a wrapper can set the flag only inside a repo.
+      #   2. Flag on, cwd inside a repo, press `s` three times to reach the view
+      #      → nil-pointer panic in `branch.(*Branch).renderRepoName`
+      #      (branch/branch.go:175), taking the whole TUI down. Reproduced in two
+      #      different repos; the 3-view cycle with the flag off is fine, so it's
+      #      the view, not the key. That one no wrapper can fix.
+      #
+      # So this stays stock until upstream ships the view unflagged. Retesting is
+      # two commands (`FF_REPO_VIEW=1 gh-dash` in a repo, then `sss`) — worth
+      # doing on a gh-dash bump, because the view is genuinely wanted.
+      ghDashPkg = pkgs.gh-dash.overrideAttrs (old: {
+        postPatch = (old.postPatch or "") + ''
+          substituteInPlace internal/tui/constants/constants.go \
+            --replace-fail '▜▔▚▐▔▌▚▔▐ ▌' '▐ ▌▐▔▌▐ ▌▚▔' \
+            --replace-fail '▟▁▞▐▔▌▁▚▐▔▌' '▐▔▌▐▔▌▙▁▟▁▚'
+          substituteInPlace internal/tui/components/tabs/tabs.go \
+            --replace-fail \
+              'Foreground(m.ctx.Theme.SecondaryText).Render(m.ctx.Version)' \
+              'Foreground(m.ctx.Theme.FaintText).Render(m.ctx.Version)' \
+            --replace-fail \
+              'Foreground(context.LogoColor)' \
+              'Foreground(m.ctx.Theme.SecondaryText)'
+        '';
+      });
     in
     {
       # home.packages lives in nebelhaus.roster now (gemini-cli, orbstack, bench —
@@ -793,6 +858,11 @@
       # queue — org:nebelhaus, my worktree branches — and shipping those to
       # everyone who installs the rice would be nonsense. The theming is the part
       # that isn't personal, and that comes from nebelung via `include:` above.
+      # The one thing here that ISN'T personal is the patched logo (ghDashPkg):
+      # it's brand, not machine, and it belongs in the rice the day gh-dash
+      # becomes a rice-wired tool. It isn't one, because nothing but this file
+      # wires gh-dash at all — so moving it now would buy a rice option nobody
+      # else can use yet.
       #
       # The one exception to "everything installed lives in nebelhaus.roster":
       # this module puts gh-dash in home.packages itself, and splitting the
@@ -815,6 +885,9 @@
 
       programs.gh-dash = {
         enable = true;
+
+        # The patched build — house mark in the accent, see ghDashPkg above.
+        package = ghDashPkg;
 
         settings = {
           # Loaded first, so anything below wins over it. This is the whole
@@ -842,19 +915,36 @@
               title = "review";
               filters = "is:open review-requested:@me";
             }
+            # The two CI tabs, side by side, because together they ARE the merge
+            # decision: `green` is the queue `/ship` can take, `red` is the queue
+            # that needs a session reopened. `status:` reads the check state of a
+            # PR's head commit, so a branch still building shows in neither —
+            # which is the point, that's the "come back in a minute" bucket.
             {
-              title = "family";
-              filters = "is:open org:nebelhaus";
+              title = "green";
+              filters = "is:open author:@me status:success";
+            }
+            {
+              title = "red";
+              filters = "is:open author:@me status:failure";
             }
             # The "did it land" tab. `nowModify` is gh-dash's own template
             # function; units go up to d/w/mo/y.
             {
               title = "landed";
               filters = ''is:merged author:@me merged:>={{ nowModify "-3d" }}'';
+              limit = 10;
             }
+            # Anything in the org that ISN'T mine — bot PRs, a tap bump, someone
+            # else turning up. `-author:@me` is load-bearing: without it this tab
+            # was a superset of `agents` + `mine` + `green` + `red`, so it showed
+            # a big count that never meant anything new, and the one row that DID
+            # (a PR I didn't open) had nowhere to stand out. Last, because in a
+            # solo org it's usually empty — and empty is the correct reading.
             {
-              title = "red";
-              filters = "is:open author:@me status:failure";
+              title = "family";
+              filters = "is:open org:nebelhaus -author:@me";
+              limit = 10;
             }
           ];
 
@@ -871,10 +961,18 @@
           ];
 
           # gh-dash defaults to EIGHT notification tabs. Two.
+          #
+          # `is:unread` rather than an empty filter, even though the tab is
+          # already CALLED unread: with no filters gh-dash matches GitHub's own
+          # default and returns read notifications too (that's the
+          # `includeReadNotifications` default, which is `true`). An explicit
+          # `is:unread` overrides that setting for this section, so the tab count
+          # is a number of things I haven't seen — which is the only number worth
+          # putting in a tab.
           notificationsSections = [
             {
               title = "unread";
-              filters = "";
+              filters = "is:unread";
             }
             {
               title = "participating";
@@ -933,28 +1031,45 @@
           };
 
           # Commands BLOCK the TUI until they exit — gh-dash hands them to a
-          # shell and waits. So these are things that either finish instantly
-          # (yank) or that I *want* to take over the pane until I'm done (holt,
-          # lazygit); nothing long-running and unattended like `bench try`.
+          # shell and waits. So these are things I *want* to take over the pane
+          # until I'm done (holt, lazygit); nothing long-running and unattended
+          # like `bench try`.
+          #
+          # ---- keys chosen from what's actually FREE, the hard way ----
+          # gh-dash checks custom keybindings BEFORE every built-in
+          # (`isUserDefinedKeybinding` is the first case in ui.go's key switch),
+          # and it does NOT warn when a custom key shadows a built-in one. It
+          # just silently wins, and `?` then lists BOTH bindings for the same
+          # key. All three of the original keys here were collisions:
+          #
+          #   w → shadowed "watch checks", the one built-in that turns a PR row
+          #       into a live CI watcher. Now `H`, for holt.
+          #   g → shadowed "first item". Now `z` — free, unshifted, and the vim
+          #       `g` is back.
+          #   y → shadowed "copy number" AND duplicated a built-in: `Y` already
+          #       copies the URL, natively and instantly. The custom one shelled
+          #       out to `gh pr view` for it, which blocks the TUI on an API
+          #       round-trip to learn a URL gh-dash already has. Deleted, not
+          #       moved; `Y` is the binding.
+          #
+          # Free keys left, if this list ever grows: b f i n, and most capitals
+          # (B D E F I J K M N O S T U Z). Everything else in the PRs view is
+          # taken by a built-in — check keys.go and prKeys.go before adding one,
+          # because nothing else will tell you.
           keybindings.prs = [
             {
               # Jump into the agent session behind this PR. holt names a
               # worktree after the branch minus the `worktree-` prefix, and
               # resumes whichever client made it (claude/codex/opencode).
               # Rebuilds the checkout first if the session was parked.
-              key = "w";
+              key = "H";
               name = "holt session";
               command = ''holt "$(printf '%s' {{.HeadRefName}} | sed 's/^worktree-//')"'';
             }
             {
-              key = "g";
+              key = "z";
               name = "lazygit";
               command = "cd {{.RepoPath}} && lazygit";
-            }
-            {
-              key = "y";
-              name = "yank url";
-              command = "gh pr view {{.PrNumber}} --repo {{.RepoName}} --json url --jq .url | tr -d '\\n' | pbcopy";
             }
           ];
 
@@ -968,6 +1083,10 @@
             "nebelhaus/.github" = "${config.home.homeDirectory}/code/workshop/org-profile";
             "JulienMartel/nix-config" = "${config.home.homeDirectory}/.config/nix";
           };
+
+          # No `repo:` block: those two intervals only feed the flagged repo view
+          # (see ghDashPkg above for why it isn't on), so setting them here would
+          # be config for a screen that can't be reached.
 
           # delta is already themed by the rice (hearth wires the nebelung
           # delta port into gitconfig), so diffs match everything else.
