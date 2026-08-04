@@ -147,15 +147,10 @@
       label = "Slack";
       cask = "slack";
     };
-    # name, appId and "who installs it" come from nebelhaus.trill; this is only
-    # the tiling half.
-    trill = {
-      order = 60;
-      key = "m";
-      workspace = "M";
-      barIcon = ":messages:";
-      label = "Trill (Messages)";
-    };
+    # No trill: the rice made nebelhaus.trill.enable opt-in on 2026-08-04 (its
+    # development is frozen) and this machine took the offer. `m` / workspace M
+    # are free again — the roster entry was only trill's tiling half, so it went
+    # with the app. Restoring it means both: the option true AND this entry back.
     swather = {
       order = 70;
       key = "h";
@@ -342,8 +337,9 @@
   # rest of the family keeps reproducible rebuilds). upgrade → a rebuild upgrades
   # outdated casks instead of pinning to whatever brew first installed; autoUpdate
   # → `brew update` first so it sees the newest versions. Together: date-released
-  # family apps like trill self-update on every rebuild. Tradeoff I'm accepting
-  # here: my rebuilds chase upstream latest and aren't perfectly reproducible.
+  # casks track upstream latest instead of freezing at whatever brew first
+  # installed. Tradeoff I'm accepting here: my rebuilds chase upstream latest
+  # and aren't perfectly reproducible.
   nebelhaus.homebrew.upgrade = true;
   nebelhaus.homebrew.autoUpdate = true;
 
