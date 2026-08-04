@@ -639,6 +639,7 @@
       config,
       lib,
       pkgs,
+      osConfig,
       nebelung,
       ...
     }:
@@ -679,6 +680,30 @@
       # package to home.packages, which would collide with the rice's own
       # pounce-commands on every shared command filename.
       pouncePluginPkg = pkgs.pounce-commands.override { plugins = pouncePlugins; };
+
+      # ---- gh-dash: the nebelung theme file to `include:` ----
+      # nebelung ships a gh-dash port, but its install is a MERGE (a `theme:`
+      # block to fold into a config the rice doesn't own), which is exactly the
+      # kind the rice's roster pass refuses to write — so no room has ever wired
+      # it. gh-dash's own `include:` closes that: includes load first and the
+      # including file wins, so the rendered block below is the base and every
+      # setting in `programs.gh-dash.settings` overrides it.
+      #
+      # The path mirrors modules/lib/nebelung.nix's variant rule (that helper is
+      # inside the rice and not importable from here): the default mocha/normal
+      # variant owns the themes root, every other one renders under a
+      # "<flavor>-high-contrast"-style subdir. Both axes are read from
+      # nebelhaus.theme rather than hardcoded, because a wrong flavor resolves to
+      # a path that simply doesn't exist and gh-dash then just looks stock.
+      nbTheme = osConfig.nebelhaus.theme;
+      nbParts =
+        lib.optional (nbTheme.flavor != "mocha") nbTheme.flavor
+        ++ lib.optional (nbTheme.contrast == "high") "high-contrast";
+      nbRoot =
+        "${nebelung.themes}" + lib.optionalString (nbParts != [ ]) "/${lib.concatStringsSep "-" nbParts}";
+      # gh-dash is one of the accent-matrix ports (all 14 accents per flavor);
+      # nebelhaus.theme.accent picks the one the rest of the rice is wearing.
+      ghDashTheme = "${nbRoot}/gh-dash/themes/${nbTheme.flavor}/catppuccin-${nbTheme.flavor}-${nbTheme.accent}.yml";
     in
     {
       # home.packages lives in nebelhaus.roster now (gemini-cli, orbstack, bench —
@@ -747,6 +772,212 @@
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
       };
 
+      # ---- gh-dash: the review-queue half of the agent HUD ----
+      # The statusline/bar HUD answers "what are my panes doing"; this answers
+      # "what is waiting on ME". They read different worlds and neither replaces
+      # the other: holt reads the worktree registry (parked sessions, wip commits,
+      # unpushed branches), gh-dash reads GitHub (PRs, CI, reviews). A branch that
+      # was never pushed is invisible here, on purpose.
+      #
+      # Declared here rather than in the rice because the sections below are MY
+      # queue — org:nebelhaus, my worktree branches — and shipping those to
+      # everyone who installs the rice would be nonsense. The theming is the part
+      # that isn't personal, and that comes from nebelung via `include:` above.
+      #
+      # The one exception to "everything installed lives in nebelhaus.roster":
+      # this module puts gh-dash in home.packages itself, and splitting the
+      # install from the config that only this module can write would buy a
+      # roster row and cost the coupling. `programs.gh.enable` is false here, so
+      # the module's gh-extension registration is a no-op — the manually
+      # installed `gh dash` extension keeps working and reads this same config
+      # file, and `gh-dash` is now on PATH from the store as well. Either entry
+      # point, one config.
+      # Hands off, catppuccin-nix. The rice runs `catppuccin.autoEnable = true`
+      # and opts OUT per tool for each one hearth themes by hand — gh-dash isn't
+      # on that list because nothing wired gh-dash before this. So the moment
+      # `programs.gh-dash.enable` went true, catppuccin-nix started writing a
+      # full stock-Mocha `theme.colors` block into settings, which sits in the
+      # INCLUDING file and therefore beats the nebelung block coming in through
+      # `include:`. The failure is silent and pretty — a dashboard in the right
+      # family of purples, in the wrong palette, with the accent ignored. Caught
+      # by reading the built config.yml, not the diff.
+      catppuccin.gh-dash.enable = false;
+
+      programs.gh-dash = {
+        enable = true;
+
+        settings = {
+          # Loaded first, so anything below wins over it. This is the whole
+          # `theme.colors.{text,background,border}` block, in the flavor +
+          # accent this machine is wearing.
+          include = [ ghDashTheme ];
+
+          # Sections are tabs. Ordered by how often I actually look at them.
+          #
+          # `head:worktree-` prefix-matches the branch name, which is exactly
+          # the naming holt gives every agent checkout — so tab 1 IS the agent
+          # fleet, in any repo I author in (the family AND this one), without
+          # having to list repos. Verified against the live search API rather
+          # than assumed: `head:` is a prefix match, not an exact one.
+          prSections = [
+            {
+              title = "agents";
+              filters = "is:open author:@me head:worktree-";
+            }
+            {
+              title = "mine";
+              filters = "is:open author:@me -head:worktree-";
+            }
+            {
+              title = "review";
+              filters = "is:open review-requested:@me";
+            }
+            {
+              title = "family";
+              filters = "is:open org:nebelhaus";
+            }
+            # The "did it land" tab. `nowModify` is gh-dash's own template
+            # function; units go up to d/w/mo/y.
+            {
+              title = "landed";
+              filters = ''is:merged author:@me merged:>={{ nowModify "-3d" }}'';
+            }
+            {
+              title = "red";
+              filters = "is:open author:@me status:failure";
+            }
+          ];
+
+          # I don't run an issue tracker; two tabs is already generous.
+          issuesSections = [
+            {
+              title = "mine";
+              filters = "is:open author:@me";
+            }
+            {
+              title = "assigned";
+              filters = "is:open assignee:@me";
+            }
+          ];
+
+          # gh-dash defaults to EIGHT notification tabs. Two.
+          notificationsSections = [
+            {
+              title = "unread";
+              filters = "";
+            }
+            {
+              title = "participating";
+              filters = "reason:participating";
+            }
+          ];
+
+          defaults = {
+            view = "prs";
+            prsLimit = 20;
+            issuesLimit = 10;
+            notificationsLimit = 20;
+            # A dashboard that's half an hour stale isn't one. Six calls an
+            # hour against a 5000/hr token budget is free.
+            refetchIntervalMinutes = 5;
+            prApproveComment = "LGTM";
+
+            # Off by default: on a laptop the preview eats half the width and
+            # the table IS the answer for "what's open". `p` toggles it, and
+            # that's when you want the CI/checks detail anyway.
+            preview = {
+              open = false;
+              width = 0.45;
+              height = 0.6;
+              position = "auto";
+            };
+
+            # Minimal on purpose. ColumnConfig only carries width + hidden
+            # (there's no grow/align in the schema), so the layout is: kill the
+            # columns that are constant for a solo org, let `title` take the
+            # slack.
+            #   author/authorIcon — it's me, in every row, in every tab.
+            #     Un-hide these two if `review`/`family` ever fills with other
+            #     people's PRs; that's the one line to change.
+            #   base — always main.
+            #   labels/assignees/createdAt — noise I never act on.
+            layout.prs = {
+              updatedAt.width = 6;
+              createdAt.hidden = true;
+              repo.width = 14;
+              author.hidden = true;
+              authorIcon.hidden = true;
+              assignees.hidden = true;
+              labels.hidden = true;
+              base.hidden = true;
+              lines.width = 10;
+              numComments.width = 4;
+            };
+            layout.issues = {
+              createdAt.hidden = true;
+              repo.width = 14;
+              creator.hidden = true;
+              creatorIcon.hidden = true;
+              assignees.hidden = true;
+            };
+          };
+
+          # Commands BLOCK the TUI until they exit — gh-dash hands them to a
+          # shell and waits. So these are things that either finish instantly
+          # (yank) or that I *want* to take over the pane until I'm done (holt,
+          # lazygit); nothing long-running and unattended like `bench try`.
+          keybindings.prs = [
+            {
+              # Jump into the agent session behind this PR. holt names a
+              # worktree after the branch minus the `worktree-` prefix, and
+              # resumes whichever client made it (claude/codex/opencode).
+              # Rebuilds the checkout first if the session was parked.
+              key = "w";
+              name = "holt session";
+              command = ''holt "$(printf '%s' {{.HeadRefName}} | sed 's/^worktree-//')"'';
+            }
+            {
+              key = "g";
+              name = "lazygit";
+              command = "cd {{.RepoPath}} && lazygit";
+            }
+            {
+              key = "y";
+              name = "yank url";
+              command = "gh pr view {{.PrNumber}} --repo {{.RepoName}} --json url --jq .url | tr -d '\\n' | pbcopy";
+            }
+          ];
+
+          # Exact keys beat the wildcard, so `workshop` and `.github` (checked
+          # out as org-profile) can sit next to the `nebelhaus/*` fallback that
+          # covers every other family repo — including ones that don't exist
+          # yet. Drives {{.RepoPath}} above and gh-dash's own checkout/diff.
+          repoPaths = {
+            "nebelhaus/*" = "${config.home.homeDirectory}/code/workshop/*";
+            "nebelhaus/workshop" = "${config.home.homeDirectory}/code/workshop";
+            "nebelhaus/.github" = "${config.home.homeDirectory}/code/workshop/org-profile";
+            "JulienMartel/nix-config" = "${config.home.homeDirectory}/.config/nix";
+          };
+
+          # delta is already themed by the rice (hearth wires the nebelung
+          # delta port into gitconfig), so diffs match everything else.
+          pager.diff = "delta";
+
+          theme.ui = {
+            sectionsShowCount = true;
+            table = {
+              compact = true;
+              showSeparator = false;
+            };
+          };
+
+          confirmQuit = false;
+          showAuthorIcons = false;
+          # Don't open on a filter prompt; open on the dashboard.
+          smartFilteringAtLaunch = false;
+        };
+      };
+
       # Claude Code — my personal "brief" answer-shape skill: verdict first, ≤5
       # anchored steps, escalate only at ≥3/5 with a recommendation + reversal cost.
       # The stanza in nebelhaus.claude.globalMd above is what makes it load every
@@ -809,14 +1040,20 @@
       '';
 
       # Claude Code — reinstate our hooks in settings.json on every rebuild.
-      #  • WorktreeCreate/WorktreeRemove: Super-c / `⌘C` (rice: hearth/zellij)
-      #    spawns `claude --worktree`; these hand the create/remove off to `wt`
+      #  • WorktreeCreate/WorktreeRemove: `Super a` / ⌘A (rice: hearth/zellij)
+      #    spawns `claude --worktree`; these hand the create/remove off to `holt`
       #    so worktrees land under ~/.cache/claude-worktrees instead of inside the
-      #    repo — and so closing a pane never loses uncommitted work (wt parks it
-      #    on the branch first) and stays resumable (`wt` to list, `wt <name>` to
-      #    reopen). `wt` itself ships in the rice (nebelhaus/modules/den); we just
-      #    point the hooks at its system path here (Claude owns settings.json, so
-      #    hook wiring is the host's job — same as the sketchybar hooks below).
+      #    repo — and so closing a pane never loses uncommitted work (holt parks
+      #    it on the branch first) and stays resumable (`holt` to list, `holt
+      #    <name>` to reopen). holt is its own repo now, taken by the rice as a
+      #    flake input and shipped on PATH; we just point the hooks at its system
+      #    path here (Claude owns settings.json, so hook wiring is the host's job
+      #    — same as the sketchybar hooks below).
+      #    These said `wt create` / `wt remove` until now, which was a live
+      #    revert waiting to happen: settings.json had already been repointed at
+      #    holt BY HAND, and this activation runs on every rebuild, so the next
+      #    `haus rebuild` would have quietly put frozen `wt` back in the loop.
+      #    Note the subcommand differs — `holt hook create`, not `holt create`.
       #  • UserPromptSubmit/Notification/Stop/SessionEnd: feed the `agents` bar
       #    paw (nebelhaus.sill.plugins) — each fires agents-hook.sh from inside the
       #    agent's pane, self-reporting its state (working/waiting/idle) + subscribe
@@ -829,14 +1066,14 @@
       home.activation.claudeCodeHooks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run sh -c '
           settings="$0"
-          wtbin="$1"
+          holtbin="$1"
           hook="$2"
           mkdir -p "''${settings%/*}"
           tmp="$settings.hm-seed"
           if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
           ${pkgs.jq}/bin/jq \
-            ".hooks.WorktreeCreate = [{hooks:[{type:\"command\",command:\"''${wtbin} create\"}]}]
-             | .hooks.WorktreeRemove = [{hooks:[{type:\"command\",command:\"''${wtbin} remove\"}]}]
+            ".hooks.WorktreeCreate = [{hooks:[{type:\"command\",command:\"''${holtbin} hook create\"}]}]
+             | .hooks.WorktreeRemove = [{hooks:[{type:\"command\",command:\"''${holtbin} hook remove\"}]}]
              | .hooks.UserPromptSubmit = [{hooks:[{type:\"command\",command:\"''${hook} working\"}]}]
              | .hooks.Notification = [{hooks:[{type:\"command\",command:\"''${hook} waiting\"}]}]
              | .hooks.Stop = [{hooks:[{type:\"command\",command:\"''${hook} idle\"}]}]
@@ -844,7 +1081,7 @@
             "$base" > "$tmp"
           mv "$tmp" "$settings"
           rm -f "$tmp.base"
-        ' "$HOME/.claude/settings.json" "/run/current-system/sw/bin/wt" "$HOME/.config/sketchybar/plugins/agents-hook.sh"
+        ' "$HOME/.claude/settings.json" "/run/current-system/sw/bin/holt" "$HOME/.config/sketchybar/plugins/agents-hook.sh"
       '';
 
       # Claude Code — pre-approve the commands auto mode keeps escalating to a
@@ -870,6 +1107,7 @@
                 \"Bash(gh:*)\",
                 \"Bash(bench:*)\",
                 \"Bash(wt:*)\",
+                \"Bash(holt:*)\",
                 \"Bash(haus:*)\"
              ] | unique)" \
             "$base" > "$tmp"
