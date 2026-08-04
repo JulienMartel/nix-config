@@ -35,6 +35,7 @@
     "codex"
     "opencode"
   ];
+  nebelhaus.agents.default = "codex";
 
   # ---- text expansion ----
   # The old Raycast "@@" snippet, now a rice option (nebelhaus.snippets → espanso
