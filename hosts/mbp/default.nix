@@ -1215,6 +1215,29 @@
         ' "$HOME/.claude/settings.json"
       '';
 
+      # Claude Code — personal UI preferences, pinned so they survive Claude's
+      # own rewrites of settings.json.
+      #   verbose = false — keep tool output collapsed to the short form; ⌃O
+      #     still expands it for the current session, this just decides what
+      #     every new session starts as.
+      # The rice seeds the defaults it considers house style
+      # (hearth: tui/statusLine/spinnerTips/…); this is the per-user layer on
+      # top, hence host and not rice. Same merge-our-keys / never-own-the-file
+      # trick as the two blocks above — and the same consequence: toggling this
+      # from inside Claude (`/config`) lasts until the next `haus rebuild`,
+      # which re-asserts the value below. Flip it here to change it for good.
+      home.activation.claudeCodePrefs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run sh -c '
+          settings="$0"
+          mkdir -p "''${settings%/*}"
+          tmp="$settings.hm-seed"
+          if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
+          ${pkgs.jq}/bin/jq ".verbose = false" "$base" > "$tmp"
+          mv "$tmp" "$settings"
+          rm -f "$tmp.base"
+        ' "$HOME/.claude/settings.json"
+      '';
+
       # Secrets + tooling that shouldn't live in the public rice.
       programs.zsh.initContent = lib.mkAfter ''
         export GEMINI_API_KEY="$(cat ~/.secrets/google-api-key)"
