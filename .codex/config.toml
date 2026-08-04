@@ -8,7 +8,7 @@
 # that installs Nix in a cloud container.
 
 [features]
-codex_hooks = true
+hooks = true
 
 # Two caveats, both upstream, both harmless if they bite:
 #   * repo-local hooks have historically not fired in every interactive session
