@@ -56,12 +56,26 @@
   };
 
   # ---- theme ----
-  # Accent: pink instead of the rice default (mauve). Machine-local — the palette
-  # itself is unchanged; this just picks which whiskers hue everything keys off.
+  # Accent: sapphire instead of the rice default (mauve). Machine-local — the
+  # palette itself is unchanged; this just picks which whiskers hue everything
+  # keys off. What it does and doesn't recolour is pinned by the rice's
+  # `accent-reach` check, not by memory.
   nebelhaus.theme.accent = "sapphire";
 
   # The "orbits" Nebelung wallpaper (palette rings on a dark base).
   nebelhaus.theme.wallpaper = "orbits";
+
+  # Stylus, force-installed into Zen through Firefox's enterprise-policy file.
+  # This one line replaces the hand-rolled policies.json + announce-activation
+  # pair that used to live down in the home-manager block: the rice owns both
+  # now, and — the reason it exists at all — it stamps nebelung's userstyle
+  # bundle with the accent above. Without that, the accent reaches Zen's own
+  # chrome but never the web: github.com and youtube.com are styled by
+  # Catppuccin userstyles living inside the extension, whose accent var
+  # defaults to mauve and which no stylesheet can reach. Importing stays a
+  # click (Stylus ▸ Manage ▸ Import); activation says so when there's a new
+  # bundle. See nebelhaus#208.
+  nebelhaus.zen.extensions.stylus = { };
 
   # ---- desktop ----
   # No icons on the desktop. The files stay in ~/Desktop — this only stops Finder
@@ -1008,36 +1022,6 @@
       # an already-pushed wip commit). Same out-of-store symlink pattern as above.
       home.file.".claude/skills/park".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
-
-      home.file."Library/Application Support/Zen/distribution/policies.json".text = builtins.toJSON {
-        policies = {
-          ExtensionSettings = {
-            "{7a7a4a92-a2a0-41d1-9fd7-1e92480d612d}" = {
-              installation_mode = "force_installed";
-              install_url = "https://addons.mozilla.org/firefox/downloads/latest/styl-us/latest.xpi";
-            };
-          };
-        };
-      };
-
-      # Stylus is the one nebelung port with no file to drop: the userstyle lives
-      # inside the extension's own storage, so all we can do is hand you a JSON
-      # to import by hand. That makes this a ONE-TIME instruction — and it used
-      # to print on every single rebuild, which is how a real instruction turns
-      # into wallpaper. Announce it only when there's something new to import:
-      # the JSON's store path changes exactly when the palette does, so the last
-      # path we announced is the whole state this needs.
-      home.activation.stylusNebelung = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        stylusJson="${nebelung.themes}/stylus/nebelung-stylus.json"
-        stylusStamp="$HOME/.local/state/nebelhaus/stylus-announced"
-        if [ -d "$HOME/Library/Application Support/Zen" ] \
-           && [ "$(cat "$stylusStamp" 2>/dev/null || true)" != "$stylusJson" ]; then
-           echo "→ Stylus (Zen): to apply the nebelung palette to your userstyles, import the generated JSON:"
-           echo "    $stylusJson"
-           $DRY_RUN_CMD mkdir -p "$(dirname "$stylusStamp")"
-           printf '%s\n' "$stylusJson" | $DRY_RUN_CMD tee "$stylusStamp" >/dev/null
-        fi
-      '';
 
       # Claude Code — reinstate our hooks in settings.json on every rebuild.
       #  • WorktreeCreate/WorktreeRemove: `Super a` / ⌘A (rice: hearth/zellij)
