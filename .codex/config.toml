@@ -7,14 +7,10 @@
 # This file only carries the one thing AGENTS.md can't express: the session hook
 # that installs Nix in a cloud container.
 
-hooks = ".codex/hooks.json"
-
 [features]
 codex_hooks = true
 
 # Two caveats, both upstream, both harmless if they bite:
 #   * repo-local hooks have historically not fired in every interactive session
-#     (openai/codex#17532) — if `/hooks` doesn't list this one, add
-#     `hooks = "<abs path>/.codex/hooks.json"` to your own ~/.codex/config.toml;
-#   * some builds want an absolute path here. Either way the fallback is the
-#     same as for any harness with no hooks at all: run ./.agents/setup.sh once.
+#     (openai/codex#17532);
+#   * the fallback is the same as for any harness with no hooks at all: run ./.agents/setup.sh once.
