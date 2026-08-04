@@ -543,7 +543,7 @@
   # one `claude` on PATH, and any future consumer of `pkgs.claude-code` inherits
   # the patch for free. `useGlobalPkgs` is on, so this reaches home-manager too.
   #
-  # Two annoyances Claude Code has no settings for:
+  # Three annoyances Claude Code has no settings for:
   #
   # 1. The permission-mode footer line ("⏵⏵ auto mode on (shift+tab to
   #    cycle)") under the custom statusline — with 4 panes per tab those
@@ -556,7 +556,19 @@
   #    Mach-O during fixup (unsigned = SIGKILL on Apple Silicon), and
   #    the package's own versionCheckPhase proves the result still runs.
   #
-  # 2. The hard-coded sleep blocker: on macOS the agent silently spawns
+  # 2. Having collapsed that row, the rice statusline is now the ONLY
+  #    place the permission mode appears — and the statusline payload
+  #    doesn't carry it, so the mode chip had to be read out of the
+  #    session transcript, where the mode is only stamped at turn
+  #    boundaries. Result: a chip that sits still while you cycle
+  #    shift+tab. statusline-permission-mode.py adds `permission_mode`
+  #    to the payload (the builder already takes the live mode as a
+  #    parameter; it just never emitted it), paying for the bytes out
+  #    of a version banner inlined at the same site. Same
+  #    same-length/fail-loud rules as above. The rice keeps its
+  #    transcript fallback, so this is an upgrade, not a dependency.
+  #
+  # 3. The hard-coded sleep blocker: on macOS the agent silently spawns
   #    `caffeinate -i -t 300` (renewed while it works). Shadow
   #    caffeinate with a no-op on claude's PATH only — everything else,
   #    including pounce's caffeinate command, still gets the real
@@ -567,23 +579,24 @@
         let
           # `prev`, never `final` — overriding a package in terms of itself is
           # infinite recursion, not a patch.
-          defootered = prev.claude-code.overrideAttrs (old: {
+          patchedCC = prev.claude-code.overrideAttrs (old: {
             nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
               prev.python3
               prev.darwin.autoSignDarwinBinariesHook # re-sign the patched Mach-O in fixup
             ];
             postInstall = (old.postInstall or "") + ''
               python3 ${./declutter-claude-footer.py} "$out/bin/.claude-wrapped"
+              python3 ${./statusline-permission-mode.py} "$out/bin/.claude-wrapped"
             '';
           });
         in
         prev.symlinkJoin {
           name = "claude-code-no-caffeinate";
-          paths = [ defootered ];
+          paths = [ patchedCC ];
           nativeBuildInputs = [ prev.makeBinaryWrapper ];
           postBuild = ''
             rm "$out/bin/claude"
-            makeBinaryWrapper "${defootered}/bin/claude" "$out/bin/claude" \
+            makeBinaryWrapper "${patchedCC}/bin/claude" "$out/bin/claude" \
               --inherit-argv0 \
               --prefix PATH : "${prev.writeShellScriptBin "caffeinate" "exit 0"}/bin"
           '';
