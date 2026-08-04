@@ -70,15 +70,14 @@
         "nix-index-database": "nix-index-database",
         "nixpkgs": "nixpkgs_2",
         "perch": "perch",
-        "pounce": "pounce",
-        "trill": "trill"
+        "pounce": "pounce"
       },
       "locked": {
-        "lastModified": 1785835341,
-        "narHash": "sha256-pJklqrJhcQsJqDQtVOo4PknZfLJ3rtYMtFfzco04sQo=",
+        "lastModified": 1785839366,
+        "narHash": "sha256-VzjrW/0KWBM9FuFerAgo4LgS0KcE8EqMM/1ZvtXY+YQ=",
         "owner": "nebelhaus",
         "repo": "nebelhaus",
-        "rev": "983097ae3cc00a981d4e1c0cff0442bd2a62a92a",
+        "rev": "066ede6d7d9ce71a7f3ce6a31e47d9564cbc9b42",
         "type": "github"
       },
       "original": {
@@ -246,46 +245,9 @@
         "perch"
       ]
     },
-    "prebuilt_2": {
-      "flake": false,
-      "locked": {
-        "path": "./nix/dev-app",
-        "type": "path"
-      },
-      "original": {
-        "path": "./nix/dev-app",
-        "type": "path"
-      },
-      "parent": [
-        "nebelhaus",
-        "trill"
-      ]
-    },
     "root": {
       "inputs": {
         "nebelhaus": "nebelhaus"
-      }
-    },
-    "trill": {
-      "inputs": {
-        "nixpkgs": [
-          "nebelhaus",
-          "nixpkgs"
-        ],
-        "prebuilt": "prebuilt_2"
-      },
-      "locked": {
-        "lastModified": 1785834855,
-        "narHash": "sha256-omsQbMOp4ci9w/L1Np4YCk5ihScsX1E9uHVec941j1w=",
-        "owner": "nebelhaus",
-        "repo": "trill",
-        "rev": "88a4ddda69e1789e3c8230b7c1f5d25f8549416f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nebelhaus",
-        "repo": "trill",
-        "type": "github"
       }
     }
   },
