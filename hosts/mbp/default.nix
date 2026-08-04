@@ -60,7 +60,7 @@
   # palette itself is unchanged; this just picks which whiskers hue everything
   # keys off. What it does and doesn't recolour is pinned by the rice's
   # `accent-reach` check, not by memory.
-  nebelhaus.theme.accent = "sapphire";
+  nebelhaus.theme.accent = "pink";
 
   # The "orbits" Nebelung wallpaper (palette rings on a dark base).
   nebelhaus.theme.wallpaper = "orbits";
