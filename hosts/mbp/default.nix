@@ -560,10 +560,13 @@
   #    cycle)") under the custom statusline — with 4 panes per tab those
   #    rows add up. declutter-claude-footer.py patches the JS source
   #    embedded in the bun-compiled binary so the line renders as null;
-  #    its regexes pin code structure, not minified names, and FAIL THE
-  #    BUILD (match count ≠ 2) if a claude-code update reshapes the
-  #    footer — so a bump can break here; see the script header for how
-  #    to re-derive. autoSignDarwinBinariesHook re-signs the patched
+  #    same for the right-hand chip strip ("/rc · focus", IDE selection,
+  #    PR status), a SIBLING row that survived the first collapse and
+  #    came back as a permanent second line in CC 2.1.220. Its regexes
+  #    pin code structure, not minified names, and FAIL THE BUILD (a
+  #    match count off its expected value) if a claude-code update
+  #    reshapes the footer — so a bump can break here; see the script
+  #    header for how to re-derive. autoSignDarwinBinariesHook re-signs the patched
   #    Mach-O during fixup (unsigned = SIGKILL on Apple Silicon), and
   #    the package's own versionCheckPhase proves the result still runs.
   #
