@@ -28,6 +28,20 @@ dense feature-flagged one and the normal one), so four patches total:
      same-length always-false expression, so the idle blank line renders as
      null.
 
+  3. The right-hand CHIP STRIP is a *sibling* row, not part of either box
+     above, so collapsing them never touched it: a column stack pinned with
+     `marginLeft:"auto"` whose contents are the hipaa banner, the cloud /
+     remote-control chip ("/rc"), the IDE-selection chip, "Debug", the PR
+     status chip and the mode labels ("focus", "memory paused"), joined with
+     " · ". It stayed invisible until CC 2.1.220 shipped `/rc` and the focus
+     ("briefTranscript") label, which are on permanently here — so the row
+     came back as a second line under our statusline in every pane. Its
+     component already returns null when it has no chips; we flip that
+     emptiness test to always-true (`.length===0` -> `.length> -1`, same
+     length), so the strip renders null unconditionally and any chip a future
+     release adds there can't bring the line back. Our own statusline already
+     carries the PR link and everything else we care about.
+
 We patch the JS source that bun embeds as plain text inside the compiled binary
 (verified empirically that the embedded source — not a bytecode cache — is what
 executes). All edits are byte-length-preserving because the bun trailer indexes
@@ -40,11 +54,15 @@ release): the object-literal prop keys `height`/`overflow`/`children` and the
 two content rows from the unrelated spinner box, and the leading `=`
 (assignment) separates the two footer placeholders from the custom-statusline
 container's own fallback, whose identical `...jsx(<Text>,{children:" "}):null`
-tail is instead preceded by `:` (a ternary else-branch). If a claude-code
-update reshapes the footer either match count moves off 2 and this script exits
-non-zero — failing the nix build loudly instead of silently bringing the row
-back. To re-derive: search the binary for 'overflow:"hidden",children:[' and
-'children:" "}):null'.
+tail is instead preceded by `:` (a ternary else-branch). The chip strip is
+pinned by its own two halves at once — the early `return null` on an empty
+chip ARRAY and, further down, that same array being spread into the Box as
+`children:<same var>.flatMap(` — a pairing nothing else in the binary has
+(the bare `.length===0){return null}` appears 25 times). If a claude-code
+update reshapes any of it a match count moves off its expected value and this
+script exits non-zero — failing the nix build loudly instead of silently
+bringing the row back. To re-derive: search the binary for
+'overflow:"hidden",children:[', 'children:" "}):null' and '.flatMap('.
 
 Usage: declutter-claude-footer.py <path-to-claude-binary>
 """
@@ -54,6 +72,7 @@ import sys
 
 EXPECTED_ROWS = 2  # the two variants of the footer status row
 EXPECTED_RESERVATIONS = 2  # their two idle placeholder-line early returns
+EXPECTED_STRIPS = 1  # the right-hand chip strip ("/rc \xb7 focus")
 
 path = sys.argv[1]
 with open(path, "rb") as f:
@@ -89,11 +108,32 @@ for m in reservation.finditer(bytes(data)):
     data[cond_start:cond_end] = b"!1".rjust(cond_end - cond_start)  # same length
     reservations += 1
 
-if rows != EXPECTED_ROWS or reservations != EXPECTED_RESERVATIONS:
+# 3. The right-hand chip strip: `if(<chips>.length===0){return null}` … later
+#    `children:<chips>.flatMap(`. Same array variable on both ends is what
+#    identifies THIS component; the early return alone is a common shape.
+#    Flip the emptiness test to an always-true comparison, same byte length,
+#    so the strip is always null.
+strip = re.compile(
+    rb"if\((%s)\.length===0\)\{return null\}.{0,400}?children:\1\.flatMap\("
+    % ident,
+    re.DOTALL,
+)
+strips = 0
+for m in strip.finditer(bytes(data)):
+    t = data.index(b"===0", m.start(), m.start() + 40)
+    data[t : t + 4] = b"> -1"  # same length
+    strips += 1
+
+if (
+    rows != EXPECTED_ROWS
+    or reservations != EXPECTED_RESERVATIONS
+    or strips != EXPECTED_STRIPS
+):
     sys.exit(
         f"declutter-claude-footer: expected {EXPECTED_ROWS} footer rows + "
-        f"{EXPECTED_RESERVATIONS} placeholder reservations, found {rows} + "
-        f"{reservations} — the claude-code update changed the footer code; "
+        f"{EXPECTED_RESERVATIONS} placeholder reservations + "
+        f"{EXPECTED_STRIPS} chip strip, found {rows} + {reservations} + "
+        f"{strips} — the claude-code update changed the footer code; "
         f"re-derive the anchors (see script header) or drop the patch."
     )
 
@@ -101,5 +141,5 @@ with open(path, "wb") as f:
     f.write(bytes(data))
 print(
     f"declutter-claude-footer: collapsed {rows} footer rows + "
-    f"{reservations} placeholder reservations in {path}"
+    f"{reservations} placeholder reservations + {strips} chip strip in {path}"
 )
