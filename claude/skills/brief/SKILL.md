@@ -134,7 +134,7 @@ Estimate in the units of my loop. Tune these numbers as they drift:
 |---|---|
 | `bench try` (warm) | ~1 min |
 | `bench try` (cold / nixpkgs moved) | ~5 min |
-| `bench try switch` | ~1 min + pane restart |
+| `bench try switch` | ~1 min — zellij hot-reloads, panes/tabs/sessions survive |
 | `zscratch` iteration | ~15 s |
 | `bench ship` ripple | ~1 min |
 | `bench release` → homebrew live | ~1 min command, ~5–10 min of CI |

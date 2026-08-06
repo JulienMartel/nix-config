@@ -404,12 +404,12 @@
     whole session: verdict first, ≤5 anchored steps, and escalate to me only at ≥3/5
     (my usual bar) with a recommendation and a reversal cost. It governs code work,
     research, and anything I paste. Say "drop brief" / "full mode" to turn it off. The
-    skill itself lives at `~/.claude/skills/brief/SKILL.md` (this host symlinks it out
-    of `~/.config/nix/claude/skills/brief`); tune its tables there, no rebuild needed.
+    skill itself lives at `~/.claude/skills/brief/SKILL.md`, a symlink into the store —
+    edit `~/.config/nix/claude/skills/brief/SKILL.md` and `haus rebuild` to apply.
 
     ## Working in a git worktree
 
-    My super+c (`⌘C`) zellij hotkey spawns Claude panes as `claude --worktree`:
+    My super+a (`⌘A`) zellij hotkey spawns agent panes as `claude --worktree`:
     each session gets its own checkout on a `worktree-<name>` branch, branched from the
     repo's local HEAD, living OUTSIDE the repo (under `~/.cache/claude-worktrees/`). The
     `WorktreeCreate`/`WorktreeRemove` hooks are wired globally, so **any** repo I open can
