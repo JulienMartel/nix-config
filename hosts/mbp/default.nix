@@ -35,7 +35,10 @@
     "codex"
     "opencode"
   ];
-  nebelhaus.agents.default = "claude";
+  # Default is opencode while I shake down the non-Claude clients (codex got a
+  # first pass). Flip this line back to "claude" when the trial is over — it is
+  # only what ⌘A / pounce's Spawn Agent launch; every client stays installed.
+  nebelhaus.agents.default = "opencode";
 
   # ---- text expansion ----
   # The old Raycast "@@" snippet, now a rice option (nebelhaus.snippets → espanso
