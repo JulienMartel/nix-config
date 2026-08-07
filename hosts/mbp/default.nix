@@ -859,7 +859,7 @@
       # was never pushed is invisible here, on purpose.
       #
       # Declared here rather than in the rice because the sections below are MY
-      # queue — org:nebelhaus, my worktree branches — and shipping those to
+      # org-wide review queue — and shipping those to
       # everyone who installs the rice would be nonsense. The theming is the part
       # that isn't personal, and that comes from nebelung via `include:` above.
       # The one thing here that ISN'T personal is the patched logo (ghDashPkg):
@@ -900,24 +900,10 @@
           include = [ ghDashTheme ];
 
           # Sections are tabs. Ordered by how often I actually look at them.
-          #
-          # `head:worktree-` prefix-matches the branch name, which is exactly
-          # the naming holt gives every agent checkout — so tab 1 IS the agent
-          # fleet, in any repo I author in (the family AND this one), without
-          # having to list repos. Verified against the live search API rather
-          # than assumed: `head:` is a prefix match, not an exact one.
           prSections = [
             {
-              title = "agents";
-              filters = "is:open author:@me head:worktree-";
-            }
-            {
-              title = "mine";
-              filters = "is:open author:@me -head:worktree-";
-            }
-            {
-              title = "review";
-              filters = "is:open review-requested:@me";
+              title = "open";
+              filters = "org:nebelhaus is:pr is:unmerged";
             }
             # The two CI tabs, side by side, because together they ARE the merge
             # decision: `green` is the queue `/ship` can take, `red` is the queue
@@ -926,28 +912,18 @@
             # which is the point, that's the "come back in a minute" bucket.
             {
               title = "green";
-              filters = "is:open author:@me status:success";
+              filters = "org:nebelhaus is:pr is:unmerged status:success";
             }
             {
               title = "red";
-              filters = "is:open author:@me status:failure";
+              filters = "org:nebelhaus is:pr is:unmerged status:failure";
             }
-            # The "did it land" tab. `nowModify` is gh-dash's own template
-            # function; units go up to d/w/mo/y.
+            # One week of landings. `nowModify` is gh-dash's own template
+            # function; GitHub's merged: qualifier wants the rendered date
+            # immediately after >=, with no spaces around the operator.
             {
-              title = "landed";
-              filters = ''is:merged author:@me merged:>={{ nowModify "-3d" }}'';
-              limit = 10;
-            }
-            # Anything in the org that ISN'T mine — bot PRs, a tap bump, someone
-            # else turning up. `-author:@me` is load-bearing: without it this tab
-            # was a superset of `agents` + `mine` + `green` + `red`, so it showed
-            # a big count that never meant anything new, and the one row that DID
-            # (a PR I didn't open) had nowhere to stand out. Last, because in a
-            # solo org it's usually empty — and empty is the correct reading.
-            {
-              title = "family";
-              filters = "is:open org:nebelhaus -author:@me";
+              title = "shipped";
+              filters = ''is:pr is:merged org:nebelhaus merged:>={{ nowModify "-7d" }}'';
               limit = 10;
             }
           ];
@@ -1008,9 +984,9 @@
             # (there's no grow/align in the schema), so the layout is: kill the
             # columns that are constant for a solo org, let `title` take the
             # slack.
-            #   author/authorIcon — it's me, in every row, in every tab.
-            #     Un-hide these two if `review`/`family` ever fills with other
-            #     people's PRs; that's the one line to change.
+            #   author/authorIcon — this is a solo org today; repo + title still
+            #     identify the occasional bot-owned row without spending two
+            #     columns on the same face/name everywhere else.
             #   base — always main.
             #   labels/assignees/createdAt — noise I never act on.
             layout.prs = {
