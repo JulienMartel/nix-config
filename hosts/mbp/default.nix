@@ -94,34 +94,37 @@
   ];
 
   # ---- everything this machine has ----
-  # ONE list. It used to be three — this roster (launcher keys + workspaces),
-  # homebrew.casks/brews (the install), and home.packages — so an app was
-  # declared twice and every entry carried a `cask = null` whose only meaning
-  # was "declared over there instead". Now each entry names its own source, and
-  # WHICH FIELDS it sets is what the entry means:
+  # ONE list. It used to be three — this roster (launcher keys + install), plus
+  # homebrew.casks/brews and home.packages — so an app was declared twice and
+  # every entry carried a `cask = null` whose only meaning was "declared over
+  # there instead". Now each entry names its own source, and WHICH FIELDS it
+  # sets is what the entry means:
   #
   #   key         → on the Caps-Lock launcher + the pounce cheatsheet
-  #   workspace   → owns an AeroSpace workspace + a SketchyBar pill
   #   neither     → just installed: nothing bound, nothing drawn
   #   cask / brew / package / appStoreId → where it comes from
+  #
+  # Which AeroSpace workspace an app owns is no longer a field here at all —
+  # nebelhaus.workspaces below claims it, by naming the app in `apps`
+  # (notes/options-roadmap.md §5.4 in the workshop repo: promoted workspaces
+  # to a real option so one can hold more than one app, and inverted
+  # ownership so the workspace says so instead of the app).
   #
   # `order` only sorts the launcher half (cheatsheet rows, pill row), so the
   # install-only entries below leave it at its default.
   nebelhaus.roster = {
     # ---- the launcher ----
-    # ghostty isn't here: den declares its name + cask, prowl its key, workspace,
-    # icon and label, and every one of those defaults is what I'd have typed. An
-    # entry only appears below where I want something the rice didn't already
-    # decide — which is why zen is one line.
+    # ghostty isn't here: den declares its name + cask, prowl its key +
+    # workspace membership + icon + label, and every one of those defaults is
+    # what I'd have typed. An entry only appears below where I want something
+    # the rice didn't already decide — which is why zen is one line.
     zen.order = 50;
 
     obsidian = {
       order = 20;
       key = "n";
       name = "Obsidian";
-      workspace = "N";
       appId = "md.obsidian";
-      barIcon = ":obsidian:";
       label = "Obsidian";
       cask = "obsidian";
     };
@@ -129,9 +132,7 @@
       order = 30;
       key = "r";
       name = "Things3";
-      workspace = "R";
       appId = "com.culturedcode.ThingsMac";
-      barIcon = ":things:";
       label = "Things3";
       # Paid App Store app. mas cannot purchase, so appStore.install (off
       # below) would skip it with a warning — the id is here to record what to
@@ -142,9 +143,7 @@
       order = 40;
       key = "s";
       name = "Slack";
-      workspace = "S";
       appId = "com.tinyspeck.slackmacgap";
-      barIcon = ":slack:";
       label = "Slack";
       cask = "slack";
     };
@@ -156,10 +155,7 @@
       order = 70;
       key = "h";
       name = "Swather";
-      workspace = "H";
       appId = "com.swather.app";
-      # Swather has no app-font glyph — fa-hourglass (U+F254) in the Nerd Font.
-      barIcon = builtins.fromJSON ''"\uf254"'';
       label = "Swather";
       # No source field: I installed this one by hand, so nothing declares it.
     };
@@ -167,9 +163,7 @@
       order = 80;
       key = "c";
       name = "Claude";
-      workspace = "C";
       appId = "com.anthropic.claudefordesktop";
-      barIcon = ":claude:";
       label = "Claude";
       cask = "claude";
     };
@@ -177,9 +171,7 @@
       order = 90;
       key = "d";
       name = "Notion Calendar";
-      workspace = "D";
       appId = "com.cron.electron";
-      barIcon = ":calendar:";
       label = "Notion Calendar";
       cask = "notion-calendar";
     };
@@ -194,9 +186,7 @@
       order = 110;
       key = "x";
       name = "ChatGPT";
-      workspace = "X";
       appId = "com.openai.codex";
-      barIcon = ":codex:";
       label = "ChatGPT";
       cask = "chatgpt";
     };
@@ -313,6 +303,52 @@
       # switch` supersedes rebuild-pounce (it overrides ALL the local checkouts,
       # not just pounce).
       package = pkgs.writeShellScriptBin "bench" ''exec "$HOME/code/workshop/bench" "$@"'';
+    };
+  };
+
+  # Which AeroSpace workspace each launcher app owns, its pill and its ⇧-throw
+  # key. One app per workspace here, same as before the schema moved this off
+  # the roster — nothing on this machine wants a role/project workspace with
+  # several apps yet, but the shape is there when something does (see
+  # nebelhaus.workspaces' own docs). Every key below matches the app's own
+  # roster `key`, uppercased for the workspace id, same convention `add-app.sh`
+  # uses.
+  nebelhaus.workspaces = {
+    N = {
+      key = "n";
+      icon = ":obsidian:";
+      apps = [ "obsidian" ];
+    };
+    R = {
+      key = "r";
+      icon = ":things:";
+      apps = [ "things" ];
+    };
+    S = {
+      key = "s";
+      icon = ":slack:";
+      apps = [ "slack" ];
+    };
+    H = {
+      key = "h";
+      # Swather has no app-font glyph — fa-hourglass (U+F254) in the Nerd Font.
+      icon = builtins.fromJSON ''"\uf254"'';
+      apps = [ "swather" ];
+    };
+    C = {
+      key = "c";
+      icon = ":claude:";
+      apps = [ "claude" ];
+    };
+    D = {
+      key = "d";
+      icon = ":calendar:";
+      apps = [ "notion-calendar" ];
+    };
+    X = {
+      key = "x";
+      icon = ":codex:";
+      apps = [ "chatgpt" ];
     };
   };
 
