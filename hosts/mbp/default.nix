@@ -23,6 +23,15 @@
   # routes double-clicked json/md/ts/… to Helix too. No Cursor anywhere.
   nebelhaus.hearth.hijackFileAssociations = true;
 
+  # gh-dash: the review-queue half of the agent HUD. The statusline/bar HUD
+  # answers "what are my panes doing"; this answers "what is waiting on ME" —
+  # holt reads the worktree registry (parked sessions, wip commits, unpushed
+  # branches), gh-dash reads GitHub (PRs, CI, reviews), and a branch that was
+  # never pushed is invisible there on purpose. This one switch buys the patched
+  # binary, the nebelung theme, and ⌘G's borderless full-window overlay; the
+  # sections are mine and stay down in programs.gh-dash.settings below.
+  nebelhaus.hearth.ghDash.enable = true;
+
   # ---- coding agents ----
   # Codex on top of the rice's default pair. There is an authed account and a
   # session history under ~/.codex, but no `codex` on PATH — it was installed
@@ -731,94 +740,6 @@
       # pounce-commands on every shared command filename.
       pouncePluginPkg = pkgs.pounce-commands.override { plugins = pouncePlugins; };
 
-      # ---- gh-dash: the nebelung theme file to `include:` ----
-      # nebelung ships a gh-dash port, but its install is a MERGE (a `theme:`
-      # block to fold into a config the rice doesn't own), which is exactly the
-      # kind the rice's roster pass refuses to write — so no room has ever wired
-      # it. gh-dash's own `include:` closes that: includes load first and the
-      # including file wins, so the rendered block below is the base and every
-      # setting in `programs.gh-dash.settings` overrides it.
-      #
-      # The path mirrors modules/lib/nebelung.nix's variant rule (that helper is
-      # inside the rice and not importable from here): the default mocha/normal
-      # variant owns the themes root, every other one renders under a
-      # "<flavor>-high-contrast"-style subdir. Both axes are read from
-      # nebelhaus.theme rather than hardcoded, because a wrong flavor resolves to
-      # a path that simply doesn't exist and gh-dash then just looks stock.
-      nbTheme = osConfig.nebelhaus.theme;
-      nbParts =
-        lib.optional (nbTheme.flavor != "mocha") nbTheme.flavor
-        ++ lib.optional (nbTheme.contrast == "high") "high-contrast";
-      nbRoot =
-        "${nebelung.themes}" + lib.optionalString (nbParts != [ ]) "/${lib.concatStringsSep "-" nbParts}";
-      # gh-dash is one of the accent-matrix ports (all 14 accents per flavor);
-      # nebelhaus.theme.accent picks the one the rest of the rice is wearing.
-      ghDashTheme = "${nbRoot}/gh-dash/themes/${nbTheme.flavor}/catppuccin-${nbTheme.flavor}-${nbTheme.accent}.yml";
-
-      # ---- gh-dash: the binary, wearing the house mark ----
-      # gh-dash draws a logo + its version in the top-right of the tabs row, and
-      # NEITHER is configurable: the mark is a Go const (`constants.Logo`) and its
-      # colour a package-level literal (`context.LogoColor`, a hardcoded cyan
-      # #00F9FB that no theme file can reach). Read the whole config schema
-      # looking for a `logo:` key before concluding this — there isn't one. So a
-      # source patch is the only door, and it's a cheap one: gh-dash is a small
-      # Go build with nothing machine-specific in it.
-      #
-      #   1+2. The two rows of the logo → "haus", set in gh-dash's OWN half-block
-      #        letterforms (its stock mark spells "dash" the same way, so the H
-      #        and the A are literally its glyphs re-used). Deliberately the same
-      #        11 columns wide, because tabs.go sizes the tab carousel as
-      #        `ScreenWidth - lipgloss.Width(logo)` — a wider mark silently eats
-      #        a tab.
-      #   3. `context.LogoColor` → the theme's SecondaryText, which the nebelung
-      #      include below sets to the accent. Pointing at the THEME instead of
-      #      substituting a hex is what makes the mark track
-      #      nebelhaus.theme.{flavor,accent,contrast} for free — no palette
-      #      plumbing up here, and no second place to update when the accent
-      #      changes. The version string beside it drops to FaintText so the
-      #      accent reads as the mark and not as a version number.
-      #
-      # --replace-fail, not --replace: a gh-dash bump that redraws its logo or
-      # renames that colour var breaks the BUILD, loudly, instead of quietly
-      # reverting the dashboard to stock cyan. Same bargain as the Claude footer
-      # patch — a patch you can't see fail isn't a patch, it's a coin flip.
-      #
-      # One thing deliberately NOT wired into this override, with the reason kept
-      # so nobody has to rediscover it: gh-dash has a FOURTH view — the local
-      # repo's branches, each with its PR and checks — behind an `FF_REPO_VIEW`
-      # env-var feature flag, and it looked like the git-side twin of the agent
-      # HUD (holt's branches, seen from GitHub). It is not usable yet, in two
-      # distinct ways, both measured on 4.25.2 rather than guessed:
-      #
-      #   1. Flag on, cwd outside a git repo → gh-dash doesn't degrade, it EXITS
-      #      on startup with `FATA … failed parsing config file … not a git
-      #      repository`. The message is a lie about which thing failed (ui.go
-      #      reuses one `showError` closure for the config parse and for the
-      #      git-remote lookup), and it means `gh-dash` from ~ simply quits.
-      #      Survivable — a wrapper can set the flag only inside a repo.
-      #   2. Flag on, cwd inside a repo, press `s` three times to reach the view
-      #      → nil-pointer panic in `branch.(*Branch).renderRepoName`
-      #      (branch/branch.go:175), taking the whole TUI down. Reproduced in two
-      #      different repos; the 3-view cycle with the flag off is fine, so it's
-      #      the view, not the key. That one no wrapper can fix.
-      #
-      # So this stays stock until upstream ships the view unflagged. Retesting is
-      # two commands (`FF_REPO_VIEW=1 gh-dash` in a repo, then `sss`) — worth
-      # doing on a gh-dash bump, because the view is genuinely wanted.
-      ghDashPkg = pkgs.gh-dash.overrideAttrs (old: {
-        postPatch = (old.postPatch or "") + ''
-          substituteInPlace internal/tui/constants/constants.go \
-            --replace-fail '▜▔▚▐▔▌▚▔▐ ▌' '▐ ▌▐▔▌▐ ▌▚▔' \
-            --replace-fail '▟▁▞▐▔▌▁▚▐▔▌' '▐▔▌▐▔▌▙▁▟▁▚'
-          substituteInPlace internal/tui/components/tabs/tabs.go \
-            --replace-fail \
-              'Foreground(m.ctx.Theme.SecondaryText).Render(m.ctx.Version)' \
-              'Foreground(m.ctx.Theme.FaintText).Render(m.ctx.Version)' \
-            --replace-fail \
-              'Foreground(context.LogoColor)' \
-              'Foreground(m.ctx.Theme.SecondaryText)'
-        '';
-      });
     in
     {
       # home.packages lives in nebelhaus.roster now (gemini-cli, orbstack, bench —
@@ -887,59 +808,33 @@
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
       };
 
-      # ---- gh-dash: the review-queue half of the agent HUD ----
-      # The statusline/bar HUD answers "what are my panes doing"; this answers
-      # "what is waiting on ME". They read different worlds and neither replaces
-      # the other: holt reads the worktree registry (parked sessions, wip commits,
-      # unpushed branches), gh-dash reads GitHub (PRs, CI, reviews). A branch that
-      # was never pushed is invisible here, on purpose.
+      # ---- gh-dash: my half of it (see nebelhaus.hearth.ghDash above) ----
+      # Everything generic now lives in the rice, behind
+      # `nebelhaus.hearth.ghDash.enable` (set at the top of this file): the
+      # patched binary wearing the house mark, the nebelung `include:` in the
+      # active flavor/accent, the `catppuccin.gh-dash.enable = false` opt-out,
+      # the roster entry, and the ⌘G borderless zellij overlay. What stays here
+      # is the only part that could never be shipped to everyone — the sections
+      # below are MY org-wide review queue, plus the repo paths and keybindings
+      # that only mean something on this machine.
       #
-      # Declared here rather than in the rice because the sections below are MY
-      # org-wide review queue — and shipping those to
-      # everyone who installs the rice would be nonsense. The theming is the part
-      # that isn't personal, and that comes from nebelung via `include:` above.
-      # The one thing here that ISN'T personal is the patched logo (ghDashPkg):
-      # it's brand, not machine, and it belongs in the rice the day gh-dash
-      # becomes a rice-wired tool. It isn't one, because nothing but this file
-      # wires gh-dash at all — so moving it now would buy a rice option nobody
-      # else can use yet.
-      #
-      # The one exception to "everything installed lives in nebelhaus.roster":
-      # this module puts gh-dash in home.packages itself, and splitting the
-      # install from the config that only this module can write would buy a
-      # roster row and cost the coupling. `programs.gh.enable` is false here, so
-      # the module's gh-extension registration is a no-op — the manually
-      # installed `gh dash` extension keeps working and reads this same config
-      # file, and `gh-dash` is now on PATH from the store as well. Either entry
-      # point, one config.
-      # Hands off, catppuccin-nix. The rice runs `catppuccin.autoEnable = true`
-      # and opts OUT per tool for each one hearth themes by hand — gh-dash isn't
-      # on that list because nothing wired gh-dash before this. So the moment
-      # `programs.gh-dash.enable` went true, catppuccin-nix started writing a
-      # full stock-Mocha `theme.colors` block into settings, which sits in the
-      # INCLUDING file and therefore beats the nebelung block coming in through
-      # `include:`. The failure is silent and pretty — a dashboard in the right
-      # family of purples, in the wrong palette, with the accent ignored. Caught
-      # by reading the built config.yml, not the diff.
-      catppuccin.gh-dash.enable = false;
-
+      # `programs.gh.enable` is false here, so home-manager's gh-extension
+      # registration is a no-op — the manually installed `gh dash` extension
+      # keeps working and reads this same config file, and `gh-dash` is on PATH
+      # from the store as well. Either entry point, one config.
       programs.gh-dash = {
-        enable = true;
-
-        # The patched build — house mark in the accent, see ghDashPkg above.
-        package = ghDashPkg;
-
         settings = {
-          # Loaded first, so anything below wins over it. This is the whole
-          # `theme.colors.{text,background,border}` block, in the flavor +
-          # accent this machine is wearing.
-          include = [ ghDashTheme ];
-
           # Sections are tabs. Ordered by how often I actually look at them.
+          #
+          # `is:open`, NOT `is:unmerged`: unmerged means "not merged", which is
+          # true of every CLOSED-without-merging PR forever — so the three live
+          # tabs slowly filled with abandoned branches. `is:open` is open +
+          # draft and nothing else, which is exactly the working queue. `shipped`
+          # below is the only tab that looks at finished PRs.
           prSections = [
             {
               title = "open";
-              filters = "org:nebelhaus is:pr is:unmerged";
+              filters = "org:nebelhaus is:pr is:open";
             }
             # The two CI tabs, side by side, because together they ARE the merge
             # decision: `green` is the queue `/ship` can take, `red` is the queue
@@ -948,11 +843,11 @@
             # which is the point, that's the "come back in a minute" bucket.
             {
               title = "green";
-              filters = "org:nebelhaus is:pr is:unmerged status:success";
+              filters = "org:nebelhaus is:pr is:open status:success";
             }
             {
               title = "red";
-              filters = "org:nebelhaus is:pr is:unmerged status:failure";
+              filters = "org:nebelhaus is:pr is:open status:failure";
             }
             # One week of landings. `nowModify` is gh-dash's own template
             # function; GitHub's merged: qualifier wants the rendered date
