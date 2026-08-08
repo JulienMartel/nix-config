@@ -26,11 +26,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1786180180,
-        "narHash": "sha256-jnnNpiJDoma8IFz0q6O4aZqu6XF+qHAj9h0wrOWjkJE=",
+        "lastModified": 1786180914,
+        "narHash": "sha256-HT3WZqw/hTRNM6IB2B5PQYwdWAIDdxl4fEBq1CO1toE=",
         "owner": "nebelhaus",
         "repo": "holt",
-        "rev": "8422b523d2b7c7a9fb076eeeb5830cf661a86c79",
+        "rev": "520af23ea485a718ef59353a54977320bfd31fc9",
         "type": "github"
       },
       "original": {
@@ -73,11 +73,11 @@
         "pounce": "pounce"
       },
       "locked": {
-        "lastModified": 1786180236,
-        "narHash": "sha256-k8bpbQWqwCdMupqpiEvR20EO4r4WURH4z/Q6hZlQKUQ=",
+        "lastModified": 1786181087,
+        "narHash": "sha256-EGn682eJzA/EU3WUcPsit5DNBODS2AzBkJ5r3YsfMAk=",
         "owner": "nebelhaus",
         "repo": "nebelhaus",
-        "rev": "90dff89bf9e5245a522f0a2768f0f3413a04a8ca",
+        "rev": "935a974fb2236b35c579fc2d83d7e2d477e68151",
         "type": "github"
       },
       "original": {
@@ -217,11 +217,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1786102337,
-        "narHash": "sha256-MpwC903aCbORXVEbr2Ig6YiLKNjtT34x7I6Ch0LY3o8=",
+        "lastModified": 1786180756,
+        "narHash": "sha256-fCplLiJlZaBsuksbAAULbrabRc0UYSGtOBf2REfP3sk=",
         "owner": "nebelhaus",
         "repo": "pounce",
-        "rev": "12b670f9b6b5029b6edcf39fb1c0c64089960a11",
+        "rev": "75ff32a2b13ba305df12a71633b4e39edd0150eb",
         "type": "github"
       },
       "original": {
