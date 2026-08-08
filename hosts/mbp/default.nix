@@ -508,7 +508,7 @@
       stops. It does **not** close this pane or open a new one — I open and close
       my own panes (see "Don't drive my multiplexer" below). The current worktree
       isn't reaped here (you're still in it); it's cleaned up when I close the
-      pane myself (the `wt` remove hook) or by a later `wt reap`.
+      pane myself (the `holt` remove hook) or by a later `holt reap`.
     - When done, push the branch, open the PR, and — if I didn't say ship — tell
       me the PR link. The worktree dies with the pane; the branch + PR survive
       until merged.

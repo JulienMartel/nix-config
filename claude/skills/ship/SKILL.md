@@ -54,17 +54,17 @@ you've been told to land this, so open the PR for the safety, then merge it your
    If it's not mergeable (conflicts / non-fast-forward): `git fetch origin && git rebase
    origin/<main>`, push, retry. On conflicts you can't cleanly resolve, **stop and show
    them** — never force-push `<main>`. On the current worktree's own branch the *local*
-   branch delete may be skipped because you're standing on it — that's fine, the `wt`
+   branch delete may be skipped because you're standing on it — that's fine, the `holt`
    remove hook reaps the merged branch when the pane closes.
 
 6. **Clean up every worktree this session spun up** — in this repo or any other. A session
-   often hand-creates a *sibling* worktree (`git worktree add`) to do work that belongs in
+   often hand-creates a *sibling* worktree (`holt child <repo>`) to do work that belongs in
    another repo; those are NOT auto-reaped. For each one you created: make sure its branch
    is merged (open + merge its PR the same way), then remove it:
    ```bash
    git -C <that-repo> worktree remove <path>     # --force only if you've confirmed it's clean
    ```
-   `wt` (if on PATH) lists every agent worktree across all repos — use it to catch any you
+   `holt` (on PATH) lists every agent worktree across all repos — use it to catch any you
    forgot. Don't delete worktrees you didn't create.
 
 7. **Move the local `<main>` ref** so my next worktree forks from what just shipped:
@@ -100,5 +100,5 @@ you've been told to land this, so open the PR for the safety, then merge it your
    - **Only low-importance notes (≤ 2.5/5) and it's all settled — report and stop.** Leave
      the pane exactly where it is: I open and close my own panes. Don't spawn a pane, don't
      close this one. The current worktree isn't reaped here (you're still sitting in it) —
-     it's cleaned up when I close the pane myself (the `wt` remove hook) or by a later
-     `wt reap`. Don't wait on CI unless CI is what this thread was about.
+     it's cleaned up when I close the pane myself (the `holt` remove hook) or by a later
+     `holt reap`. Don't wait on CI unless CI is what this thread was about.
