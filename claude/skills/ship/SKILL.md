@@ -68,9 +68,8 @@ hunts the things that only bite **after** merge:
 | **Routing** | the change landed in the wrong repo or the wrong layer — a theme value in the consumer instead of the palette, machine-local config in a shared module. The repo's own routing table decides, and "it works here" is not a defence. |
 | **Docs drift** | a renamed/added option, flag, keybind or user-visible behavior with no matching edit in the docs source-of-truth, the reference pages, or the README. A thing a user can set and can't discover is a bug. |
 | **Atomicity** | a breaking rename split across PRs — the consumer edit and the thing it consumes must ride in the **same** PR, or `main` is broken in between. |
-| **Hotkey drift** | a new keybind colliding with an existing one across zellij / AeroSpace / pounce / macOS symbolic hotkeys. Collisions are silent: the loser just stops firing. |
 | **Raw worktree adds** | a raw `git worktree add` where `holt child` is required (a raw add skips the registry, so the PR goes invisible in the bar). |
-| **Blast radius** | the diff touches a tap/release artifact, moves a flake-input edge, or touches secrets or `~/.config/nix` identity. Any of those is ≥3/5 by definition and belongs in the PR body loudly. |
+| **Blast radius** | the diff touches a release artifact, moves a dependency/input pin, or touches secrets or machine identity. Any of those is ≥3/5 by definition and belongs in the PR body loudly. |
 | **PR body** | What/Why/Verify/Watch-out are actually filled in, and **Verify** is concrete and observable — a cold agent with only `gh pr view` must be able to run it. |
 
 Two properties that make this worth doing rather than ritual:

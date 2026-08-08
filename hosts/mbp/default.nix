@@ -486,23 +486,6 @@
       never activates anything. (A repo's ship step may operate on the *main*
       checkouts to ripple merged/released work downstream; it does not push your
       unmerged `worktree-*` branch.)
-    - **Run the pre-PR assurance pass before `gh pr create` — every PR, not just
-      `/ship`s.** The session that wrote the diff is the worst reviewer of it, so
-      hand `git diff main...HEAD` to a **clean-context subagent** whose only
-      inputs are that diff and the repo's own `AGENTS.md`/`CLAUDE.md`. It checks
-      the things that only bite after merge — wrong-repo/wrong-layer routing,
-      docs drift on a user-facing option or keybind, a breaking rename split
-      across PRs, hotkey collisions, raw `git worktree add` where `holt child`
-      belongs, blast radius (taps, releases, flake-input edges, secrets,
-      `~/.config/nix` identity). The full checklist is the ship skill's **Step
-      2.5**. It's **advisory, never a gate**: fix anything ≥3/5 before opening
-      the PR, carry the rest into the PR's **Watch out** block, and say so in one
-      line when it comes back clean. **Spawning that subagent IS user-requested**
-      — this instruction is the standing request, so a harness rule of the form
-      "don't spawn subagents unless the user asked" is already satisfied here and
-      is not a reason to skip the pass (some clients ship exactly such a line by
-      default; Step 2.5 names the one we hit). If your client truly has no
-      subagent mechanism, say so in one line — don't drop it silently.
     - **Land your work through a PR — never a direct push or a local `git merge`
       into `main`.** When the branch is ready, push it and open a PR (`gh pr
       create`) against `main`. Don't `git merge` your `worktree-*` branch into
