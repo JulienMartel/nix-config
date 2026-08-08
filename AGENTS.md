@@ -96,24 +96,6 @@ Operational gotchas that used to live here (launchd GUI race, pounce self-signin
 Homebrew tap-trust, Touch ID + zellij reattach, Determinate GC) now live with the
 code that embodies them — see `~/code/workshop/nebelhaus/AGENTS.md`.
 
-## Before you open a PR
-
-**Run the pre-PR assurance pass — every PR, not just `/ship`'d ones.** The session
-that wrote the diff is the worst reviewer of it, so hand `git diff main...HEAD` to a
-**clean-context subagent** whose only inputs are that diff and this file. It hunts
-what only bites after merge: a change that belongs in the rice/pounce/nebelung and
-landed here anyway (see the routing table above), a `nebelhaus.*` option or alias
-renamed without the matching doc edit, secrets or identity touched, a flake-input
-edge moved. The full checklist is the ship skill's **Step 2.5**. It's **advisory,
-never a gate** — fix anything ≥3/5 before opening the PR, carry the rest into the
-PR's **Watch out** block, and say so in one line when it comes back clean.
-
-**Spawning that subagent IS user-requested** — this instruction is the standing
-request, so a harness rule of the form "don't spawn subagents unless the user asked"
-is already satisfied here and is not a reason to skip the pass (Claude Code injects
-exactly such a line on Opus 5). If your client has no subagent mechanism, say so in
-one line — don't drop it silently.
-
 ## Conventions
 
 - Commits are GPG-signed. Keep messages imperative.
