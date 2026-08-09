@@ -1,10 +1,21 @@
 # mbp — Julien's machine. The personal layer on top of the nebelhaus rice:
 # identity, private apps, secrets. Everything else lives in the public modules.
 {
+  config,
   username,
   pkgs,
   ...
 }:
+
+let
+  # The one place the org's name is typed. `haus.git.org` (set below) drives
+  # every gh-dash section filter, rendered by the rice; this alias lets the
+  # repoPaths further down — this machine's checkout layout, which is not the
+  # rice's business — follow the same word instead of repeating it. Bound out
+  # here because inside `home-manager.users.<user>` the `config` in scope is
+  # home-manager's, which has no haus.* on it.
+  ghOrg = config.haus.git.org;
+in
 
 {
   # ---- identity ----
@@ -28,9 +39,22 @@
   # holt reads the worktree registry (parked sessions, wip commits, unpushed
   # branches), gh-dash reads GitHub (PRs, CI, reviews), and a branch that was
   # never pushed is invisible there on purpose. This one switch buys the patched
-  # binary, the nebelung theme, and ⌘G's borderless full-window overlay; the
-  # sections are mine and stay down in programs.gh-dash.settings below.
+  # binary, the nebelung theme, ⌘G's borderless full-window overlay — and, now
+  # that `git.org` is set, the tab strip itself: open / green / red / shipped,
+  # rendered by hearth from that one word. What stays mine down in
+  # programs.gh-dash.settings is only what describes THIS machine — where the
+  # checkouts live, which key runs holt, how wide the columns are.
   nebelhaus.hearth.ghDash.enable = true;
+  # The owner the review queue is about. One word, because an org rename would
+  # otherwise be four search filters and three repo globs — and it silently
+  # renders empty tabs rather than failing, which is the worst way for a
+  # dashboard to be wrong.
+  #
+  # `haus.`, not the `nebelhaus.` prefix the rest of this file still uses:
+  # modules/renamed.nix aliases the options that were RENAMED, and this one is
+  # new, so it only ever had the canonical name. The old prefix here would be
+  # asking for a deprecation shim that was never owed.
+  haus.git.org = "nebelhaus";
 
   # ---- coding agents ----
   # Codex on top of the rice's default pair. There is an authed account and a
@@ -813,10 +837,17 @@
       # `nebelhaus.hearth.ghDash.enable` (set at the top of this file): the
       # patched binary wearing the house mark, the nebelung `include:` in the
       # active flavor/accent, the `catppuccin.gh-dash.enable = false` opt-out,
-      # the roster entry, and the ⌘G borderless zellij overlay. What stays here
-      # is the only part that could never be shipped to everyone — the sections
-      # below are MY org-wide review queue, plus the repo paths and keybindings
-      # that only mean something on this machine.
+      # the roster entry, the ⌘G borderless zellij overlay — and, since
+      # `git.org` is set up there, the three section lists themselves. The tabs
+      # used to live here; they were never personal, only org-shaped, and
+      # hearth renders exactly the same four PR tabs from the owner name.
+      #
+      # What's left below is the part that genuinely could never be shipped to
+      # anyone else: where my checkouts sit on disk, which keys run which local
+      # command, and the column widths of a laptop screen. Any of the rice's
+      # lists can still be replaced wholesale from here — they're mkDefault —
+      # but replacing one means restating that whole list, since gh-dash reads
+      # a section list as a unit.
       #
       # `programs.gh.enable` is false here, so home-manager's gh-extension
       # registration is a no-op — the manually installed `gh dash` extension
@@ -824,73 +855,6 @@
       # from the store as well. Either entry point, one config.
       programs.gh-dash = {
         settings = {
-          # Sections are tabs. Ordered by how often I actually look at them.
-          #
-          # `is:open`, NOT `is:unmerged`: unmerged means "not merged", which is
-          # true of every CLOSED-without-merging PR forever — so the three live
-          # tabs slowly filled with abandoned branches. `is:open` is open +
-          # draft and nothing else, which is exactly the working queue. `shipped`
-          # below is the only tab that looks at finished PRs.
-          prSections = [
-            {
-              title = "open";
-              filters = "org:nebelhaus is:pr is:open";
-            }
-            # The two CI tabs, side by side, because together they ARE the merge
-            # decision: `green` is the queue `/ship` can take, `red` is the queue
-            # that needs a session reopened. `status:` reads the check state of a
-            # PR's head commit, so a branch still building shows in neither —
-            # which is the point, that's the "come back in a minute" bucket.
-            {
-              title = "green";
-              filters = "org:nebelhaus is:pr is:open status:success";
-            }
-            {
-              title = "red";
-              filters = "org:nebelhaus is:pr is:open status:failure";
-            }
-            # One week of landings. `nowModify` is gh-dash's own template
-            # function; GitHub's merged: qualifier wants the rendered date
-            # immediately after >=, with no spaces around the operator.
-            {
-              title = "shipped";
-              filters = ''is:pr is:merged org:nebelhaus merged:>={{ nowModify "-7d" }}'';
-              limit = 10;
-            }
-          ];
-
-          # I don't run an issue tracker; two tabs is already generous.
-          issuesSections = [
-            {
-              title = "mine";
-              filters = "is:open author:@me";
-            }
-            {
-              title = "assigned";
-              filters = "is:open assignee:@me";
-            }
-          ];
-
-          # gh-dash defaults to EIGHT notification tabs. Two.
-          #
-          # `is:unread` rather than an empty filter, even though the tab is
-          # already CALLED unread: with no filters gh-dash matches GitHub's own
-          # default and returns read notifications too (that's the
-          # `includeReadNotifications` default, which is `true`). An explicit
-          # `is:unread` overrides that setting for this section, so the tab count
-          # is a number of things I haven't seen — which is the only number worth
-          # putting in a tab.
-          notificationsSections = [
-            {
-              title = "unread";
-              filters = "is:unread";
-            }
-            {
-              title = "participating";
-              filters = "reason:participating";
-            }
-          ];
-
           defaults = {
             view = "prs";
             prsLimit = 20;
@@ -984,14 +948,22 @@
             }
           ];
 
-          # Exact keys beat the wildcard, so `workshop` and `.github` (checked
-          # out as org-profile) can sit next to the `nebelhaus/*` fallback that
-          # covers every other family repo — including ones that don't exist
-          # yet. Drives {{.RepoPath}} above and gh-dash's own checkout/diff.
+          # Where the owner's repos are checked out — the half of the queue the
+          # rice can't know, since it's a filesystem layout rather than a
+          # GitHub fact. Exact keys beat the wildcard, so `workshop` and
+          # `.github` (checked out as org-profile) can sit next to the
+          # `${ghOrg}/*` fallback that covers every other family repo,
+          # including ones that don't exist yet. Drives {{.RepoPath}} above and
+          # gh-dash's own checkout/diff.
+          #
+          # ghOrg, not a literal: these globs and the rice's section filters
+          # have to name the same owner or the tabs list PRs whose rows can't
+          # be opened locally, so they read one option (see the top of this
+          # file).
           repoPaths = {
-            "nebelhaus/*" = "${config.home.homeDirectory}/code/workshop/*";
-            "nebelhaus/workshop" = "${config.home.homeDirectory}/code/workshop";
-            "nebelhaus/.github" = "${config.home.homeDirectory}/code/workshop/org-profile";
+            "${ghOrg}/*" = "${config.home.homeDirectory}/code/workshop/*";
+            "${ghOrg}/workshop" = "${config.home.homeDirectory}/code/workshop";
+            "${ghOrg}/.github" = "${config.home.homeDirectory}/code/workshop/org-profile";
             "JulienMartel/nix-config" = "${config.home.homeDirectory}/.config/nix";
           };
 
