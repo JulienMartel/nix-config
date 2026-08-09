@@ -453,17 +453,17 @@ in
   haus.sill.battery.hideOver = 80;
   haus.sill.clock.mode = "compact";
 
-  # Keep both bars: the coupled workspace/front-app/leader side stays in the
-  # menu bar, while every right-side pill enabled above moves to the second bar
-  # at the bottom. Pinning the menu bar to `top` is load-bearing here: `auto`
-  # would put it on the bottom beside the second bar whenever the Mac is docked.
+  # Keep both bars: the coupled workspace/front-app/leader side plus clock and
+  # battery stay in the menu bar; media, hush and the personal controller/status
+  # pills move to the second bar at the bottom. Pinning the menu bar to `top` is
+  # load-bearing here: `auto` would put it on the bottom beside the second bar
+  # whenever the Mac is docked.
   haus.sill.position = "top";
   haus.sill.bottom = {
     enable = true;
     items = {
-      clock = true;
       media = true;
-      battery = true;
+      hush = true;
       agents = true;
       aiUsage = true;
       elgato = true;
