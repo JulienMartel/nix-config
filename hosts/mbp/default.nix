@@ -453,11 +453,23 @@ in
   haus.sill.battery.hideOver = 80;
   haus.sill.clock.mode = "compact";
 
-  # Bar follows the display: top on the built-in (tucked under the notch),
-  # bottom whenever an external is attached — i.e. bottom when docked to the
-  # Studio Display, top on the go. Flips live on dock/undock via sill's
-  # display_change hook; no rebuild needed to move it.
-  haus.sill.position = "auto";
+  # Keep both bars: the coupled workspace/front-app/leader side stays in the
+  # menu bar, while every right-side pill enabled above moves to the second bar
+  # at the bottom. Pinning the menu bar to `top` is load-bearing here: `auto`
+  # would put it on the bottom beside the second bar whenever the Mac is docked.
+  haus.sill.position = "top";
+  haus.sill.bottom = {
+    enable = true;
+    items = {
+      clock = true;
+      media = true;
+      battery = true;
+      agents = true;
+      aiUsage = true;
+      elgato = true;
+      caffeinate = true;
+    };
+  };
 
   # Claude Code's global memory (~/.claude/CLAUDE.md) — how I like to work across
   # every repo. Personal, so it lives here in the host; the rice just provides the
