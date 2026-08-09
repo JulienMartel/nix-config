@@ -38,8 +38,8 @@ pre-approved tool-call allowlist — machine-local permission state, not a proje
 rule — so it stays exactly where its client expects it, and other clients keep
 their own.
 
-**Also not here: the nebelhaus skill.** `~/.claude/skills/nebelhaus/` is
-installed by the rice (`nebelhaus.claude.skill`) and generated from the revision
+**Also not here: the `haus` skill.** `~/.claude/skills/haus/` is
+installed by the rice (`haus.claude.skill`) and generated from the revision
 this machine pins, so it can't drift from what's actually settable. It's outside
 this repo entirely — but the files are ordinary markdown, so read them whatever
 client you are.
