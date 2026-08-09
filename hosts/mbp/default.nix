@@ -532,7 +532,7 @@
     ## How I ship
 
     **Ship by default, sized to the change — but only in repos I own solo** (my personal
-    infra: nebelhaus family, qnap-mediastack, ~/.config/nix, and the like). In shared or
+    infra: the hausfold family, qnap-mediastack, ~/.config/nix, and the like). In shared or
     client repos, default to caution: prepare the change, then ask before pushing.
 
     In a solo repo:
@@ -549,8 +549,8 @@
     ## Repos nested inside other repos
 
     Some of my solo repos live *inside* another checkout — e.g. the whole
-    nebelhaus family (`nebelung`, `pounce`, `nebelhaus`, …) sits under the
-    `nebelhaus` workshop dir, whose `.gitignore` lists each child. **That
+    hausfold family (`nebelung`, `pounce`, `nebelhaus`, …) sits under the
+    `~/code/workshop` dir, whose `.gitignore` lists each child. **That
     nesting is purely to keep the outer tree clean; each child is a full,
     independent repo I own solo.** So:
 
