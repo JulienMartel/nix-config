@@ -19,20 +19,20 @@ in
 
 {
   # ---- identity ----
-  nebelhaus.git.name = "Julien Martel";
-  nebelhaus.git.email = "julienbmartel@gmail.com";
-  nebelhaus.git.signingKey = "6F7BD6F43A7C1420";
+  haus.git.name = "Julien Martel";
+  haus.git.email = "julienbmartel@gmail.com";
+  haus.git.signingKey = "6F7BD6F43A7C1420";
   # Select the Developer ID by SHA so the generated launch-agent script does not
   # contain the certificate holder's legal name. The resulting Developer ID
   # signature still anchors its designated requirement to the stable team OU.
   # Refresh with `security find-identity -v -p codesigning` after cert renewal.
-  nebelhaus.pounce.signingIdentity = "4D2693E75A214534ACE299861AE7FC3086573136";
+  haus.pounce.signingIdentity = "4D2693E75A214534ACE299861AE7FC3086573136";
 
   # Editor: Helix (hx) everywhere. $EDITOR/$VISUAL are hx by default; the "Nix
   # Config" palette/bar action opens ~/.config/nix in a new Helix terminal tab
   # (hearth.guiEditor now defaults to "hx"), and the file-association hijack
   # routes double-clicked json/md/ts/… to Helix too. No Cursor anywhere.
-  nebelhaus.hearth.hijackFileAssociations = true;
+  haus.hearth.hijackFileAssociations = true;
 
   # gh-dash: the review-queue half of the agent HUD. The statusline/bar HUD
   # answers "what are my panes doing"; this answers "what is waiting on ME" —
@@ -44,17 +44,13 @@ in
   # rendered by hearth from that one word. What stays mine down in
   # programs.gh-dash.settings is only what describes THIS machine — where the
   # checkouts live, which key runs holt, how wide the columns are.
-  nebelhaus.hearth.ghDash.enable = true;
+  haus.hearth.ghDash.enable = true;
   # The owner the review queue is about. One word, because an org rename would
   # otherwise be four search filters and three repo globs — and it silently
   # renders empty tabs rather than failing, which is the worst way for a
   # dashboard to be wrong.
   #
-  # `haus.`, not the `nebelhaus.` prefix the rest of this file still uses:
-  # modules/renamed.nix aliases the options that were RENAMED, and this one is
-  # new, so it only ever had the canonical name. The old prefix here would be
-  # asking for a deprecation shim that was never owed.
-  haus.git.org = "nebelhaus";
+  haus.git.org = "hausfold";
 
   # ---- coding agents ----
   # Codex on top of the rice's default pair. There is an authed account and a
@@ -63,19 +59,19 @@ in
   # `agents.default = "codex"` a dead pane rather than an error. Listing it
   # here is what installs it; `agents.default` is asserted to be a member, so
   # switching the default is now a rebuild-time decision, not a discovery.
-  nebelhaus.agents.clients = [
+  haus.agents.clients = [
     "claude"
     "codex"
     "opencode"
   ];
-  nebelhaus.agents.default = "claude";
+  haus.agents.default = "claude";
 
   # ---- text expansion ----
-  # The old Raycast "@@" snippet, now a rice option (nebelhaus.snippets → espanso
+  # The old Raycast "@@" snippet, now a rice option (haus.snippets → espanso
   # via the Espanso.app cask). Runs the SIGNED app bundle, not a nix-store binary,
   # so the one-time Accessibility grant survives reboots + nixpkgs bumps and the
   # espanso troubleshooting window stops popping up at login.
-  nebelhaus.snippets = {
+  haus.snippets = {
     enable = true;
     matches = [
       {
@@ -94,10 +90,10 @@ in
   # palette itself is unchanged; this just picks which whiskers hue everything
   # keys off. What it does and doesn't recolour is pinned by the rice's
   # `accent-reach` check, not by memory.
-  nebelhaus.theme.accent = "pink";
+  haus.theme.accent = "pink";
 
   # The "orbits" Nebelung wallpaper (palette rings on a dark base).
-  nebelhaus.theme.wallpaper = "orbits";
+  haus.theme.wallpaper = "orbits";
 
   # Stylus, force-installed into Zen through Firefox's enterprise-policy file.
   # This one line replaces the hand-rolled policies.json + announce-activation
@@ -108,8 +104,8 @@ in
   # Catppuccin userstyles living inside the extension, whose accent var
   # defaults to mauve and which no stylesheet can reach. Importing stays a
   # click (Stylus ▸ Manage ▸ Import); activation says so when there's a new
-  # bundle. See nebelhaus#208.
-  nebelhaus.zen.extensions.stylus = { };
+  # bundle. See hausfold#208.
+  haus.zen.extensions.stylus = { };
 
   # ---- desktop ----
   # No icons on the desktop. The files stay in ~/Desktop — this only stops Finder
@@ -129,7 +125,7 @@ in
 
   # Obsidian stores its theme per vault. Keep the notes vault on the full
   # Nebelung theme and retire the old palette-only CSS snippet.
-  nebelhaus.hearth.obsidianVaults = [
+  haus.hearth.obsidianVaults = [
     "Library/Mobile Documents/iCloud~md~obsidian/Documents/notes"
   ];
 
@@ -145,14 +141,14 @@ in
   #   cask / brew / package / appStoreId → where it comes from
   #
   # Which AeroSpace workspace an app owns is no longer a field here at all —
-  # nebelhaus.workspaces below claims it, by naming the app in `apps`
+  # haus.workspaces below claims it, by naming the app in `apps`
   # (notes/options-roadmap.md §5.4 in the workshop repo: promoted workspaces
   # to a real option so one can hold more than one app, and inverted
   # ownership so the workspace says so instead of the app).
   #
   # `order` only sorts the launcher half (cheatsheet rows, pill row), so the
   # install-only entries below leave it at its default.
-  nebelhaus.roster = {
+  haus.roster = {
     # ---- the launcher ----
     # ghostty isn't here: den declares its name + cask, prowl its key +
     # workspace membership + icon + label, and every one of those defaults is
@@ -187,7 +183,7 @@ in
       label = "Slack";
       cask = "slack";
     };
-    # No trill: the rice made nebelhaus.trill.enable opt-in on 2026-08-04 (its
+    # No trill: the rice made haus.trill.enable opt-in on 2026-08-04 (its
     # development is frozen) and this machine took the offer. `m` / workspace M
     # are free again — the roster entry was only trill's tiling half, so it went
     # with the app. Restoring it means both: the option true AND this entry back.
@@ -312,7 +308,7 @@ in
     gogcli = {
       brew = "gogcli";
     };
-    # The CLI only — nebelhaus.appStore.install stays off and masApps is
+    # The CLI only — haus.appStore.install stays off and masApps is
     # intentionally unused (see the note there), so this is for `mas list` /
     # `mas upgrade` by hand.
     mas = {
@@ -323,7 +319,7 @@ in
       package = pkgs.gemini-cli-bin;
     };
     # Claude Code is deliberately NOT here — the rice installs it from
-    # nebelhaus.agents.clients, and the overlay below is what makes that copy
+    # haus.agents.clients, and the overlay below is what makes that copy
     # the patched one. A second derivation shipping bin/claude would collide in
     # the same profile.
 
@@ -350,10 +346,10 @@ in
   # key. One app per workspace here, same as before the schema moved this off
   # the roster — nothing on this machine wants a role/project workspace with
   # several apps yet, but the shape is there when something does (see
-  # nebelhaus.workspaces' own docs). Every key below matches the app's own
+  # haus.workspaces' own docs). Every key below matches the app's own
   # roster `key`, uppercased for the workspace id, same convention `add-app.sh`
   # uses.
-  nebelhaus.workspaces = {
+  haus.workspaces = {
     N = {
       key = "n";
       icon = ":obsidian:";
@@ -396,7 +392,7 @@ in
   # Entry panel. The app roster above maps letters → open an app; this maps a key
   # → a command, for actions that aren't "launch an app". `enter` is free in launch
   # mode (the rice asserts it doesn't collide with a roster letter or a built-in).
-  nebelhaus.keys.leaderExtras = [
+  haus.keys.leaderExtras = [
     {
       key = "enter";
       command = "osascript -e 'tell application \"Things3\" to show quick entry panel'";
@@ -408,7 +404,7 @@ in
   # cask/brew not declared above. Every app I keep is now listed, so the only
   # thing this reaps is genuine cruft. Adding an undeclared app by hand and
   # forgetting to list it means it's gone on the next rebuild — that's the deal.
-  nebelhaus.homebrew.cleanup = "zap";
+  haus.homebrew.cleanup = "zap";
 
   # Keep declared casks current on THIS machine (rice default stays off, so the
   # rest of the family keeps reproducible rebuilds). upgrade → a rebuild upgrades
@@ -417,8 +413,8 @@ in
   # casks track upstream latest instead of freezing at whatever brew first
   # installed. Tradeoff I'm accepting here: my rebuilds chase upstream latest
   # and aren't perfectly reproducible.
-  nebelhaus.homebrew.upgrade = true;
-  nebelhaus.homebrew.autoUpdate = true;
+  haus.homebrew.upgrade = true;
+  haus.homebrew.autoUpdate = true;
 
   # Install casks without the com.apple.quarantine xattr. These are notarized
   # apps I curated in homebrew.casks; the quarantine flag only gates a one-time
@@ -445,7 +441,7 @@ in
   # points at `claude-statusline`), the Elgato key light toggle, and the
   # caffeinate keep-awake controller; switch off the default-on weather and
   # wifi core pills.
-  nebelhaus.sill.items = {
+  haus.sill.items = {
     agents = true;
     aiUsage = true;
     elgato = true;
@@ -454,20 +450,20 @@ in
     wifi = false;
   };
 
-  nebelhaus.sill.battery.hideOver = 80;
-  nebelhaus.sill.clock.mode = "compact";
+  haus.sill.battery.hideOver = 80;
+  haus.sill.clock.mode = "compact";
 
   # Bar follows the display: top on the built-in (tucked under the notch),
   # bottom whenever an external is attached — i.e. bottom when docked to the
   # Studio Display, top on the go. Flips live on dock/undock via sill's
   # display_change hook; no rebuild needed to move it.
-  nebelhaus.sill.position = "auto";
+  haus.sill.position = "auto";
 
   # Claude Code's global memory (~/.claude/CLAUDE.md) — how I like to work across
   # every repo. Personal, so it lives here in the host; the rice just provides the
-  # nebelhaus.claude.globalMd plumbing (hearth writes the file when set). Keep it
+  # haus.claude.globalMd plumbing (hearth writes the file when set). Keep it
   # short and universal — repo-specific rules belong in each project's own CLAUDE.md.
-  nebelhaus.claude.globalMd = ''
+  haus.claude.globalMd = ''
     # CLAUDE.md — global
 
     Personal defaults for how I (julienmartel) like to work, across every repo. Kept
@@ -623,7 +619,7 @@ in
   '';
 
   # ---- Claude Code, patched, as an OVERLAY rather than a package ----
-  # The rice installs the clients named in `nebelhaus.agents.clients` and
+  # The rice installs the clients named in `haus.agents.clients` and
   # references `pkgs.claude-code` to do it. So this cannot be a second
   # derivation in home.packages, where it used to live: two builds shipping
   # `bin/claude` collide in one profile. Redefining `claude-code` itself means
@@ -705,11 +701,11 @@ in
   homebrew.taps = [ "pear-devs/pear" ];
 
   # No homebrew.casks / homebrew.brews / home.packages list down here any more:
-  # every one of those entries moved into nebelhaus.roster above, which is the
+  # every one of those entries moved into haus.roster above, which is the
   # point of the change. The rice's own modules still contribute their casks
   # (ghostty, aerospace, sketchybar, espanso) — those aren't mine to list.
 
-  # The App Store stays manual on this machine (nebelhaus.appStore.install is
+  # The App Store stays manual on this machine (haus.appStore.install is
   # off by default). What that costs, precisely, having checked it against
   # mas 7 rather than assuming:
   #   • mas has no `signin` — sign in once in App Store.app, per machine.
@@ -774,7 +770,7 @@ in
 
     in
     {
-      # home.packages lives in nebelhaus.roster now (gemini-cli, orbstack, bench —
+      # home.packages lives in haus.roster now (gemini-cli, orbstack, bench —
       # `scope = "user"` puts them right back here). One list for what this
       # machine has, whether it's a cask, a formula or a Nixpkgs package.
 
@@ -798,7 +794,7 @@ in
       # `home.file."…".source` attr-paths in this file.
       #
       # Declarative on purpose. This dir spent months holding these same eight
-      # scripts as HAND-MADE symlinks into ~/code/nebelhaus/pounce, and all
+      # scripts as HAND-MADE symlinks into ~/code/workshop/pounce, and all
       # eight went dangling the day that checkout moved to ~/code/workshop —
       # silently, because a command whose file won't read simply doesn't appear
       # in the palette. Nothing announced the loss; the rows just stopped being
@@ -832,7 +828,7 @@ in
         ' "$HOME/.config/pounce/commands"
       '';
 
-      # Text expansion moved up to nebelhaus.snippets (darwin level) — the rice
+      # Text expansion moved up to haus.snippets (darwin level) — the rice
       # option now owns espanso, via the signed Espanso.app cask.
 
       programs.git.settings = {
@@ -840,9 +836,9 @@ in
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
       };
 
-      # ---- gh-dash: my half of it (see nebelhaus.hearth.ghDash above) ----
+      # ---- gh-dash: my half of it (see haus.hearth.ghDash above) ----
       # Everything generic now lives in the rice, behind
-      # `nebelhaus.hearth.ghDash.enable` (set at the top of this file): the
+      # `haus.hearth.ghDash.enable` (set at the top of this file): the
       # patched binary wearing the house mark, the nebelung `include:` in the
       # active flavor/accent, the `catppuccin.gh-dash.enable = false` opt-out,
       # the roster entry, the ⌘G borderless zellij overlay — and, since
@@ -1000,7 +996,7 @@ in
 
       # Claude Code — my personal "brief" answer-shape skill: verdict first, ≤5
       # anchored steps, escalate only at ≥3/5 with a recommendation + reversal cost.
-      # The stanza in nebelhaus.claude.globalMd above is what makes it load every
+      # The stanza in haus.claude.globalMd above is what makes it load every
       # session; this just puts the skill on disk. Symlinked OUT of the nix store
       # (mkOutOfStoreSymlink) so editing SKILL.md is live in the next pane with no
       # rebuild — its tables (time estimates, the always-≥3/5 list) get tuned often.
@@ -1056,7 +1052,7 @@ in
       #    `haus rebuild` would have quietly put frozen `wt` back in the loop.
       #    Note the subcommand differs — `holt hook create`, not `holt create`.
       #  • UserPromptSubmit/Notification/Stop/SessionEnd: feed the `agents` bar
-      #    paw (nebelhaus.sill.plugins) — each fires agents-hook.sh from inside the
+      #    paw (haus.sill.plugins) — each fires agents-hook.sh from inside the
       #    agent's pane, self-reporting its state (working/waiting/idle) + subscribe
       #    target. Personal because it points at the sketchybar plugin path.
       # All of it lives in the host, NOT the generic rice (the rice's pathless

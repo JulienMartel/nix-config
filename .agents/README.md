@@ -14,7 +14,7 @@ Corollary: never "fix" a stale pointer by copying the current text into it.
 
 The family-wide rationale — the four kinds of agent config, how to add a new
 harness — is written once, in the workshop:
-[`nebelhaus/workshop` → `.agents/README.md`](https://github.com/nebelhaus/workshop/blob/main/.agents/README.md).
+[`hausfold/workshop` → `.agents/README.md`](https://github.com/hausfold/workshop/blob/main/.agents/README.md).
 The table below is only what's wired in *this* repo.
 
 | Path | Read by | What it actually is |

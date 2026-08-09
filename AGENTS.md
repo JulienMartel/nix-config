@@ -2,7 +2,7 @@
 
 Personal machine config for one Apple Silicon Mac (host `mbp`, user `julienmartel`).
 
-This repo is **thin**: it consumes the public [nebelhaus](https://github.com/nebelhaus/nebelhaus)
+This repo is **thin**: it consumes the public [nebelhaus](https://github.com/hausfold/hausfold)
 rice and adds only what's personal. The actual system/shell config lives in the
 public modules, not here.
 
@@ -17,11 +17,11 @@ which tool reads which file is [`.agents/README.md`](./.agents/README.md).
 - `hosts/mbp/default.nix` — the personal layer: identity, private apps, secrets.
 
 The rice itself lives in sibling repos (checked out under `~/code/workshop/`,
-the [workshop](https://github.com/nebelhaus/workshop)):
-- **[nebelhaus](https://github.com/nebelhaus/nebelhaus)** — the flake + modules
+the [workshop](https://github.com/hausfold/workshop)):
+- **[nebelhaus](https://github.com/hausfold/hausfold)** — the flake + modules
   (`den` `hearth` `prowl` `sill` `collar` `pounce`). System, shell, everything.
-- **[pounce](https://github.com/nebelhaus/pounce)** — the command-palette app.
-- **[nebelung](https://github.com/nebelhaus/nebelung)** — the theme.
+- **[pounce](https://github.com/hausfold/pounce)** — the command-palette app.
+- **[nebelung](https://github.com/hausfold/nebelung)** — the theme.
 
 The workshop's `bench` CLI (aliased in the shell; `bench` was formerly named
 `haus`) drives the cross-repo flow: `bench status` (what's stale where),
@@ -39,14 +39,14 @@ identity, secrets, host tweaks. The rice itself lives elsewhere.
 | Want to change… | Repo |
 |---|---|
 | this machine's apps / identity / secrets / host tweaks | `~/.config/nix` ← **you are here** |
-| the rice: macOS defaults, tiling (prowl), bar (sill), shell (hearth), security (collar) | `~/code/workshop/nebelhaus` |
+| the rice: macOS defaults, tiling (prowl), bar (sill), shell (hearth), security (collar) | `~/code/workshop/hausfold` |
 | the pounce palette app or its commands | `~/code/workshop/pounce` |
 | colors / the theme palette | `~/code/workshop/nebelung` |
 
 > **Whatever agent you are, enforce this.** If a request targets a different repo
 > than the one whose files you're in, STOP and say so before editing — e.g.
 > "That's a bar tweak; it lives in the rice at
-> `~/code/workshop/nebelhaus/modules/sill`. Want me to switch to that repo?"
+> `~/code/workshop/hausfold/modules/sill`. Want me to switch to that repo?"
 > Don't make the change in the wrong place. After the owning repo is edited +
 > pushed, the consumer here pulls it via `nix flake update <input>` + rebuild.
 
@@ -64,9 +64,9 @@ errors are verbose; read from the *bottom* up for the actual cause.
 | You're changing…                                   | Do this |
 |----------------------------------------------------|---------|
 | A personal app (cask/brew), for this machine only  | `hosts/mbp/default.nix` → `homebrew.casks`/`brews` |
-| Your identity (git name/email/signing, pounce cert)| `hosts/mbp/default.nix` → `nebelhaus.git.*` / `nebelhaus.pounce.signingIdentity` |
+| Your identity (git name/email/signing, pounce cert)| `hosts/mbp/default.nix` → `haus.git.*` / `haus.pounce.signingIdentity` |
 | A personal package / secret / private alias        | `hosts/mbp/default.nix` → `home-manager.users.${username}` |
-| **The rice** (system defaults, WM, bar, shell, theming) | edit the module in `~/code/workshop/nebelhaus`, test with `bench try`, commit, then `bench ship` |
+| **The rice** (system defaults, WM, bar, shell, theming) | edit the module in `~/code/workshop/hausfold`, test with `bench try`, commit, then `bench ship` |
 | **Pounce** (the app or its commands)               | edit `~/code/workshop/pounce`, test with `bench try` (or `rebuild-pounce`), commit, then `bench ship` |
 
 To pull the latest rice + theme + pounce: `haus update` (the rice CLI: pulls
@@ -76,7 +76,7 @@ rebuild.
 ## Theme / colors
 
 Colors aren't defined here — the source of truth is the
-[nebelung](https://github.com/nebelhaus/nebelung) flake (whiskers palette +
+[nebelung](https://github.com/hausfold/nebelung) flake (whiskers palette +
 `name → #hex` map), which `nebelhaus` consumes to theme every tool. One palette
 edit re-colors everything at once. To recolor: edit the palette in
 `~/code/workshop/nebelung`, judge it with `bench try switch` (no pushing), then
@@ -94,7 +94,7 @@ uncommitted pounce edits. A plain `darwin-rebuild` uses the pinned GitHub input
 
 Operational gotchas that used to live here (launchd GUI race, pounce self-signing,
 Homebrew tap-trust, Touch ID + zellij reattach, Determinate GC) now live with the
-code that embodies them — see `~/code/workshop/nebelhaus/AGENTS.md`.
+code that embodies them — see `~/code/workshop/hausfold/AGENTS.md`.
 
 ## Conventions
 

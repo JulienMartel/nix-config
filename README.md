@@ -1,7 +1,7 @@
 # nix-config
 
 Personal machine config for one Apple Silicon Mac (host `mbp`). This repo is a
-**thin consumer** of the public [nebelhaus](https://github.com/nebelhaus/nebelhaus)
+**thin consumer** of the public [nebelhaus](https://github.com/hausfold/hausfold)
 rice — it pulls the whole system + shell from there and adds only what's personal.
 
 > Working on this config? See [`CLAUDE.md`](./CLAUDE.md).
@@ -52,7 +52,7 @@ darwin-rebuild --rollback
 ```
 
 To change the rice itself (not just this machine), work in the
-[workshop](https://github.com/nebelhaus/workshop) at `~/code/workshop`: edit
+[workshop](https://github.com/hausfold/workshop) at `~/code/workshop`: edit
 the module repos there, `bench try` to test against the local checkouts without
 pushing, then `bench ship` to push and ripple the lock updates back here.
 (`bench` is the workshop's cross-repo CLI — formerly named `haus`, which now
