@@ -120,6 +120,13 @@ in
   # nothing to override — plain assignment.
   system.defaults.finder.CreateDesktop = false;
 
+  # ---- trackpad ----
+  # No tap-to-click — a physical press is the only click. Tapping fires stray
+  # clicks while a palm rests on the pad mid-type. Both keys are needed: the
+  # built-in pad reads AppleMultitouchTrackpad, an external Magic Trackpad reads
+  # the Bluetooth domain, and nix-darwin's `trackpad.*` writes both.
+  system.defaults.trackpad.Clicking = false;
+
   # Obsidian stores its theme per vault. Keep the notes vault on the full
   # Nebelung theme and retire the old palette-only CSS snippet.
   nebelhaus.hearth.obsidianVaults = [
