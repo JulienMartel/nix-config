@@ -75,14 +75,14 @@
       "locked": {
         "lastModified": 1786278236,
         "narHash": "sha256-YI/6M7kSx2zOPK9Ql/FZGSWhvNXop6b86HlVu7JvW6E=",
-        "owner": "nebelhaus",
-        "repo": "nebelhaus",
+        "owner": "hausfold",
+        "repo": "hausfold",
         "rev": "765275ee73264d300fa7e0b088d506be5e90d96b",
         "type": "github"
       },
       "original": {
-        "owner": "nebelhaus",
-        "repo": "nebelhaus",
+        "owner": "hausfold",
+        "repo": "hausfold",
         "type": "github"
       }
     },
