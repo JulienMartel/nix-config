@@ -473,8 +473,9 @@ in
     whole session: verdict first, ≤5 anchored steps, and escalate to me only at ≥3/5
     (my usual bar) with a recommendation and a reversal cost. It governs code work,
     research, and anything I paste. Say "drop brief" / "full mode" to turn it off. The
-    skill itself lives at `~/.claude/skills/brief/SKILL.md`, a symlink into the store —
-    edit `~/.config/nix/claude/skills/brief/SKILL.md` and `haus rebuild` to apply.
+    skill itself lives at `~/.claude/skills/brief/SKILL.md`, an OUT-of-store symlink —
+    edit `~/.config/nix/claude/skills/brief/SKILL.md` and the next pane has it, no
+    rebuild. Same for the other three host-installed skills: `ship`, `park`, `handoff`.
 
     ## Working in a git worktree
 
@@ -1020,6 +1021,17 @@ in
       # an already-pushed wip commit). Same out-of-store symlink pattern as above.
       home.file.".claude/skills/park".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
+
+      # Claude Code — "/handoff": turn a paste (or this session) into a
+      # self-contained prompt for a COLD agent, put it on the clipboard, and
+      # print it between begin/end markers so it's findable in a wall of
+      # transcript. Lives here rather than in the rice because it's about how I
+      # move work between panes, not about the desktop the rice builds — same
+      # bucket as brief/ship/park. Out-of-store symlink for the same reason
+      # again: the prompt template is the part that gets tuned, and tuning it
+      # shouldn't cost a rebuild.
+      home.file.".claude/skills/handoff".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/handoff";
 
       # Claude Code — reinstate our hooks in settings.json on every rebuild.
       #  • WorktreeCreate/WorktreeRemove: `Super a` / ⌘A (rice: hearth/zellij)
