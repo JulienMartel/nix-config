@@ -435,14 +435,14 @@ in
   # only surfaced the first time a cask was added.
   homebrew.onActivation.extraEnv.HOMEBREW_CASK_OPTS = "--no-quarantine";
 
-  # Every pill sill offers, all on: the agent-pane status paw (fed by the Claude
+  # Nearly every pill sill offers: the agent-pane status paw (fed by the Claude
   # hooks wired below), the AI usage gauge (5-hour · weekly, fed by the same
   # statusLine the rice already points at `claude-statusline`), the Elgato key
-  # light toggle, the caffeinate keep-awake controller, the cpu/memory/volume
-  # readouts, the next-event calendar and the Harvest timer — plus the core
-  # pills, which default on. Omitted on purpose: `claudeUsage`, a deprecated
-  # alias for `aiUsage`, and `hush`, which rides `haus.hush.enable` instead of
-  # this set.
+  # light toggle, the caffeinate keep-awake controller, the cpu/memory readouts
+  # and the next-event calendar — plus the core pills, which default on.
+  # Left off deliberately: `wifi` (the menu bar's own is enough), `volume` (the
+  # HUD already says it) and `harvest`; `claudeUsage`, a deprecated alias for
+  # `aiUsage`; and `hush`, which rides `haus.hush.enable` instead of this set.
   haus.sill.items = {
     agents = true;
     aiUsage = true;
@@ -450,19 +450,17 @@ in
     caffeinate = true;
     cpu = true;
     memory = true;
-    volume = true;
     calendar = true;
-    harvest = true;
     weather = true;
-    wifi = true;
+    wifi = false;
   };
 
   haus.sill.battery.hideOver = 80;
   haus.sill.clock.mode = "compact";
 
   # Keep both bars: the coupled workspace/front-app/leader side plus clock,
-  # battery and the readouts (weather, wifi, cpu, memory, volume, calendar,
-  # harvest) stay in the menu bar; media, hush and the personal
+  # battery and the readouts (weather, cpu, memory, calendar) stay in the
+  # menu bar; media, hush and the personal
   # controller/status pills move to the second bar at the bottom. Pinning the
   # menu bar to `top` is load-bearing here: `auto` would put it on the bottom
   # beside the second bar whenever the Mac is docked.
