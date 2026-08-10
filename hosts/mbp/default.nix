@@ -523,6 +523,14 @@ in
   haus.sill.battery.hideOver = 80;
   haus.sill.clock.mode = "compact";
 
+  # The far-left logo pill. Everything about it is left at its default — the
+  # solid house glyph at 20pt, wearing haus.theme.accent (pink, above), the
+  # health colours, and the six-accent hover sweep — except the upstream check,
+  # which is off by default because it is the one part of that pill that leaves
+  # the machine. This machine tracks the rice it is built from, so a yellow pill
+  # saying "haus update" is exactly the reminder I want.
+  haus.sill.logo.updateCheck = true;
+
   # Keep both bars: the coupled workspace/front-app/leader side plus clock,
   # battery and the calendar stay in the menu bar; everything else moves to the
   # second bar at the bottom. Pinning the menu bar to `top` is load-bearing
