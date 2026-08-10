@@ -28,6 +28,49 @@ in
   # Refresh with `security find-identity -v -p codesigning` after cert renewal.
   haus.pounce.signingIdentity = "4D2693E75A214534ACE299861AE7FC3086573136";
 
+  # Windows-style "closing the last window closes the program" — macOS keeps a
+  # windowless app running, and on this machine that is always a ⌘Q I forgot.
+  # It's the same Quit event ⌘Q sends, so unsaved work still puts its sheet up.
+  #
+  # `exclude` REPLACES pounce's default rather than extending it, so Finder is
+  # listed here explicitly — quit it and the desktop blinks out while it
+  # relaunches. The rest are the apps on THIS Mac that keep doing real work with
+  # no window open, which is the one case where "no windows" doesn't mean "done
+  # with it":
+  #
+  #   OrbStack     the Docker case — closing the dashboard would stop the VM and
+  #                every container in it
+  #   ProtonVPN    the tunnel outlives its window; quitting drops it
+  #   Chrome       windowless is a resting state, not an exit: downloads,
+  #                extensions, and the browser-automation session an agent drives
+  #   Notion Cal   lives in the menu bar for the next meeting and its alerts
+  #   Slack        kept running for notifications, not for its window
+  #   Legcord      ditto (Discord)
+  #   ChatGPT      its global hotkey dies with it
+  #   Cap, Loom    an upload finishing after the recording window closed
+  #
+  # Only .regular apps are candidates at all — pounce's census walks those and
+  # skips accessory ones — so AeroSpace, Espanso, Dropover, Elgato, perch and
+  # pounce itself need no entry. Tailscale is accessory today too and is listed
+  # anyway: that's upstream's packaging choice, not a promise, and dropping the
+  # mesh would be a bad way to find out it changed.
+  haus.pounce.autoQuit = {
+    enable = true;
+    exclude = [
+      "com.apple.finder"
+      "dev.kdrag0n.MacVirt"
+      "ch.protonvpn.mac"
+      "io.tailscale.ipn.macsys"
+      "com.google.Chrome"
+      "com.cron.electron"
+      "com.tinyspeck.slackmacgap"
+      "app.legcord.Legcord"
+      "com.openai.codex"
+      "so.cap.desktop"
+      "com.loom.desktop"
+    ];
+  };
+
   # Editor: Helix (hx) everywhere. $EDITOR/$VISUAL are hx by default; the "Nix
   # Config" palette/bar action opens ~/.config/nix in a new Helix terminal tab
   # (hearth.guiEditor now defaults to "hx"), and the file-association hijack
