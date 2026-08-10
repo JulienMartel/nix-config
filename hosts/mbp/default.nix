@@ -612,6 +612,19 @@ in
       never activates anything. (A repo's ship step may operate on the *main*
       checkouts to ripple merged/released work downstream; it does not push your
       unmerged `worktree-*` branch.)
+    - **Don't sync with main unless you have to — and when you do, rebase.**
+      GitHub merges a PR that's merely *behind* main; only a genuine conflict
+      forces a sync, so most branches never need one. When one does: `git
+      rebase origin/main`, then force-push. Rebase replays *your* commits onto
+      main's tip — main's commits become the new base and are never re-resolved
+      — so the cost is one resolution per commit on YOUR branch, not per commit
+      on main; with my small PRs that's usually one. My `worktree-*` branches
+      are single-agent and nobody bases on them, so rewriting them is free:
+      "never rebase published history" doesn't apply here. Never `git merge
+      origin/main` into a branch — it puts commits I didn't write in my PR's
+      commit list. `flake.lock` is never hand-merged either way: take main's
+      wholesale (`git checkout --theirs flake.lock`), then re-run `nix flake
+      update <input>` if the branch genuinely needed a newer pin.
     - **Land your work through a PR — never a direct push or a local `git merge`
       into `main`.** When the branch is ready, push it and open a PR (`gh pr
       create`) against `main`. Don't `git merge` your `worktree-*` branch into
