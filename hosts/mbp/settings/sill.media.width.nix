@@ -3,5 +3,5 @@
 { lib, ... }:
 
 {
-  haus.sill.media.width = lib.mkForce (builtins.fromJSON "60");
+  haus.sill.media.width = lib.mkForce (builtins.fromJSON "90");
 }
