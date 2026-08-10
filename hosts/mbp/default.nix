@@ -107,6 +107,26 @@ in
   # bundle. See hausfold#208.
   haus.zen.extensions.stylus = { };
 
+  # ---- motion ----
+  # Snappy macOS: the Dock's slide and Mission Control's zoom shortened, the
+  # launch bounce gone, minimise scaling instead of the genie, and AppKit's
+  # window open/close fade off — five keys the rice leaves alone by default
+  # (hausfold#286). This is the opt-in.
+  #
+  # NOT `System Settings ▸ Accessibility ▸ Reduce motion`, which would cover the
+  # same ground and more but is also the one flag every browser maps to
+  # `prefers-reduced-motion: reduce` — and sites whose scroll-reveal animation
+  # is what makes the content visible then never show it. These five keys are in
+  # com.apple.dock and NSGlobalDomain and move no accessibility flag;
+  # `hausax | jq .reduceMotion` stays false.
+  #
+  # Tradeoff I'm accepting here: it doesn't undo. Setting this back to "system"
+  # only stops the rice WRITING the keys — a `defaults` write is sticky and
+  # macOS keeps no memory of the values that were there before, so going back
+  # means naming them here by hand (they're mkDefault, so a plain value wins) or
+  # a `defaults delete`. Fine on this machine: it had never set any of them.
+  haus.animations = "fast";
+
   # ---- desktop ----
   # No icons on the desktop. The files stay in ~/Desktop — this only stops Finder
   # from drawing them, so the wallpaper (and whatever prowl tiles on top of it) is
