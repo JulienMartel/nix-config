@@ -455,39 +455,53 @@ in
   # only surfaced the first time a cask was added.
   homebrew.onActivation.extraEnv.HOMEBREW_CASK_OPTS = "--no-quarantine";
 
-  # My personal SketchyBar pills, tuned atop the rice default: switch on the
-  # agent-pane status paw (fed by the Claude hooks wired below), the Claude
-  # usage gauge (5-hour · weekly, fed by the same statusLine the rice already
-  # points at `claude-statusline`), the Elgato key light toggle, and the
-  # caffeinate keep-awake controller; switch off the default-on weather and
-  # wifi core pills.
+  # Nearly every pill sill offers: the agent-pane status paw (fed by the Claude
+  # hooks wired below), the AI usage gauge (5-hour · weekly, fed by the same
+  # statusLine the rice already points at `claude-statusline`), the Elgato key
+  # light toggle, the caffeinate keep-awake controller, the cpu/memory readouts
+  # and the next-event calendar — plus the core pills, which default on. This
+  # set is only WHICH pills exist; `haus.sill.bottom.items` below decides which
+  # bar and which group each one lands in.
+  # Left off deliberately: `wifi` (the menu bar's own is enough), `volume` (the
+  # HUD already says it) and `harvest`; `claudeUsage`, a deprecated alias for
+  # `aiUsage`; and `hush`, which rides `haus.hush.enable` instead of this set.
   haus.sill.items = {
     agents = true;
     aiUsage = true;
     elgato = true;
     caffeinate = true;
-    weather = false;
+    cpu = true;
+    memory = true;
+    calendar = true;
+    weather = true;
     wifi = false;
   };
 
   haus.sill.battery.hideOver = 80;
   haus.sill.clock.mode = "compact";
 
-  # Keep both bars: the coupled workspace/front-app/leader side plus clock and
-  # battery stay in the menu bar; media, hush and the personal controller/status
-  # pills move to the second bar at the bottom. Pinning the menu bar to `top` is
-  # load-bearing here: `auto` would put it on the bottom beside the second bar
-  # whenever the Mac is docked.
+  # Keep both bars: the coupled workspace/front-app/leader side plus clock,
+  # battery and the calendar stay in the menu bar; everything else moves to the
+  # second bar at the bottom. Pinning the menu bar to `top` is load-bearing
+  # here: `auto` would put it on the bottom beside the second bar whenever the
+  # Mac is docked.
   haus.sill.position = "top";
   haus.sill.bottom = {
     enable = true;
     items = {
-      media = true;
-      hush = true;
-      agents = true;
-      aiUsage = true;
-      elgato = true;
-      caffeinate = true;
+      # The two agent readouts sit in the LEFT group, under the panes they
+      # describe; media takes the center, where nothing competes with a
+      # scrolling title; the machine readouts and the controllers fill the
+      # right.
+      agents = "left";
+      aiUsage = "left";
+      media = "center";
+      weather = "right";
+      cpu = "right";
+      memory = "right";
+      hush = "right";
+      elgato = "right";
+      caffeinate = "right";
     };
   };
 
