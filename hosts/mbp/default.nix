@@ -470,13 +470,15 @@ in
     enable = true;
     items = {
       # The two agent readouts sit in the LEFT group, under the panes they
-      # describe; the machine readouts and the controllers fill the right.
+      # describe; media takes the center, where nothing competes with a
+      # scrolling title; the machine readouts and the controllers fill the
+      # right.
       agents = "left";
       aiUsage = "left";
+      media = "center";
       weather = "right";
       cpu = "right";
       memory = "right";
-      media = "right";
       hush = "right";
       elgato = "right";
       caffeinate = "right";
