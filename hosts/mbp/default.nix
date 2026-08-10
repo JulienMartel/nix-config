@@ -470,8 +470,10 @@ in
     items = {
       media = true;
       hush = true;
-      agents = true;
-      aiUsage = true;
+      # The two agent readouts sit in the bottom bar's LEFT group, under the
+      # panes they describe; the controllers stay on the right with media.
+      agents = "left";
+      aiUsage = "left";
       elgato = true;
       caffeinate = true;
     };
