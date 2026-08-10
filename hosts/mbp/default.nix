@@ -435,29 +435,37 @@ in
   # only surfaced the first time a cask was added.
   homebrew.onActivation.extraEnv.HOMEBREW_CASK_OPTS = "--no-quarantine";
 
-  # My personal SketchyBar pills, tuned atop the rice default: switch on the
-  # agent-pane status paw (fed by the Claude hooks wired below), the Claude
-  # usage gauge (5-hour · weekly, fed by the same statusLine the rice already
-  # points at `claude-statusline`), the Elgato key light toggle, and the
-  # caffeinate keep-awake controller; switch off the default-on weather and
-  # wifi core pills.
+  # Every pill sill offers, all on: the agent-pane status paw (fed by the Claude
+  # hooks wired below), the AI usage gauge (5-hour · weekly, fed by the same
+  # statusLine the rice already points at `claude-statusline`), the Elgato key
+  # light toggle, the caffeinate keep-awake controller, the cpu/memory/volume
+  # readouts, the next-event calendar and the Harvest timer — plus the core
+  # pills, which default on. Omitted on purpose: `claudeUsage`, a deprecated
+  # alias for `aiUsage`, and `hush`, which rides `haus.hush.enable` instead of
+  # this set.
   haus.sill.items = {
     agents = true;
     aiUsage = true;
     elgato = true;
     caffeinate = true;
-    weather = false;
-    wifi = false;
+    cpu = true;
+    memory = true;
+    volume = true;
+    calendar = true;
+    harvest = true;
+    weather = true;
+    wifi = true;
   };
 
   haus.sill.battery.hideOver = 80;
   haus.sill.clock.mode = "compact";
 
-  # Keep both bars: the coupled workspace/front-app/leader side plus clock and
-  # battery stay in the menu bar; media, hush and the personal controller/status
-  # pills move to the second bar at the bottom. Pinning the menu bar to `top` is
-  # load-bearing here: `auto` would put it on the bottom beside the second bar
-  # whenever the Mac is docked.
+  # Keep both bars: the coupled workspace/front-app/leader side plus clock,
+  # battery and the readouts (weather, wifi, cpu, memory, volume, calendar,
+  # harvest) stay in the menu bar; media, hush and the personal
+  # controller/status pills move to the second bar at the bottom. Pinning the
+  # menu bar to `top` is load-bearing here: `auto` would put it on the bottom
+  # beside the second bar whenever the Mac is docked.
   haus.sill.position = "top";
   haus.sill.bottom = {
     enable = true;
