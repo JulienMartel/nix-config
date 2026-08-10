@@ -439,7 +439,9 @@ in
   # hooks wired below), the AI usage gauge (5-hour · weekly, fed by the same
   # statusLine the rice already points at `claude-statusline`), the Elgato key
   # light toggle, the caffeinate keep-awake controller, the cpu/memory readouts
-  # and the next-event calendar — plus the core pills, which default on.
+  # and the next-event calendar — plus the core pills, which default on. This
+  # set is only WHICH pills exist; `haus.sill.bottom.items` below decides which
+  # bar and which group each one lands in.
   # Left off deliberately: `wifi` (the menu bar's own is enough), `volume` (the
   # HUD already says it) and `harvest`; `claudeUsage`, a deprecated alias for
   # `aiUsage`; and `hush`, which rides `haus.hush.enable` instead of this set.
@@ -459,23 +461,25 @@ in
   haus.sill.clock.mode = "compact";
 
   # Keep both bars: the coupled workspace/front-app/leader side plus clock,
-  # battery and the readouts (weather, cpu, memory, calendar) stay in the
-  # menu bar; media, hush and the personal
-  # controller/status pills move to the second bar at the bottom. Pinning the
-  # menu bar to `top` is load-bearing here: `auto` would put it on the bottom
-  # beside the second bar whenever the Mac is docked.
+  # battery and the calendar stay in the menu bar; everything else moves to the
+  # second bar at the bottom. Pinning the menu bar to `top` is load-bearing
+  # here: `auto` would put it on the bottom beside the second bar whenever the
+  # Mac is docked.
   haus.sill.position = "top";
   haus.sill.bottom = {
     enable = true;
     items = {
-      media = true;
-      hush = true;
-      # The two agent readouts sit in the bottom bar's LEFT group, under the
-      # panes they describe; the controllers stay on the right with media.
+      # The two agent readouts sit in the LEFT group, under the panes they
+      # describe; the machine readouts and the controllers fill the right.
       agents = "left";
       aiUsage = "left";
-      elgato = true;
-      caffeinate = true;
+      weather = "right";
+      cpu = "right";
+      memory = "right";
+      media = "right";
+      hush = "right";
+      elgato = "right";
+      caffeinate = "right";
     };
   };
 
