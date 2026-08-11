@@ -136,7 +136,8 @@ in
   haus.theme.accent = "pink";
 
   # The "orbits" Nebelung wallpaper (palette rings on a dark base).
-  haus.theme.wallpaper = "orbits";
+  haus.wallpaper.style = "minimal";
+  haus.wallpaper.mark.color = "spectrum";
 
   # Stylus, force-installed into Zen through Firefox's enterprise-policy file.
   # This one line replaces the hand-rolled policies.json + announce-activation
