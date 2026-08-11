@@ -143,7 +143,7 @@ in
   haus.wallpaper.style = "minimal";
   haus.wallpaper.mark.color = "spectrum";
   haus.wallpaper.mark.size = 0.1;
-  haus.wallpaper.mark.weight = 0.08;
+  haus.wallpaper.mark.weight = 0.09;
 
   # Stylus, force-installed into Zen through Firefox's enterprise-policy file.
   # This one line replaces the hand-rolled policies.json + announce-activation
