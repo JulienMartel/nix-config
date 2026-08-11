@@ -136,15 +136,14 @@ in
   haus.theme.accent = "pink";
 
   # The "minimal" wallpaper: flat field, bloom, grain, the ⌂ at the centre.
-  # Size and weight are set to the mark as hausfold.co draws it — 0.094 is the
-  # glyph's own stem/height ratio once the apex miter is counted (the rice's
-  # own option doc calls that out), and 0.13 puts the mark at the same share of
-  # the short edge the site gives it. The defaults (0.11/0.055) read as a thin
-  # outline; this reads as the logo.
+  # Sized a touch under the mark as hausfold.co draws it (0.13/0.094 is the
+  # site exactly), and weighted just under the glyph's own stem/height ratio —
+  # heavy enough to read as the logo rather than as the rice default's thin
+  # outline (0.11/0.055), small enough not to dominate a bare desktop.
   haus.wallpaper.style = "minimal";
   haus.wallpaper.mark.color = "spectrum";
-  haus.wallpaper.mark.size = 0.13;
-  haus.wallpaper.mark.weight = 0.094;
+  haus.wallpaper.mark.size = 0.1;
+  haus.wallpaper.mark.weight = 0.08;
 
   # Stylus, force-installed into Zen through Firefox's enterprise-policy file.
   # This one line replaces the hand-rolled policies.json + announce-activation
