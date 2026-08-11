@@ -135,9 +135,16 @@ in
   # `accent-reach` check, not by memory.
   haus.theme.accent = "pink";
 
-  # The "orbits" Nebelung wallpaper (palette rings on a dark base).
+  # The "minimal" wallpaper: flat field, bloom, grain, the ⌂ at the centre.
+  # Size and weight are set to the mark as hausfold.co draws it — 0.094 is the
+  # glyph's own stem/height ratio once the apex miter is counted (the rice's
+  # own option doc calls that out), and 0.13 puts the mark at the same share of
+  # the short edge the site gives it. The defaults (0.11/0.055) read as a thin
+  # outline; this reads as the logo.
   haus.wallpaper.style = "minimal";
   haus.wallpaper.mark.color = "spectrum";
+  haus.wallpaper.mark.size = 0.13;
+  haus.wallpaper.mark.weight = 0.094;
 
   # Stylus, force-installed into Zen through Firefox's enterprise-policy file.
   # This one line replaces the hand-rolled policies.json + announce-activation
