@@ -135,16 +135,6 @@ in
   # `accent-reach` check, not by memory.
   haus.theme.accent = "pink";
 
-  # The "minimal" wallpaper: flat field, bloom, grain, the ⌂ at the centre.
-  # Sized a touch under the mark as hausfold.co draws it (0.13/0.094 is the
-  # site exactly), and weighted just under the glyph's own stem/height ratio —
-  # heavy enough to read as the logo rather than as the rice default's thin
-  # outline (0.11/0.055), small enough not to dominate a bare desktop.
-  haus.wallpaper.style = "minimal";
-  haus.wallpaper.mark.color = "spectrum";
-  haus.wallpaper.mark.size = 0.1;
-  haus.wallpaper.mark.weight = 0.09;
-
   # Stylus, force-installed into Zen through Firefox's enterprise-policy file.
   # This one line replaces the hand-rolled policies.json + announce-activation
   # pair that used to live down in the home-manager block: the rice owns both
