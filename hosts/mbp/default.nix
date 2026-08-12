@@ -562,17 +562,15 @@ in
   };
 
   # My always-on instructions — how I like to work across every repo. Personal, so
-  # it lives here in the host; the rice just provides the plumbing, and as of
-  # hausfold#TBD it writes one copy per installed client at the path that client
-  # reads (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.config/opencode/AGENTS.md).
+  # it lives here in the host; the rice just provides the plumbing, and since
+  # hausfold/haus#312 it writes one copy per installed client at the path that
+  # client reads (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md,
+  # ~/.config/opencode/AGENTS.md).
   # So keep this CLIENT-NEUTRAL: a line about a Claude-only path or flag is noise
   # to the other two panes it also lands in. Short and universal — repo-specific
   # rules belong in each project's own AGENTS.md.
   #
-  # The option is `haus.agents.instructions` on that revision; this stays on the
-  # old name until the lock ripples here, because renaming it before the pin moves
-  # is a rebuild that fails on an option this machine doesn't have yet.
-  haus.claude.globalMd = ''
+  haus.agents.instructions = ''
     # Global instructions
 
     Personal defaults for how I (julienmartel) like to work, across every repo, in
