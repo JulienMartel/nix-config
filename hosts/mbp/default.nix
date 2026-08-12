@@ -147,6 +147,14 @@ in
   # bundle. See hausfold#208.
   haus.zen.extensions.stylus = { };
 
+  # The rice's own add-on, not somebody else's: it publishes Zen's tab list to
+  # the bar so the media pill's ⌘ click lands on the TAB that's making noise
+  # rather than just bringing Zen forward. Firefox and its forks expose no tab
+  # list at all — not to AppleScript, not through accessibility — so an
+  # extension is the only thing that can answer, and Zen is the only one that
+  # will load an unsigned one. See hausfold#311.
+  haus.zen.tabBridge.enable = true;
+
   # ---- motion ----
   # Snappy macOS: the Dock's slide and Mission Control's zoom shortened, the
   # launch bounce gone, minimise scaling instead of the genie, and AppKit's
@@ -553,16 +561,23 @@ in
     };
   };
 
-  # Claude Code's global memory (~/.claude/CLAUDE.md) — how I like to work across
-  # every repo. Personal, so it lives here in the host; the rice just provides the
-  # haus.claude.globalMd plumbing (hearth writes the file when set). Keep it
-  # short and universal — repo-specific rules belong in each project's own CLAUDE.md.
+  # My always-on instructions — how I like to work across every repo. Personal, so
+  # it lives here in the host; the rice just provides the plumbing, and as of
+  # hausfold#TBD it writes one copy per installed client at the path that client
+  # reads (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.config/opencode/AGENTS.md).
+  # So keep this CLIENT-NEUTRAL: a line about a Claude-only path or flag is noise
+  # to the other two panes it also lands in. Short and universal — repo-specific
+  # rules belong in each project's own AGENTS.md.
+  #
+  # The option is `haus.agents.instructions` on that revision; this stays on the
+  # old name until the lock ripples here, because renaming it before the pin moves
+  # is a rebuild that fails on an option this machine doesn't have yet.
   haus.claude.globalMd = ''
-    # CLAUDE.md — global
+    # Global instructions
 
-    Personal defaults for how I (julienmartel) like to work, across every repo. Kept
-    deliberately short and universal — repo-specific detail lives in each project's own
-    CLAUDE.md, not here.
+    Personal defaults for how I (julienmartel) like to work, across every repo, in
+    whichever client the pane is running. Kept deliberately short and universal —
+    repo-specific detail lives in each project's own AGENTS.md, not here.
 
     ## How to answer me
 
@@ -570,17 +585,22 @@ in
     whole session: verdict first, ≤5 anchored steps, and escalate to me only at ≥3/5
     (my usual bar) with a recommendation and a reversal cost. It governs code work,
     research, and anything I paste. Say "drop brief" / "full mode" to turn it off. The
-    skill itself lives at `~/.claude/skills/brief/SKILL.md`, an OUT-of-store symlink —
-    edit `~/.config/nix/claude/skills/brief/SKILL.md` and the next pane has it, no
+    skill body lives at `~/.config/nix/claude/skills/brief/SKILL.md` and is linked into
+    both `~/.claude/skills/brief` and `~/.agents/skills/brief` (Codex and OpenCode read
+    the second) as an OUT-of-store symlink — edit it and the next pane has it, no
     rebuild. Same for the other three host-installed skills: `ship`, `park`, `handoff`.
+    If your client doesn't load skills at all, read the SKILL.md by path; it's plain
+    markdown.
 
     ## Working in a git worktree
 
-    My super+a (`⌘A`) zellij hotkey spawns agent panes as `claude --worktree`:
-    each session gets its own checkout on a `worktree-<name>` branch, branched from the
-    repo's local HEAD, living OUTSIDE the repo (under `~/.cache/claude-worktrees/`). The
-    `WorktreeCreate`/`WorktreeRemove` hooks are wired globally, so **any** repo I open can
-    be worktree'd — not just nebelhaus.
+    My super+a (`⌘A`) zellij hotkey spawns each agent pane into its own worktree —
+    Claude Code through its native `--worktree` flag, Codex and OpenCode through
+    `holt new`, which produces the identical checkout from the outside. Either way the
+    session gets its own checkout on a `worktree-<name>` branch, branched from the
+    repo's local HEAD, living OUTSIDE the repo (under `~/.cache/claude-worktrees/` —
+    the path name is historical, every client shares it). The lifecycle hooks are wired
+    globally, so **any** repo I open can be worktree'd — not just nebelhaus.
 
     **Detect it:** `git rev-parse --git-common-dir` points outside your toplevel → you're
     in a linked worktree.
@@ -609,8 +629,8 @@ in
       switch would silently overwrite one another. So build, then hand me the
       exact command to run from a pane in your worktree and let me run it. Where
       a repo's own tooling enforces this, it refuses you by name and its
-      refusal/CLAUDE.md names the override — if I've explicitly asked you to
-      activate, use that override rather than asking again.
+      refusal (or the repo's AGENTS.md) names the override — if I've explicitly
+      asked you to activate, use that override rather than asking again.
     - **Pushing already-committed work is fine from a worktree.** You have my
       standing permission, in default mode, to run a repo's push/ship step from
       a worktree without asking — it only pushes commits that already exist and
@@ -720,9 +740,9 @@ in
 
     ## Keeping docs honest
 
-    If you find something in a CLAUDE.md, README, or docs file that's wrong or stale, fix
-    it in the same change — don't just work around it. Keep these files short; push detail
-    into the matching docs file rather than growing the top-level one.
+    If you find something in an AGENTS.md, CLAUDE.md, README, or docs file that's wrong or
+    stale, fix it in the same change — don't just work around it. Keep these files short;
+    push detail into the matching docs file rather than growing the top-level one.
   '';
 
   # ---- Claude Code, patched, as an OVERLAY rather than a package ----
@@ -1101,9 +1121,9 @@ in
         };
       };
 
-      # Claude Code — my personal "brief" answer-shape skill: verdict first, ≤5
+      # My personal "brief" answer-shape skill: verdict first, ≤5
       # anchored steps, escalate only at ≥3/5 with a recommendation + reversal cost.
-      # The stanza in haus.claude.globalMd above is what makes it load every
+      # The stanza in my instructions above is what makes it load every
       # session; this just puts the skill on disk. Symlinked OUT of the nix store
       # (mkOutOfStoreSymlink) so editing SKILL.md is live in the next pane with no
       # rebuild — its tables (time estimates, the always-≥3/5 list) get tuned often.
@@ -1141,6 +1161,28 @@ in
       # again: the prompt template is the part that gets tuned, and tuning it
       # shouldn't cost a rebuild.
       home.file.".claude/skills/handoff".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/handoff";
+
+      # The same four skills, linked a second time under ~/.agents/skills — the
+      # directory BOTH Codex and OpenCode scan for personal skills. Verified on
+      # this machine rather than taken from docs: a marker skill dropped there
+      # shows up in `codex debug prompt-input` and in `opencode debug skill`.
+      #
+      # Without this, "load the `brief` skill" — an instruction that now reaches
+      # all three clients, since the rice writes it to each one's own
+      # instructions file — is an order only Claude Code can obey. Same
+      # out-of-store targets, so there is one body per skill and editing it stays
+      # live in the next pane whichever client that pane runs.
+      #
+      # Both dirs at once is safe: each client dedupes by the skill's frontmatter
+      # `name`, and Claude Code doesn't read ~/.agents at all.
+      home.file.".agents/skills/brief".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/brief";
+      home.file.".agents/skills/ship".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/ship";
+      home.file.".agents/skills/park".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
+      home.file.".agents/skills/handoff".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/handoff";
 
       # Claude Code — reinstate our hooks in settings.json on every rebuild.
