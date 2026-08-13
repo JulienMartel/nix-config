@@ -376,6 +376,9 @@ in
     gogcli = {
       brew = "gogcli";
     };
+    jcode = {
+      brew = "jcode";
+    };
     # The CLI only — haus.appStore.install stays off and masApps is
     # intentionally unused (see the note there), so this is for `mas list` /
     # `mas upgrade` by hand.
@@ -820,10 +823,13 @@ in
     })
   ];
 
-  # The tap pear-desktop comes from. Taps are the one Homebrew thing the roster
-  # doesn't model — a cask names its tap inline (see pear-desktop above), but
-  # the tap itself still has to be registered once.
-  homebrew.taps = [ "pear-devs/pear" ];
+  # The taps pear-desktop and jcode come from. Taps are the one Homebrew thing
+  # the roster doesn't model — a source can name its tap inline, but the tap
+  # itself still has to be registered once.
+  homebrew.taps = [
+    "1jehuang/jcode"
+    "pear-devs/pear"
+  ];
 
   # No homebrew.casks / homebrew.brews / home.packages list down here any more:
   # every one of those entries moved into haus.roster above, which is the
