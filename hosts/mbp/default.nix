@@ -385,10 +385,6 @@ in
     mas = {
       brew = "mas";
     };
-    gemini-cli = {
-      # No ai.clients entry: gemini isn't a `wt` client, just a package.
-      package = pkgs.gemini-cli-bin;
-    };
     # Claude Code is deliberately NOT here — the rice installs it from
     # haus.ai.clients, and the overlay below is what makes that copy
     # the patched one. A second derivation shipping bin/claude would collide in
@@ -897,7 +893,7 @@ in
 
     in
     {
-      # home.packages lives in haus.roster now (gemini-cli, orbstack, bench —
+      # home.packages lives in haus.roster now (orbstack, bench —
       # `scope = "user"` puts them right back here). One list for what this
       # machine has, whether it's a cask, a formula or a Nixpkgs package.
 
@@ -1285,9 +1281,8 @@ in
         ' "$HOME/.claude/settings.json"
       '';
 
-      # Secrets + tooling that shouldn't live in the public rice.
+      # Private tooling that shouldn't live in the public rice.
       programs.zsh.initContent = lib.mkAfter ''
-        export GEMINI_API_KEY="$(cat ~/.secrets/google-api-key)"
         source ~/.orbstack/shell/init.zsh 2>/dev/null || :
       '';
     };
