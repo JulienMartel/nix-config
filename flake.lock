@@ -26,11 +26,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1786554147,
-        "narHash": "sha256-+JIm9NUot4nQeveSIqNf8BdjkfhC/iWLGom5rUSv4Mo=",
+        "lastModified": 1786643033,
+        "narHash": "sha256-H/IM4Hhz1S7XNjI+Td+WgEJPEz83xoz1C0LFyf2BCyQ=",
         "owner": "hausfold",
         "repo": "holt",
-        "rev": "e59e4daaa9617d0328556a1b0d2afe9f631d7b7f",
+        "rev": "a7964bf251b4e3bd6262093ae8bfdde9282038de",
         "type": "github"
       },
       "original": {
@@ -73,11 +73,11 @@
         "pounce": "pounce"
       },
       "locked": {
-        "lastModified": 1786638488,
-        "narHash": "sha256-IMova+VwJ1x+ice1tRNRl3quu6FH1uQKRJ7uBOdPSMQ=",
+        "lastModified": 1786643698,
+        "narHash": "sha256-PjWEAqScCMXMsXcFoYYUQYQflYYCqmPcYcU5AF3b4tY=",
         "owner": "hausfold",
         "repo": "hausfold",
-        "rev": "2a0c721345855e3e94be52ef880b10052860a051",
+        "rev": "9455035ce55eca07c906dcba09420329eaf1f868",
         "type": "github"
       },
       "original": {
@@ -192,11 +192,11 @@
         "prebuilt": "prebuilt"
       },
       "locked": {
-        "lastModified": 1786558832,
-        "narHash": "sha256-LUuZ9SWm8JV+B8j0t3SVTNQhl+JPYoWByi3q8CUJq6E=",
+        "lastModified": 1786643107,
+        "narHash": "sha256-lr62373RBdbdlxIrUNm/N3tZfhhP/GYjJT267JQpZxU=",
         "owner": "hausfold",
         "repo": "perch",
-        "rev": "20e622e90f95c41499603c97e96ca198c2fb7c92",
+        "rev": "37e3cc23d36fdf1141aec66d856ebe316641865c",
         "type": "github"
       },
       "original": {
@@ -217,11 +217,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1786547748,
-        "narHash": "sha256-6ou9igt4vQF2UsW46t0Psz1VKU3qVW6OJS0k9UK3/jI=",
+        "lastModified": 1786642949,
+        "narHash": "sha256-fq3tHAQuMYYluNPU5zYJBjkNnGpEu6hQT+v0F447ubE=",
         "owner": "hausfold",
         "repo": "pounce",
-        "rev": "e13b8cd160802cf113c7f9bcbc1d954c2ffb40a5",
+        "rev": "3b0ff3b1dcefcb5d4faf60c5a46ec2219cce5171",
         "type": "github"
       },
       "original": {
