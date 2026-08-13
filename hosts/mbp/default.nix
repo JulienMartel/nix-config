@@ -99,15 +99,15 @@ in
   # Codex on top of the rice's default pair. There is an authed account and a
   # session history under ~/.codex, but no `codex` on PATH — it was installed
   # outside Nix once and went away, which is exactly the state that made
-  # `agents.default = "codex"` a dead pane rather than an error. Listing it
-  # here is what installs it; `agents.default` is asserted to be a member, so
+  # `ai.default = "codex"` a dead pane rather than an error. Listing it
+  # here is what installs it; `ai.default` is asserted to be a member, so
   # switching the default is now a rebuild-time decision, not a discovery.
-  haus.agents.clients = [
+  haus.ai.clients = [
     "claude"
     "codex"
     "opencode"
   ];
-  haus.agents.default = "claude";
+  haus.ai.default = "claude";
 
   # ---- text expansion ----
   # The old Raycast "@@" snippet, now a rice option (haus.snippets → espanso
@@ -386,11 +386,11 @@ in
       brew = "mas";
     };
     gemini-cli = {
-      # No agents.clients entry: gemini isn't a `wt` client, just a package.
+      # No ai.clients entry: gemini isn't a `wt` client, just a package.
       package = pkgs.gemini-cli-bin;
     };
     # Claude Code is deliberately NOT here — the rice installs it from
-    # haus.agents.clients, and the overlay below is what makes that copy
+    # haus.ai.clients, and the overlay below is what makes that copy
     # the patched one. A second derivation shipping bin/claude would collide in
     # the same profile.
 
@@ -573,7 +573,7 @@ in
   # to the other two panes it also lands in. Short and universal — repo-specific
   # rules belong in each project's own AGENTS.md.
   #
-  haus.agents.instructions = ''
+  haus.ai.instructions = ''
     # Global instructions
 
     Personal defaults for how I (julienmartel) like to work, across every repo, in
@@ -747,7 +747,7 @@ in
   '';
 
   # ---- Claude Code, patched, as an OVERLAY rather than a package ----
-  # The rice installs the clients named in `haus.agents.clients` and
+  # The rice installs the clients named in `haus.ai.clients` and
   # references `pkgs.claude-code` to do it. So this cannot be a second
   # derivation in home.packages, where it used to live: two builds shipping
   # `bin/claude` collide in one profile. Redefining `claude-code` itself means
@@ -816,7 +816,7 @@ in
               --prefix PATH : "${prev.writeShellScriptBin "caffeinate" "exit 0"}/bin"
           '';
           # symlinkJoin invents its own (empty) meta, which would drop the
-          # platform list the rice's agents.clients assertion reads and the
+          # platform list the rice's ai.clients assertion reads and the
           # license the unfree check reads. Carry the real one through.
           inherit (prev.claude-code) meta;
         };
