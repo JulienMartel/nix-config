@@ -823,13 +823,9 @@ in
     })
   ];
 
-  # The taps pear-desktop and jcode come from. Taps are the one Homebrew thing
-  # the roster doesn't model — a source can name its tap inline, but the tap
-  # itself still has to be registered once.
-  homebrew.taps = [
-    "1jehuang/jcode"
-    "pear-devs/pear"
-  ];
+  # The tap providing jcode. Taps are the one Homebrew thing the roster doesn't
+  # model, so it still has to be registered once.
+  homebrew.taps = [ "1jehuang/jcode" ];
 
   # No homebrew.casks / homebrew.brews / home.packages list down here any more:
   # every one of those entries moved into haus.roster above, which is the
