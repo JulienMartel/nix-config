@@ -334,6 +334,7 @@ in
     memory = true;
     calendar = true;
     weather = true;
+    github = true;
     wifi = false;
   };
 
