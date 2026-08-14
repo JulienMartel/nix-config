@@ -52,8 +52,11 @@ in
   haus.git.org = "hausfold";
 
   # ---- coding agents ----
+  # Codex on top of the rice's default pair (an authed ~/.codex exists here).
+  # CLI only — the ChatGPT GUI app is deliberately not installed.
   haus.ai.clients = [
     "claude"
+    "codex"
     "opencode"
   ];
   haus.ai.default = "claude";
@@ -375,7 +378,7 @@ in
     (my usual bar) with a recommendation and a reversal cost. It governs code work,
     research, and anything I paste. Say "drop brief" / "full mode" to turn it off. The
     skill body lives at `~/.config/nix/claude/skills/brief/SKILL.md` and is linked into
-    both `~/.claude/skills/brief` and `~/.agents/skills/brief` (OpenCode reads
+    both `~/.claude/skills/brief` and `~/.agents/skills/brief` (Codex and OpenCode read
     the second) as an OUT-of-store symlink — edit it and the next pane has it, no
     rebuild. Same for the other three host-installed skills: `ship`, `park`, `handoff`.
     If your client doesn't load skills at all, read the SKILL.md by path; it's plain
@@ -384,7 +387,7 @@ in
     ## Working in a git worktree
 
     My super+a (`⌘A`) zellij hotkey spawns each agent pane into its own worktree —
-    Claude Code through its native `--worktree` flag, OpenCode through
+    Claude Code through its native `--worktree` flag, Codex and OpenCode through
     `holt new`, which produces the identical checkout from the outside. Either way the
     session gets its own checkout on a `worktree-<name>` branch, branched from the
     repo's local HEAD, living OUTSIDE the repo (under `~/.cache/claude-worktrees/` —
@@ -780,8 +783,9 @@ in
       home.file.".claude/skills/handoff".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/handoff";
 
-      # The same four, linked again under ~/.agents/skills — the dir OpenCode
-      # scans (verified with `opencode debug skill`). Otherwise "load the `brief` skill" is an order
+      # The same four, linked again under ~/.agents/skills — the dir BOTH Codex
+      # and OpenCode scan (verified with `codex debug prompt-input` /
+      # `opencode debug skill`). Otherwise "load the `brief` skill" is an order
       # only Claude Code can obey. Both dirs is safe: clients dedupe by
       # frontmatter `name`, and Claude Code never reads ~/.agents.
       home.file.".agents/skills/brief".source =
