@@ -8,12 +8,9 @@
 }:
 
 let
-  # The one place the org's name is typed. `haus.git.org` (set below) drives
-  # every gh-dash section filter, rendered by the rice; this alias lets the
-  # repoPaths further down — this machine's checkout layout, which is not the
-  # rice's business — follow the same word instead of repeating it. Bound out
-  # here because inside `home-manager.users.<user>` the `config` in scope is
-  # home-manager's, which has no haus.* on it.
+  # Bound here because inside `home-manager.users.<user>` the `config` in scope
+  # is home-manager's, which has no haus.* on it. Lets repoPaths (this
+  # machine's checkout layout) reuse the org name instead of repeating it.
   ghOrg = config.haus.git.org;
 in
 
@@ -22,38 +19,14 @@ in
   haus.git.name = "Julien Martel";
   haus.git.email = "julienbmartel@gmail.com";
   haus.git.signingKey = "6F7BD6F43A7C1420";
-  # Select the Developer ID by SHA so the generated launch-agent script does not
-  # contain the certificate holder's legal name. The resulting Developer ID
-  # signature still anchors its designated requirement to the stable team OU.
-  # Refresh with `security find-identity -v -p codesigning` after cert renewal.
+  # By SHA, not name, so the generated launch-agent script doesn't carry my
+  # legal name. Refresh with `security find-identity -v -p codesigning`.
   haus.pounce.signingIdentity = "4D2693E75A214534ACE299861AE7FC3086573136";
 
-  # Windows-style "closing the last window closes the program" — macOS keeps a
-  # windowless app running, and on this machine that is always a ⌘Q I forgot.
-  # It's the same Quit event ⌘Q sends, so unsaved work still puts its sheet up.
-  #
-  # `exclude` REPLACES pounce's default rather than extending it, so Finder is
-  # listed here explicitly — quit it and the desktop blinks out while it
-  # relaunches. The rest are the apps on THIS Mac that keep doing real work with
-  # no window open, which is the one case where "no windows" doesn't mean "done
-  # with it":
-  #
-  #   OrbStack     the Docker case — closing the dashboard would stop the VM and
-  #                every container in it
-  #   ProtonVPN    the tunnel outlives its window; quitting drops it
-  #   Chrome       windowless is a resting state, not an exit: downloads,
-  #                extensions, and the browser-automation session an agent drives
-  #   Notion Cal   lives in the menu bar for the next meeting and its alerts
-  #   Slack        kept running for notifications, not for its window
-  #   Legcord      ditto (Discord)
-  #   ChatGPT      its global hotkey dies with it
-  #   Cap, Loom    an upload finishing after the recording window closed
-  #
-  # Only .regular apps are candidates at all — pounce's census walks those and
-  # skips accessory ones — so AeroSpace, Espanso, Dropover, Elgato, perch and
-  # pounce itself need no entry. Tailscale is accessory today too and is listed
-  # anyway: that's upstream's packaging choice, not a promise, and dropping the
-  # mesh would be a bad way to find out it changed.
+  # `exclude` REPLACES pounce's default, so Finder is restated. The rest are
+  # apps on THIS Mac that keep working with no window open (VM/tunnel/mesh,
+  # notifications, global hotkeys, in-flight uploads). Tailscale is accessory
+  # today and listed anyway, in case upstream's packaging changes.
   haus.pounce.autoQuit = {
     enable = true;
     exclude = [
@@ -71,37 +44,16 @@ in
     ];
   };
 
-  # Editor: Helix (hx) everywhere. $EDITOR/$VISUAL are hx by default; the "Nix
-  # Config" palette/bar action opens ~/.config/nix in a new Helix terminal tab
-  # (hearth.guiEditor now defaults to "hx"), and the file-association hijack
-  # routes double-clicked json/md/ts/… to Helix too. No Cursor anywhere.
+  # Double-clicked json/md/ts/… open in Helix, matching the hx-everywhere default.
   haus.hearth.hijackFileAssociations = true;
 
-  # gh-dash: the review-queue half of the agent HUD. The statusline/bar HUD
-  # answers "what are my panes doing"; this answers "what is waiting on ME" —
-  # holt reads the worktree registry (parked sessions, wip commits, unpushed
-  # branches), gh-dash reads GitHub (PRs, CI, reviews), and a branch that was
-  # never pushed is invisible there on purpose. This one switch buys the patched
-  # binary, the nebelung theme, ⌘G's borderless full-window overlay — and, now
-  # that `git.org` is set, the tab strip itself: open / green / red / shipped,
-  # rendered by hearth from that one word. What stays mine down in
-  # programs.gh-dash.settings is only what describes THIS machine — where the
-  # checkouts live, which key runs holt, how wide the columns are.
+  # The review queue. Everything generic is the rice's; only this machine's
+  # checkout paths / keys / column widths stay in programs.gh-dash below.
   haus.hearth.ghDash.enable = true;
-  # The owner the review queue is about. One word, because an org rename would
-  # otherwise be four search filters and three repo globs — and it silently
-  # renders empty tabs rather than failing, which is the worst way for a
-  # dashboard to be wrong.
-  #
   haus.git.org = "hausfold";
 
   # ---- coding agents ----
-  # Codex on top of the rice's default pair. There is an authed account and a
-  # session history under ~/.codex, but no `codex` on PATH — it was installed
-  # outside Nix once and went away, which is exactly the state that made
-  # `ai.default = "codex"` a dead pane rather than an error. Listing it
-  # here is what installs it; `ai.default` is asserted to be a member, so
-  # switching the default is now a rebuild-time decision, not a discovery.
+  # Codex on top of the rice's default pair (an authed ~/.codex exists here).
   haus.ai.clients = [
     "claude"
     "codex"
@@ -110,10 +62,6 @@ in
   haus.ai.default = "claude";
 
   # ---- text expansion ----
-  # The old Raycast "@@" snippet, now a rice option (haus.snippets → espanso
-  # via the Espanso.app cask). Runs the SIGNED app bundle, not a nix-store binary,
-  # so the one-time Accessibility grant survives reboots + nixpkgs bumps and the
-  # espanso troubleshooting window stops popping up at login.
   haus.snippets = {
     enable = true;
     matches = [
@@ -129,99 +77,38 @@ in
   };
 
   # ---- theme ----
-  # Accent: sapphire instead of the rice default (mauve). Machine-local — the
-  # palette itself is unchanged; this just picks which whiskers hue everything
-  # keys off. What it does and doesn't recolour is pinned by the rice's
-  # `accent-reach` check, not by memory.
   haus.theme.accent = "pink";
 
-  # Stylus, force-installed into Zen through Firefox's enterprise-policy file.
-  # This one line replaces the hand-rolled policies.json + announce-activation
-  # pair that used to live down in the home-manager block: the rice owns both
-  # now, and — the reason it exists at all — it stamps nebelung's userstyle
-  # bundle with the accent above. Without that, the accent reaches Zen's own
-  # chrome but never the web: github.com and youtube.com are styled by
-  # Catppuccin userstyles living inside the extension, whose accent var
-  # defaults to mauve and which no stylesheet can reach. Importing stays a
-  # click (Stylus ▸ Manage ▸ Import); activation says so when there's a new
-  # bundle. See hausfold#208.
+  # Accent-stamped userstyles in Zen (hausfold#208); import stays a click.
   haus.zen.extensions.stylus = { };
 
-  # The rice's own add-on, not somebody else's: it publishes Zen's tab list to
-  # the bar so the media pill's ⌘ click lands on the TAB that's making noise
-  # rather than just bringing Zen forward. Firefox and its forks expose no tab
-  # list at all — not to AppleScript, not through accessibility — so an
-  # extension is the only thing that can answer, and Zen is the only one that
-  # will load an unsigned one. See hausfold#311.
+  # Tab list → bar, so the media pill's ⌘ click lands on the noisy tab
+  # (hausfold#311).
   haus.zen.tabBridge.enable = true;
 
   # ---- motion ----
-  # Snappy macOS: the Dock's slide and Mission Control's zoom shortened, the
-  # launch bounce gone, minimise scaling instead of the genie, and AppKit's
-  # window open/close fade off — five keys the rice leaves alone by default
-  # (hausfold#286). This is the opt-in.
-  #
-  # NOT `System Settings ▸ Accessibility ▸ Reduce motion`, which would cover the
-  # same ground and more but is also the one flag every browser maps to
-  # `prefers-reduced-motion: reduce` — and sites whose scroll-reveal animation
-  # is what makes the content visible then never show it. These five keys are in
-  # com.apple.dock and NSGlobalDomain and move no accessibility flag;
-  # `hausax | jq .reduceMotion` stays false.
-  #
-  # Tradeoff I'm accepting here: it doesn't undo. Setting this back to "system"
-  # only stops the rice WRITING the keys — a `defaults` write is sticky and
-  # macOS keeps no memory of the values that were there before, so going back
-  # means naming them here by hand (they're mkDefault, so a plain value wins) or
-  # a `defaults delete`. Fine on this machine: it had never set any of them.
+  # Opt-in to the rice's snappy defaults (hausfold#286). Accepting that it
+  # doesn't undo: reverting to "system" only stops the writes, not the keys.
   haus.animations = "fast";
 
   # ---- desktop ----
-  # No icons on the desktop. The files stay in ~/Desktop — this only stops Finder
-  # from drawing them, so the wallpaper (and whatever prowl tiles on top of it) is
-  # all that's ever behind the windows. Side effect of the same switch: the desktop
-  # is no longer clickable, so clicking through to bare wallpaper doesn't activate
-  # Finder any more. The rice's own finder defaults (den) don't touch this key, so
-  # nothing to override — plain assignment.
+  # No desktop icons; files stay in ~/Desktop. Also makes the desktop unclickable.
   system.defaults.finder.CreateDesktop = false;
 
   # ---- trackpad ----
-  # No tap-to-click — a physical press is the only click. Tapping fires stray
-  # clicks while a palm rests on the pad mid-type. Both keys are needed: the
-  # built-in pad reads AppleMultitouchTrackpad, an external Magic Trackpad reads
-  # the Bluetooth domain, and nix-darwin's `trackpad.*` writes both.
+  # No tap-to-click: palm rests fire stray clicks mid-type.
   system.defaults.trackpad.Clicking = false;
 
-  # Obsidian stores its theme per vault. Keep the notes vault on the full
-  # Nebelung theme and retire the old palette-only CSS snippet.
+  # Obsidian themes per vault; this is the one to theme.
   haus.hearth.obsidianVaults = [
     "Library/Mobile Documents/iCloud~md~obsidian/Documents/notes"
   ];
 
   # ---- everything this machine has ----
-  # ONE list. It used to be three — this roster (launcher keys + install), plus
-  # homebrew.casks/brews and home.packages — so an app was declared twice and
-  # every entry carried a `cask = null` whose only meaning was "declared over
-  # there instead". Now each entry names its own source, and WHICH FIELDS it
-  # sets is what the entry means:
-  #
-  #   key         → on the Caps-Lock launcher + the pounce cheatsheet
-  #   neither     → just installed: nothing bound, nothing drawn
-  #   cask / brew / package / appStoreId → where it comes from
-  #
-  # Which AeroSpace workspace an app owns is no longer a field here at all —
-  # haus.workspaces below claims it, by naming the app in `apps`
-  # (notes/options-roadmap.md §5.4 in the workshop repo: promoted workspaces
-  # to a real option so one can hold more than one app, and inverted
-  # ownership so the workspace says so instead of the app).
-  #
-  # `order` only sorts the launcher half (cheatsheet rows, pill row), so the
-  # install-only entries below leave it at its default.
+  # One list of what this Mac has; see haus.roster's own docs in the rice.
   haus.roster = {
     # ---- the launcher ----
-    # ghostty isn't here: den declares its name + cask, prowl its key +
-    # workspace membership + icon + label, and every one of those defaults is
-    # what I'd have typed. An entry only appears below where I want something
-    # the rice didn't already decide — which is why zen is one line.
+    # ghostty/zen defaults come from the rice; only overrides appear here.
     zen.order = 50;
 
     obsidian = {
@@ -238,9 +125,7 @@ in
       name = "Things3";
       appId = "com.culturedcode.ThingsMac";
       label = "Things3";
-      # Paid App Store app. mas cannot purchase, so appStore.install (off
-      # below) would skip it with a warning — the id is here to record what to
-      # buy back on a fresh machine, not to promise an unattended install.
+      # Paid: mas can't purchase it. The id records what to re-buy, not an install.
       appStoreId = 904280696;
     };
     slack = {
@@ -251,17 +136,14 @@ in
       label = "Slack";
       cask = "slack";
     };
-    # No trill: the rice made haus.trill.enable opt-in on 2026-08-04 (its
-    # development is frozen) and this machine took the offer. `m` / workspace M
-    # are free again — the roster entry was only trill's tiling half, so it went
-    # with the app. Restoring it means both: the option true AND this entry back.
+    # No trill here: opt-in in the rice and left off, so `m` / workspace M are free.
     swather = {
       order = 70;
       key = "h";
       name = "Swather";
       appId = "com.swather.app";
       label = "Swather";
-      # No source field: I installed this one by hand, so nothing declares it.
+      # No source field: installed by hand.
     };
     claude = {
       order = 80;
@@ -296,9 +178,7 @@ in
     };
 
     # ---- apps I don't launch by keyboard ----
-    # No key → no leader letter, no cheatsheet row, no pill. Still declared,
-    # which with homebrew.cleanup = "zap" below is the whole difference between
-    # "installed" and "deleted on the next rebuild".
+    # No key → installed only. Still declared, or `cleanup = "zap"` below reaps it.
     cap = {
       name = "Cap";
       cask = "cap";
@@ -347,18 +227,14 @@ in
       name = "OrbStack";
       package = pkgs.orbstack;
     };
-    # Free, so it's the one App Store app mas could actually fetch on its own
-    # if appStore.install were ever turned on.
+    # Free, so mas could actually fetch this one.
     xcode = {
       name = "Xcode";
       appStoreId = 497799835;
     };
 
     # ---- not apps at all ----
-    # Fonts and CLIs have no bundle, no window, no icon, so every launcher field
-    # stays null and only the source is set. They live here anyway: the point of
-    # one list is that nothing is declared somewhere else merely for not being
-    # clickable.
+    # Fonts and CLIs: source only, no launcher fields.
     font-hack = {
       cask = "font-hack-nerd-font";
     };
@@ -368,8 +244,7 @@ in
     gcloud-cli = {
       cask = "gcloud-cli";
     };
-    # Also sill's, when the calendar pill is on — same id, so the definitions
-    # merge instead of installing it twice.
+    # Also sill's when the calendar pill is on; same id, so they merge.
     ical-buddy = {
       brew = "ical-buddy";
     };
@@ -379,43 +254,28 @@ in
     jcode = {
       brew = "jcode";
     };
-    # The CLI only — haus.appStore.install stays off and masApps is
-    # intentionally unused (see the note there), so this is for `mas list` /
-    # `mas upgrade` by hand.
+    # CLI only, for `mas list` / `mas upgrade` by hand (see the App Store note below).
     mas = {
       brew = "mas";
     };
-    # Claude Code is deliberately NOT here — the rice installs it from
-    # haus.ai.clients, and the overlay below is what makes that copy
-    # the patched one. A second derivation shipping bin/claude would collide in
-    # the same profile.
+    # Claude Code is deliberately NOT here: ai.clients installs it and the
+    # overlay below patches that copy. A second bin/claude would collide.
 
     # ---- system scope ----
-    # environment.systemPackages rather than my user profile: on PATH for root,
-    # for launchd jobs, and for non-login shells.
+    # systemPackages: on PATH for root, launchd jobs and non-login shells.
     biome = {
       package = pkgs.biome;
       scope = "system";
     };
     bench = {
-      # Stays user-scope (the default): it's my tool, and the per-user profile
-      # is already on PATH for scripts and non-login shells.
-      # The workshop CLI (~/code/workshop): status / try / ship / rebuild for
-      # the whole rice family. A real command on PATH (not an alias) so it works
-      # from scripts, other shells, and non-interactive contexts; `bench try
-      # switch` supersedes rebuild-pounce (it overrides ALL the local checkouts,
-      # not just pounce).
+      # The workshop CLI (~/code/workshop), as a real command rather than an
+      # alias so scripts and non-interactive shells get it too.
       package = pkgs.writeShellScriptBin "bench" ''exec "$HOME/code/workshop/bench" "$@"'';
     };
   };
 
-  # Which AeroSpace workspace each launcher app owns, its pill and its ⇧-throw
-  # key. One app per workspace here, same as before the schema moved this off
-  # the roster — nothing on this machine wants a role/project workspace with
-  # several apps yet, but the shape is there when something does (see
-  # haus.workspaces' own docs). Every key below matches the app's own
-  # roster `key`, uppercased for the workspace id, same convention `add-app.sh`
-  # uses.
+  # One app per workspace; each key matches the app's roster `key`, uppercased
+  # for the workspace id. See haus.workspaces' own docs in the rice.
   haus.workspaces = {
     N = {
       key = "n";
@@ -434,7 +294,7 @@ in
     };
     H = {
       key = "h";
-      # Swather has no app-font glyph — fa-hourglass (U+F254) in the Nerd Font.
+      # No app-font glyph for Swather — fa-hourglass (U+F254) in the Nerd Font.
       icon = builtins.fromJSON ''"\uf254"'';
       apps = [ "swather" ];
     };
@@ -455,10 +315,7 @@ in
     };
   };
 
-  # Non-app leader actions. Tap Caps (the leader), then Return → Things3's Quick
-  # Entry panel. The app roster above maps letters → open an app; this maps a key
-  # → a command, for actions that aren't "launch an app". `enter` is free in launch
-  # mode (the rice asserts it doesn't collide with a roster letter or a built-in).
+  # Leader then Return → Things3's Quick Entry panel.
   haus.keys.leaderExtras = [
     {
       key = "enter";
@@ -467,51 +324,21 @@ in
     }
   ];
 
-  # Fully declarative Homebrew: a rebuild uninstalls (and zaps the data of) any
-  # cask/brew not declared above. Every app I keep is now listed, so the only
-  # thing this reaps is genuine cruft. Adding an undeclared app by hand and
-  # forgetting to list it means it's gone on the next rebuild — that's the deal.
+  # Fully declarative: an undeclared cask/brew is uninstalled (and zapped).
   haus.homebrew.cleanup = "zap";
 
-  # Keep declared casks current on THIS machine (rice default stays off, so the
-  # rest of the family keeps reproducible rebuilds). upgrade → a rebuild upgrades
-  # outdated casks instead of pinning to whatever brew first installed; autoUpdate
-  # → `brew update` first so it sees the newest versions. Together: date-released
-  # casks track upstream latest instead of freezing at whatever brew first
-  # installed. Tradeoff I'm accepting here: my rebuilds chase upstream latest
-  # and aren't perfectly reproducible.
+  # Chase upstream latest on this machine, accepting less reproducible rebuilds.
   haus.homebrew.upgrade = true;
   haus.homebrew.autoUpdate = true;
 
-  # Install casks without the com.apple.quarantine xattr. These are notarized
-  # apps I curated in homebrew.casks; the quarantine flag only gates a one-time
-  # Gatekeeper first-launch prompt. Most casks prompt once, but ChatGPT relaunches
-  # a nested quarantined helper (its "computer use" sub-app) by path, so macOS
-  # re-prompted on EVERY launch. Sparkle self-updates never set the flag — only
-  # Homebrew did — so stripping it at install kills the prompt for good. Tradeoff:
-  # skips the first-launch notarization check for casks (signature enforcement +
-  # XProtect still apply).
-  #
-  # Delivered as HOMEBREW_CASK_OPTS, not `homebrew.caskArgs.no_quarantine`:
-  # Homebrew 6 dropped `--no-quarantine` as a `brew install` flag (the env var is
-  # the only path left — see cask_opts_quarantine? in env_config.rb). caskArgs
-  # writes `cask_args no_quarantine: true` into the Brewfile, and brew bundle
-  # turns that into `brew install --no_quarantine`, which now aborts with
-  # "invalid option" — so EVERY new cask install failed the whole `brew bundle`
-  # step of a rebuild. Already-installed casks were unaffected, which is why this
-  # only surfaced the first time a cask was added.
+  # Skip Gatekeeper's first-launch prompt for curated casks — ChatGPT re-prompts
+  # on EVERY launch otherwise (nested quarantined helper). Must be the env var,
+  # not `homebrew.caskArgs.no_quarantine`: Homebrew 6 dropped the install flag,
+  # so caskArgs makes every new cask install fail the rebuild's `brew bundle`.
   homebrew.onActivation.extraEnv.HOMEBREW_CASK_OPTS = "--no-quarantine";
 
-  # Nearly every pill sill offers: the agent-pane status paw (fed by the Claude
-  # hooks wired below), the AI usage gauge (5-hour · weekly, fed by the same
-  # statusLine the rice already points at `claude-statusline`), the Elgato key
-  # light toggle, the caffeinate keep-awake controller, the cpu/memory readouts
-  # and the next-event calendar — plus the core pills, which default on. This
-  # set is only WHICH pills exist; `haus.sill.bottom.items` below decides which
-  # bar and which group each one lands in.
-  # Left off deliberately: `wifi` (the menu bar's own is enough), `volume` (the
-  # HUD already says it) and `harvest`; `claudeUsage`, a deprecated alias for
-  # `aiUsage`; and `hush`, which rides `haus.hush.enable` instead of this set.
+  # Which pills exist; `haus.sill.bottom.items` below places them.
+  # Off on purpose: wifi/volume (menu bar + HUD already say it) and harvest.
   haus.sill.items = {
     agents = true;
     aiUsage = true;
@@ -527,27 +354,16 @@ in
   haus.sill.battery.hideOver = 80;
   haus.sill.clock.mode = "compact";
 
-  # The far-left logo pill. Everything about it is left at its default — the
-  # solid house glyph at 20pt, wearing haus.theme.accent (pink, above), the
-  # health colours, and the six-accent hover sweep — except the upstream check,
-  # which is off by default because it is the one part of that pill that leaves
-  # the machine. This machine tracks the rice it is built from, so a yellow pill
-  # saying "haus update" is exactly the reminder I want.
+  # This machine tracks the rice, so the "haus update" nag is wanted.
   haus.sill.logo.updateCheck = true;
 
-  # Keep both bars: the coupled workspace/front-app/leader side plus clock,
-  # battery and the calendar stay in the menu bar; everything else moves to the
-  # second bar at the bottom. Pinning the menu bar to `top` is load-bearing
-  # here: `auto` would put it on the bottom beside the second bar whenever the
-  # Mac is docked.
+  # Both bars. `top` is load-bearing: `auto` would drop the menu bar down beside
+  # the second bar whenever this Mac is docked.
   haus.sill.position = "top";
   haus.sill.bottom = {
     enable = true;
     items = {
-      # The two agent readouts sit in the LEFT group, under the panes they
-      # describe; media takes the center, where nothing competes with a
-      # scrolling title; the machine readouts and the controllers fill the
-      # right.
+      # Agent readouts under the panes they describe; media alone in the center.
       agents = "left";
       aiUsage = "left";
       media = "center";
@@ -560,15 +376,8 @@ in
     };
   };
 
-  # My always-on instructions — how I like to work across every repo. Personal, so
-  # it lives here in the host; the rice just provides the plumbing, and since
-  # hausfold/haus#312 it writes one copy per installed client at the path that
-  # client reads (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md,
-  # ~/.config/opencode/AGENTS.md).
-  # So keep this CLIENT-NEUTRAL: a line about a Claude-only path or flag is noise
-  # to the other two panes it also lands in. Short and universal — repo-specific
-  # rules belong in each project's own AGENTS.md.
-  #
+  # Written once per installed client, so keep this CLIENT-NEUTRAL and universal;
+  # repo-specific rules belong in each project's own AGENTS.md.
   haus.ai.instructions = ''
     # Global instructions
 
@@ -743,47 +552,17 @@ in
   '';
 
   # ---- Claude Code, patched, as an OVERLAY rather than a package ----
-  # The rice installs the clients named in `haus.ai.clients` and
-  # references `pkgs.claude-code` to do it. So this cannot be a second
-  # derivation in home.packages, where it used to live: two builds shipping
-  # `bin/claude` collide in one profile. Redefining `claude-code` itself means
-  # the rice's own reference resolves to the patched build, there is exactly
-  # one `claude` on PATH, and any future consumer of `pkgs.claude-code` inherits
-  # the patch for free. `useGlobalPkgs` is on, so this reaches home-manager too.
-  #
-  # Three annoyances Claude Code has no settings for:
-  #
-  # 1. The permission-mode footer line ("⏵⏵ auto mode on (shift+tab to
-  #    cycle)") under the custom statusline — with 4 panes per tab those
-  #    rows add up. declutter-claude-footer.py patches the JS source
-  #    embedded in the bun-compiled binary so the line renders as null;
-  #    same for the right-hand chip strip ("/rc · focus", IDE selection,
-  #    PR status), a SIBLING row that survived the first collapse and
-  #    came back as a permanent second line in CC 2.1.220. Its regexes
-  #    pin code structure, not minified names, and FAIL THE BUILD (a
-  #    match count off its expected value) if a claude-code update
-  #    reshapes the footer — so a bump can break here; see the script
-  #    header for how to re-derive. autoSignDarwinBinariesHook re-signs the patched
-  #    Mach-O during fixup (unsigned = SIGKILL on Apple Silicon), and
-  #    the package's own versionCheckPhase proves the result still runs.
-  #
-  # 2. Having collapsed that row, the rice statusline is now the ONLY
-  #    place the permission mode appears — and the statusline payload
-  #    doesn't carry it, so the mode chip had to be read out of the
-  #    session transcript, where the mode is only stamped at turn
-  #    boundaries. Result: a chip that sits still while you cycle
-  #    shift+tab. statusline-permission-mode.py adds `permission_mode`
-  #    to the payload (the builder already takes the live mode as a
-  #    parameter; it just never emitted it), paying for the bytes out
-  #    of a version banner inlined at the same site. Same
-  #    same-length/fail-loud rules as above. The rice keeps its
-  #    transcript fallback, so this is an upgrade, not a dependency.
-  #
-  # 3. The hard-coded sleep blocker: on macOS the agent silently spawns
-  #    `caffeinate -i -t 300` (renewed while it works). Shadow
-  #    caffeinate with a no-op on claude's PATH only — everything else,
-  #    including pounce's caffeinate command, still gets the real
-  #    /usr/bin/caffeinate. Sleep stays manual.
+  # An overlay, not a home.packages entry: the rice already installs
+  # `pkgs.claude-code` from ai.clients, and two builds shipping `bin/claude`
+  # would collide. Three things Claude Code has no setting for:
+  #  1. declutter-claude-footer.py — drop the permission-mode footer row and the
+  #     right-hand chip strip. Fails the build if an update reshapes them; the
+  #     script header says how to re-derive the regexes.
+  #  2. statusline-permission-mode.py — emit `permission_mode` in the statusline
+  #     payload, so the rice's chip tracks shift+tab live instead of lagging
+  #     behind the transcript.
+  #  3. caffeinate shadowed with a no-op on claude's PATH only, so the agent
+  #     can't block sleep. Everything else still gets /usr/bin/caffeinate.
   nixpkgs.overlays = [
     (final: prev: {
       claude-code =
@@ -819,28 +598,11 @@ in
     })
   ];
 
-  # The tap providing jcode. Taps are the one Homebrew thing the roster doesn't
-  # model, so it still has to be registered once.
+  # Taps are the one Homebrew thing the roster doesn't model.
   homebrew.taps = [ "1jehuang/jcode" ];
 
-  # No homebrew.casks / homebrew.brews / home.packages list down here any more:
-  # every one of those entries moved into haus.roster above, which is the
-  # point of the change. The rice's own modules still contribute their casks
-  # (ghostty, aerospace, sketchybar, espanso) — those aren't mine to list.
-
-  # The App Store stays manual on this machine (haus.appStore.install is
-  # off by default). What that costs, precisely, having checked it against
-  # mas 7 rather than assuming:
-  #   • mas has no `signin` — sign in once in App Store.app, per machine.
-  #   • mas CANNOT buy a paid app, ever. Things (904280696) is a purchase.
-  #   • mas CAN fetch a free app it's never seen: `mas get` works for Xcode
-  #     (497799835). (`mas install` is the narrower one — already-purchased
-  #     only — and is what the old note here conflated it with.)
-  #   • Both need root since macOS 13, which is exactly why homebrew.masApps
-  #     hangs: brew bundle runs `mas install` as me, mas stops for a password,
-  #     and a rebuild has no terminal to show it in. The rice's activation path
-  #     is already root, so turning appStore.install on would work — I just
-  #     don't want a rebuild touching my Apple ID.
+  # App Store stays manual here (haus.appStore.install off): mas can't buy a
+  # paid app (Things), and I don't want a rebuild touching my Apple ID.
   # System Settings → App Store → automatic updates keeps them current.
 
   # ---- personal home layer: extra packages, private git config, secrets ----
@@ -855,24 +617,8 @@ in
     }:
     let
       # ---- pounce: opt-in command plugins ----
-      # pounce's optional plugins (pkgs/pounce-commands/optional) ship OFF —
-      # each assumes a tool, a service or an account. The rice installs
-      # pounce-commands with the default `plugins = []`, so turning one on is
-      # the host's job. This list IS the switch; everything below is plumbing.
-      #
-      #   audio       switch sound output / input device
-      #   bluetooth   connect & disconnect paired devices (AirPods…)
-      #   caffeinate  keep the Mac awake (also what the sill caffeinate pill drives)
-      #   docker      start / stop / restart containers, tail logs (OrbStack here)
-      #   github      jump to my PRs, review requests, issues, repos
-      #   perplexity  type a question → a fresh perplexity.ai thread in the browser
-      #   spotify     play / pause / skip / shuffle, copy song link
-      #   ssh         pick a host from ~/.ssh/config and connect
-      #   tailscale   connect toggle, copy my / any peer's tailnet IP
-      #
-      # Their CLI deps (switchaudio-osx, blueutil, gh) already come from the
-      # rice, which adds pounce-commands.allPluginDeps to the profile whether
-      # or not a plugin is enabled — so nothing here has to carry them.
+      # pounce's optional command plugins ship OFF; this list is the switch.
+      # Their CLI deps already come from the rice.
       pouncePlugins = [
         "audio"
         "bluetooth"
@@ -885,22 +631,14 @@ in
         "tailscale"
       ];
 
-      # One store copy of pounce-commands built with exactly those plugins. We
-      # symlink the individual scripts out of it (below) rather than adding the
-      # package to home.packages, which would collide with the rice's own
-      # pounce-commands on every shared command filename.
+      # Symlinked script-by-script below rather than added to home.packages,
+      # which would collide with the rice's own pounce-commands.
       pouncePluginPkg = pkgs.pounce-commands.override { plugins = pouncePlugins; };
 
     in
     {
-      # home.packages lives in haus.roster now (orbstack, bench —
-      # `scope = "user"` puts them right back here). One list for what this
-      # machine has, whether it's a cask, a formula or a Nixpkgs package.
-
-      # Dev loop for hacking on pounce: rebuild the system against the LOCAL
-      # pounce checkout (picks up uncommitted edits) instead of the pinned
-      # github input. Normal `darwin-rebuild` still uses github → reproducible.
-      # When happy: commit + push pounce, then a plain rebuild pins the new rev.
+      # Dev loop for hacking on pounce: rebuild against the LOCAL checkout
+      # (uncommitted edits) instead of the pinned input. See AGENTS.md.
       programs.zsh.shellAliases.rebuild-pounce = ''
         (cd "$HOME/.config/nix" \
           && nix build .#darwinConfigurations.mbp.system \
@@ -908,20 +646,10 @@ in
           && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp)
       '';
 
-      # The enabled plugins (see pouncePlugins above), dropped into
-      # ~/.config/pounce/commands — the last and highest-precedence dir pounce
-      # discovers at runtime, so an enabled plugin behaves exactly like a
-      # built-in and is still shadowable by a hand-written script of the same
-      # name. xdg.configFile rather than home.file for the same reason the rice
-      # uses it: a dynamic attrset can't merge with the static
-      # `home.file."…".source` attr-paths in this file.
-      #
-      # Declarative on purpose. This dir spent months holding these same eight
-      # scripts as HAND-MADE symlinks into ~/code/workshop/pounce, and all
-      # eight went dangling the day that checkout moved to ~/code/workshop —
-      # silently, because a command whose file won't read simply doesn't appear
-      # in the palette. Nothing announced the loss; the rows just stopped being
-      # there. Store paths can't rot that way.
+      # Into ~/.config/pounce/commands, pounce's highest-precedence runtime dir.
+      # xdg.configFile, not home.file: a dynamic attrset can't merge with the
+      # static `home.file."…".source` attr-paths below. Store paths so these
+      # can't go dangling the way the old hand-made symlinks silently did.
       xdg.configFile = lib.listToAttrs (
         map (
           p:
@@ -931,14 +659,9 @@ in
         ) pouncePlugins
       );
 
-      # …and reap what the old hand-made symlinks left behind. Any dangling
-      # link in that dir is by definition a plugin pointing at a checkout that
-      # moved or went away, and home-manager REFUSES to link over an existing
-      # unmanaged path — so without this the first rebuild after this lands
-      # dies on eight "would be clobbered" errors. Ordered before
-      # checkLinkTargets (home-manager's own collision check) so it runs early
-      # enough to matter. Only ever removes BROKEN links: a real file or a live
-      # symlink someone put there on purpose is left alone.
+      # …and reap the old hand-made symlinks: home-manager refuses to link over
+      # an unmanaged path, so a dangling one fails the rebuild. Before
+      # checkLinkTargets, and only ever removes BROKEN links.
       home.activation.pounceCommandsReapDangling = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
         run sh -c '
           dir="$0"
@@ -951,35 +674,15 @@ in
         ' "$HOME/.config/pounce/commands"
       '';
 
-      # Text expansion moved up to haus.snippets (darwin level) — the rice
-      # option now owns espanso, via the signed Espanso.app cask.
-
       programs.git.settings = {
         http.cookiefile = "${config.home.homeDirectory}/.gitcookies";
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
       };
 
       # ---- gh-dash: my half of it (see haus.hearth.ghDash above) ----
-      # Everything generic now lives in the rice, behind
-      # `haus.hearth.ghDash.enable` (set at the top of this file): the
-      # patched binary wearing the house mark, the nebelung `include:` in the
-      # active flavor/accent, the `catppuccin.gh-dash.enable = false` opt-out,
-      # the roster entry, the ⌘G borderless zellij overlay — and, since
-      # `git.org` is set up there, the three section lists themselves. The tabs
-      # used to live here; they were never personal, only org-shaped, and
-      # hearth renders exactly the same four PR tabs from the owner name.
-      #
-      # What's left below is the part that genuinely could never be shipped to
-      # anyone else: where my checkouts sit on disk, which keys run which local
-      # command, and the column widths of a laptop screen. Any of the rice's
-      # lists can still be replaced wholesale from here — they're mkDefault —
-      # but replacing one means restating that whole list, since gh-dash reads
-      # a section list as a unit.
-      #
-      # `programs.gh.enable` is false here, so home-manager's gh-extension
-      # registration is a no-op — the manually installed `gh dash` extension
-      # keeps working and reads this same config file, and `gh-dash` is on PATH
-      # from the store as well. Either entry point, one config.
+      # Only what can't be shipped to anyone else: my checkout paths, my keys,
+      # a laptop's column widths. The rice's lists are mkDefault, so overriding
+      # one means restating it whole (gh-dash reads a section list as a unit).
       programs.gh-dash = {
         settings = {
           defaults = {
@@ -987,14 +690,11 @@ in
             prsLimit = 20;
             issuesLimit = 10;
             notificationsLimit = 20;
-            # A dashboard that's half an hour stale isn't one. Six calls an
-            # hour against a 5000/hr token budget is free.
             refetchIntervalMinutes = 5;
             prApproveComment = "LGTM";
 
-            # Off by default: on a laptop the preview eats half the width and
-            # the table IS the answer for "what's open". `p` toggles it, and
-            # that's when you want the CI/checks detail anyway.
+            # Off by default: on a laptop the preview eats half the width. `p`
+            # toggles it when the CI detail is what you're after.
             preview = {
               open = false;
               width = 0.45;
@@ -1002,15 +702,8 @@ in
               position = "auto";
             };
 
-            # Minimal on purpose. ColumnConfig only carries width + hidden
-            # (there's no grow/align in the schema), so the layout is: kill the
-            # columns that are constant for a solo org, let `title` take the
-            # slack.
-            #   author/authorIcon — this is a solo org today; repo + title still
-            #     identify the occasional bot-owned row without spending two
-            #     columns on the same face/name everywhere else.
-            #   base — always main.
-            #   labels/assignees/createdAt — noise I never act on.
+            # Hide what's constant in a solo org (author, base) or that I never
+            # act on (labels/assignees/createdAt), and let `title` take the slack.
             layout.prs = {
               updatedAt.width = 6;
               createdAt.hidden = true;
@@ -1032,38 +725,15 @@ in
             };
           };
 
-          # Commands BLOCK the TUI until they exit — gh-dash hands them to a
-          # shell and waits. So these are things I *want* to take over the pane
-          # until I'm done (holt, lazygit); nothing long-running and unattended
-          # like `bench try`.
-          #
-          # ---- keys chosen from what's actually FREE, the hard way ----
-          # gh-dash checks custom keybindings BEFORE every built-in
-          # (`isUserDefinedKeybinding` is the first case in ui.go's key switch),
-          # and it does NOT warn when a custom key shadows a built-in one. It
-          # just silently wins, and `?` then lists BOTH bindings for the same
-          # key. All three of the original keys here were collisions:
-          #
-          #   w → shadowed "watch checks", the one built-in that turns a PR row
-          #       into a live CI watcher. Now `H`, for holt.
-          #   g → shadowed "first item". Now `z` — free, unshifted, and the vim
-          #       `g` is back.
-          #   y → shadowed "copy number" AND duplicated a built-in: `Y` already
-          #       copies the URL, natively and instantly. The custom one shelled
-          #       out to `gh pr view` for it, which blocks the TUI on an API
-          #       round-trip to learn a URL gh-dash already has. Deleted, not
-          #       moved; `Y` is the binding.
-          #
-          # Free keys left, if this list ever grows: b f i n, and most capitals
-          # (B D E F I J K M N O S T U Z). Everything else in the PRs view is
-          # taken by a built-in — check keys.go and prKeys.go before adding one,
-          # because nothing else will tell you.
+          # Commands BLOCK the TUI until they exit, so only things I want to
+          # take over the pane (holt, lazygit) — never `bench try`.
+          # Custom keys silently SHADOW built-ins with no warning, so check
+          # keys.go / prKeys.go before adding one. Free today: b f i n and most
+          # capitals (B D E F I J K M N O S T U Z).
           keybindings.prs = [
             {
-              # Jump into the agent session behind this PR. holt names a
-              # worktree after the branch minus the `worktree-` prefix, and
-              # resumes whichever client made it (claude/codex/opencode).
-              # Rebuilds the checkout first if the session was parked.
+              # Jump into the agent session behind this PR (holt names the
+              # worktree after the branch minus the `worktree-` prefix).
               key = "H";
               name = "holt session";
               command = ''holt "$(printf '%s' {{.HeadRefName}} | sed 's/^worktree-//')"'';
@@ -1075,18 +745,9 @@ in
             }
           ];
 
-          # Where the owner's repos are checked out — the half of the queue the
-          # rice can't know, since it's a filesystem layout rather than a
-          # GitHub fact. Exact keys beat the wildcard, so `workshop` and
-          # `.github` (checked out as org-profile) can sit next to the
-          # `${ghOrg}/*` fallback that covers every other family repo,
-          # including ones that don't exist yet. Drives {{.RepoPath}} above and
-          # gh-dash's own checkout/diff.
-          #
-          # ghOrg, not a literal: these globs and the rice's section filters
-          # have to name the same owner or the tabs list PRs whose rows can't
-          # be opened locally, so they read one option (see the top of this
-          # file).
+          # Where my checkouts sit on disk — the half the rice can't know.
+          # Exact keys beat the wildcard. ghOrg, not a literal, so these globs
+          # and the rice's section filters can't name different owners.
           repoPaths = {
             "${ghOrg}/*" = "${config.home.homeDirectory}/code/workshop/*";
             "${ghOrg}/workshop" = "${config.home.homeDirectory}/code/workshop";
@@ -1094,12 +755,7 @@ in
             "JulienMartel/nix-config" = "${config.home.homeDirectory}/.config/nix";
           };
 
-          # No `repo:` block: those two intervals only feed the flagged repo view
-          # (see ghDashPkg above for why it isn't on), so setting them here would
-          # be config for a screen that can't be reached.
-
-          # delta is already themed by the rice (hearth wires the nebelung
-          # delta port into gitconfig), so diffs match everything else.
+          # delta is already themed by the rice.
           pager.diff = "delta";
 
           theme.ui = {
@@ -1117,61 +773,35 @@ in
         };
       };
 
-      # My personal "brief" answer-shape skill: verdict first, ≤5
-      # anchored steps, escalate only at ≥3/5 with a recommendation + reversal cost.
-      # The stanza in my instructions above is what makes it load every
-      # session; this just puts the skill on disk. Symlinked OUT of the nix store
-      # (mkOutOfStoreSymlink) so editing SKILL.md is live in the next pane with no
-      # rebuild — its tables (time estimates, the always-≥3/5 list) get tuned often.
-      # Reproducible on a fresh machine: the target is in THIS repo, which always
-      # lives at ~/.config/nix.
+      # My four personal skills. The instructions above are what make `brief`
+      # load every session; these just put the bodies on disk. mkOutOfStoreSymlink
+      # so editing a SKILL.md is live in the next pane with no rebuild, and the
+      # targets are in THIS repo, which always lives at ~/.config/nix.
+      # brief — answer shape: verdict first, ≤5 steps, escalate only at ≥3/5.
       home.file.".claude/skills/brief".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/brief";
 
-      # Claude Code — my generic "ship" skill (the repo-agnostic fallback: PR →
-      # merge → clean up → report; never opens/closes a zellij pane). Repos with
-      # their own scoped ship skill win over this one. Same out-of-store symlink
-      # pattern as brief, for the same reason (edit SKILL.md, live next pane).
-      # NOTE: on the FIRST rebuild after this lands, remove the old hand-placed
-      # dir so the symlink can take over — `rm -rf ~/.claude/skills/ship` — since
-      # there's no home-manager backupFileExtension to move it aside.
+      # ship — repo-agnostic fallback (PR → merge → clean up → report); a repo's
+      # own scoped ship skill wins over this one.
       home.file.".claude/skills/ship".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/ship";
 
-      # Claude Code — "/park": set the working tree aside as a `wip:` commit via
-      # `wt park`, never `git stash`. The stash stack lives in the shared .git dir,
-      # so every agent worktree of a repo AND the main checkout pop the same one —
-      # parallel agents have popped each other's entries into trees that never asked
-      # for them. The rule is in my global CLAUDE.md; this skill is the door an agent
-      # actually walks through, and covers `/unpark` (including its refusal to rewind
-      # an already-pushed wip commit). Same out-of-store symlink pattern as above.
+      # park — set the tree aside as a `wip:` commit, never `git stash`: the
+      # stash stack is shared across every worktree of a repo, so parallel
+      # agents pop each other's entries. Covers `/unpark` too.
       home.file.".claude/skills/park".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
 
-      # Claude Code — "/handoff": turn a paste (or this session) into a
-      # self-contained prompt for a COLD agent, put it on the clipboard, and
-      # print it between begin/end markers so it's findable in a wall of
-      # transcript. Lives here rather than in the rice because it's about how I
-      # move work between panes, not about the desktop the rice builds — same
-      # bucket as brief/ship/park. Out-of-store symlink for the same reason
-      # again: the prompt template is the part that gets tuned, and tuning it
-      # shouldn't cost a rebuild.
+      # handoff — turn a paste (or this session) into a self-contained prompt
+      # for a COLD agent, on the clipboard and between begin/end markers.
       home.file.".claude/skills/handoff".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/handoff";
 
-      # The same four skills, linked a second time under ~/.agents/skills — the
-      # directory BOTH Codex and OpenCode scan for personal skills. Verified on
-      # this machine rather than taken from docs: a marker skill dropped there
-      # shows up in `codex debug prompt-input` and in `opencode debug skill`.
-      #
-      # Without this, "load the `brief` skill" — an instruction that now reaches
-      # all three clients, since the rice writes it to each one's own
-      # instructions file — is an order only Claude Code can obey. Same
-      # out-of-store targets, so there is one body per skill and editing it stays
-      # live in the next pane whichever client that pane runs.
-      #
-      # Both dirs at once is safe: each client dedupes by the skill's frontmatter
-      # `name`, and Claude Code doesn't read ~/.agents at all.
+      # The same four, linked again under ~/.agents/skills — the dir BOTH Codex
+      # and OpenCode scan (verified with `codex debug prompt-input` /
+      # `opencode debug skill`). Otherwise "load the `brief` skill" is an order
+      # only Claude Code can obey. Both dirs is safe: clients dedupe by
+      # frontmatter `name`, and Claude Code never reads ~/.agents.
       home.file.".agents/skills/brief".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/brief";
       home.file.".agents/skills/ship".source =
@@ -1182,29 +812,13 @@ in
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/handoff";
 
       # Claude Code — reinstate our hooks in settings.json on every rebuild.
-      #  • WorktreeCreate/WorktreeRemove: `Super a` / ⌘A (rice: hearth/zellij)
-      #    spawns `claude --worktree`; these hand the create/remove off to `holt`
-      #    so worktrees land under ~/.cache/claude-worktrees instead of inside the
-      #    repo — and so closing a pane never loses uncommitted work (holt parks
-      #    it on the branch first) and stays resumable (`holt` to list, `holt
-      #    <name>` to reopen). holt is its own repo now, taken by the rice as a
-      #    flake input and shipped on PATH; we just point the hooks at its system
-      #    path here (Claude owns settings.json, so hook wiring is the host's job
-      #    — same as the sketchybar hooks below).
-      #    These said `wt create` / `wt remove` until now, which was a live
-      #    revert waiting to happen: settings.json had already been repointed at
-      #    holt BY HAND, and this activation runs on every rebuild, so the next
-      #    `haus rebuild` would have quietly put frozen `wt` back in the loop.
-      #    Note the subcommand differs — `holt hook create`, not `holt create`.
-      #  • UserPromptSubmit/Notification/Stop/SessionEnd: feed the `agents` bar
-      #    paw (haus.sill.plugins) — each fires agents-hook.sh from inside the
-      #    agent's pane, self-reporting its state (working/waiting/idle) + subscribe
-      #    target. Personal because it points at the sketchybar plugin path.
-      # All of it lives in the host, NOT the generic rice (the rice's pathless
-      # claudeCodePermissionMode correctly stays there). Same jq-merge-only-our-keys,
-      # never-own-the-file trick — Claude rewrites settings.json as grants/plugins
-      # change, so we preserve the rest. jq is pinned from the store because
-      # activation runs with a bare PATH.
+      #  • WorktreeCreate/Remove → `holt hook create|remove` (note the `hook`
+      #    subcommand), so ⌘A's worktrees land under ~/.cache/claude-worktrees,
+      #    get parked on pane close, and stay resumable.
+      #  • UserPromptSubmit/Notification/Stop/SessionEnd → agents-hook.sh, which
+      #    feeds the `agents` bar paw. Host-side because it names a plugin path.
+      # Claude owns settings.json, so we jq-merge only our keys and never own the
+      # file. jq is pinned from the store: activation runs with a bare PATH.
       home.activation.claudeCodeHooks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run sh -c '
           settings="$0"
@@ -1226,16 +840,10 @@ in
         ' "$HOME/.claude/settings.json" "/run/current-system/sw/bin/holt" "$HOME/.config/sketchybar/plugins/agents-hook.sh"
       '';
 
-      # Claude Code — pre-approve the commands auto mode keeps escalating to a
-      # prompt. The rice's claudeCodePermissionMode sets defaultMode = "auto":
-      # edits + safe reads run unattended, but `gh …`, `git worktree add/remove`,
-      # pushes and the like still stop for a yes/no — and those are exactly the
-      # agent-worktree flow's bread and butter (wt, bench, and everyday git/gh).
-      # So allowlist them here. Personal, NOT the public rice: how loose an
-      # agent's leash is is a per-user call, and `git:*`/`gh:*` are broad. We
-      # UNION into whatever grants Claude has already written (never clobber its
-      # list) — same merge-our-keys / never-own-the-file trick as the hooks
-      # above; auto mode's own background safety checks still apply on top.
+      # Pre-approve what auto mode still escalates (git/gh/worktree/push) — the
+      # agent-worktree flow's bread and butter. Personal, not rice: leash length
+      # is a per-user call and `git:*`/`gh:*` are broad. UNIONed into Claude's
+      # own grants; auto mode's background safety checks still apply.
       home.activation.claudeCodePermissionAllow = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run sh -c '
           settings="$0"
@@ -1258,17 +866,9 @@ in
         ' "$HOME/.claude/settings.json"
       '';
 
-      # Claude Code — personal UI preferences, pinned so they survive Claude's
-      # own rewrites of settings.json.
-      #   verbose = false — keep tool output collapsed to the short form; ⌃O
-      #     still expands it for the current session, this just decides what
-      #     every new session starts as.
-      # The rice seeds the defaults it considers house style
-      # (hearth: tui/statusLine/spinnerTips/…); this is the per-user layer on
-      # top, hence host and not rice. Same merge-our-keys / never-own-the-file
-      # trick as the two blocks above — and the same consequence: toggling this
-      # from inside Claude (`/config`) lasts until the next `haus rebuild`,
-      # which re-asserts the value below. Flip it here to change it for good.
+      # Personal UI prefs on top of the rice's house-style defaults.
+      # verbose = false: new sessions start with tool output collapsed (⌃O still
+      # expands). Toggling it via `/config` lasts only until the next rebuild.
       home.activation.claudeCodePrefs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run sh -c '
           settings="$0"
