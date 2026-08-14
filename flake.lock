@@ -92,11 +92,11 @@
         "zmx": "zmx"
       },
       "locked": {
-        "lastModified": 1786741754,
-        "narHash": "sha256-cDwD+m1Xman/D2qYCpz2qeLmFO9gN/o/3OYv4foK99s=",
+        "lastModified": 1786743588,
+        "narHash": "sha256-BgYXoI7kqH8ac7u3yupnnBbeDQc5PoV0VgkXlY/sug4=",
         "owner": "hausfold",
         "repo": "hausfold",
-        "rev": "0b1e1724dbafaeba8a111729ca80a8fa70826eea",
+        "rev": "739403f9fc55877aea84337c3866e97232c664ec",
         "type": "github"
       },
       "original": {
@@ -226,11 +226,11 @@
         "prebuilt": "prebuilt"
       },
       "locked": {
-        "lastModified": 1786741039,
-        "narHash": "sha256-PEyWgcGxHV9sYJxWmEmoLAbaq5Qy/9q37v/dH4PKbEw=",
+        "lastModified": 1786743548,
+        "narHash": "sha256-aylGaOpoO5icx+EvUGzJ8l/zVFtL3NQB7swJ76b5aYs=",
         "owner": "hausfold",
         "repo": "perch",
-        "rev": "e33ccbd6d9b6e6055cb95d88fa9547fe97e9db70",
+        "rev": "c2e674e4aa6c56f6d097d62fc1f5daf12ffe1d48",
         "type": "github"
       },
       "original": {
