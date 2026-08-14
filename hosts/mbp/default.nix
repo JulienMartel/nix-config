@@ -38,7 +38,6 @@ in
       "com.cron.electron"
       "com.tinyspeck.slackmacgap"
       "app.legcord.Legcord"
-      "com.openai.codex"
       "so.cap.desktop"
       "com.loom.desktop"
     ];
@@ -53,10 +52,8 @@ in
   haus.git.org = "hausfold";
 
   # ---- coding agents ----
-  # Codex on top of the rice's default pair (an authed ~/.codex exists here).
   haus.ai.clients = [
     "claude"
-    "codex"
     "opencode"
   ];
   haus.ai.default = "claude";
@@ -168,15 +165,6 @@ in
       # Launcher-only: opens/focuses in the current workspace, no pill/auto-assign.
       label = "Passwords";
     };
-    chatgpt = {
-      order = 110;
-      key = "x";
-      name = "ChatGPT";
-      appId = "com.openai.codex";
-      label = "ChatGPT";
-      cask = "chatgpt";
-    };
-
     # ---- apps I don't launch by keyboard ----
     # No key → installed only. Still declared, or `cleanup = "zap"` below reaps it.
     cap = {
@@ -308,11 +296,6 @@ in
       icon = ":calendar:";
       apps = [ "notion-calendar" ];
     };
-    X = {
-      key = "x";
-      icon = ":codex:";
-      apps = [ "chatgpt" ];
-    };
   };
 
   # Leader then Return → Things3's Quick Entry panel.
@@ -331,8 +314,8 @@ in
   haus.homebrew.upgrade = true;
   haus.homebrew.autoUpdate = true;
 
-  # Skip Gatekeeper's first-launch prompt for curated casks — ChatGPT re-prompts
-  # on EVERY launch otherwise (nested quarantined helper). Must be the env var,
+  # Skip Gatekeeper's first-launch prompt for curated casks — a cask with a
+  # nested quarantined helper otherwise re-prompts on EVERY launch. Must be the env var,
   # not `homebrew.caskArgs.no_quarantine`: Homebrew 6 dropped the install flag,
   # so caskArgs makes every new cask install fail the rebuild's `brew bundle`.
   homebrew.onActivation.extraEnv.HOMEBREW_CASK_OPTS = "--no-quarantine";
@@ -392,7 +375,7 @@ in
     (my usual bar) with a recommendation and a reversal cost. It governs code work,
     research, and anything I paste. Say "drop brief" / "full mode" to turn it off. The
     skill body lives at `~/.config/nix/claude/skills/brief/SKILL.md` and is linked into
-    both `~/.claude/skills/brief` and `~/.agents/skills/brief` (Codex and OpenCode read
+    both `~/.claude/skills/brief` and `~/.agents/skills/brief` (OpenCode reads
     the second) as an OUT-of-store symlink — edit it and the next pane has it, no
     rebuild. Same for the other three host-installed skills: `ship`, `park`, `handoff`.
     If your client doesn't load skills at all, read the SKILL.md by path; it's plain
@@ -401,7 +384,7 @@ in
     ## Working in a git worktree
 
     My super+a (`⌘A`) zellij hotkey spawns each agent pane into its own worktree —
-    Claude Code through its native `--worktree` flag, Codex and OpenCode through
+    Claude Code through its native `--worktree` flag, OpenCode through
     `holt new`, which produces the identical checkout from the outside. Either way the
     session gets its own checkout on a `worktree-<name>` branch, branched from the
     repo's local HEAD, living OUTSIDE the repo (under `~/.cache/claude-worktrees/` —
@@ -797,9 +780,8 @@ in
       home.file.".claude/skills/handoff".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/handoff";
 
-      # The same four, linked again under ~/.agents/skills — the dir BOTH Codex
-      # and OpenCode scan (verified with `codex debug prompt-input` /
-      # `opencode debug skill`). Otherwise "load the `brief` skill" is an order
+      # The same four, linked again under ~/.agents/skills — the dir OpenCode
+      # scans (verified with `opencode debug skill`). Otherwise "load the `brief` skill" is an order
       # only Claude Code can obey. Both dirs is safe: clients dedupe by
       # frontmatter `name`, and Claude Code never reads ~/.agents.
       home.file.".agents/skills/brief".source =
