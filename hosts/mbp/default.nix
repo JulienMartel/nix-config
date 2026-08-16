@@ -86,6 +86,13 @@ in
   haus.ai.clients = [
     "claude"
     "opencode"
+    # jcode (jcode.sh) — on trial. It is the one client that does NOT come from
+    # nixpkgs: the AI room installs it from its own Homebrew tap and declares
+    # that tap, which is why neither appears in this file any more. `ai.default`
+    # stays claude until it has been driven for a while; naming it here only
+    # installs it, writes its instructions and skill, and lights its rows in the
+    # bar.
+    "jcode"
   ];
   haus.ai.default = "claude";
 
@@ -269,9 +276,6 @@ in
     };
     gogcli = {
       brew = "gogcli";
-    };
-    jcode = {
-      brew = "jcode";
     };
     # CLI only, for `mas list` / `mas upgrade` by hand (see the App Store note below).
     mas = {
@@ -619,8 +623,9 @@ in
     })
   ];
 
-  # Taps are the one Homebrew thing the roster doesn't model.
-  homebrew.taps = [ "1jehuang/jcode" ];
+  # Taps are the one Homebrew thing the roster doesn't model — but nothing here
+  # needs one any more: `1jehuang/jcode` moved into the AI room, which declares
+  # both the tap and the formula whenever `ai.clients` names jcode.
 
   # App Store stays manual here (haus.appStore.install off): mas can't buy a
   # paid app (Things), and I don't want a rebuild touching my Apple ID.
