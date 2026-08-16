@@ -374,6 +374,12 @@ in
       # Agent readouts under the panes they describe; media alone in the center.
       agents = "left";
       aiUsage = "left";
+      # Beside them on purpose. The left group is already "what is my work
+      # doing" — which panes are busy, what they have spent — and the GitHub
+      # pill answers the same question one step further out: which of it has
+      # landed, and what is stuck. The menu bar's right corner is the machine's
+      # own readouts, and this is not one of those.
+      github = "left";
       media = "center";
       weather = "right";
       cpu = "right";
