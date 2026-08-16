@@ -73,11 +73,18 @@ in
   haus.git.org = "hausfold";
 
   # ---- coding agents ----
-  # Codex on top of the rice's default pair (an authed ~/.codex exists here).
-  # CLI only — the ChatGPT GUI app is deliberately not installed.
+  # Codex was here and is deliberately gone: the CLI's TUI isn't worth the
+  # pane. The ChatGPT GUI app stays uninstalled too.
+  #
+  # This does NOT cost the bar's Codex usage row. That row is polled from the
+  # ChatGPT account with the OAuth token in ~/.codex/auth.json, which survives
+  # the client leaving the profile — statusline-refresh.sh even refreshes the
+  # token itself precisely because `codex login` needs a CLI that isn't
+  # installed. `haus.bar.aiUsage.provider` is deliberately not tied to this
+  # list. So leave ~/.codex/auth.json alone; deleting it is what would kill
+  # the row.
   haus.ai.clients = [
     "claude"
-    "codex"
     "opencode"
   ];
   haus.ai.default = "claude";
