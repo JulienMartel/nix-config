@@ -23,6 +23,14 @@ in
   # legal name. Refresh with `security find-identity -v -p codesigning`.
   haus.launcher.signingIdentity = "4D2693E75A214534ACE299861AE7FC3086573136";
 
+  # The Fn/Globe key opens pounce's emoji grid (haus wires that by default). Take
+  # the key away from macOS at the HID layer instead of sharing it with an event
+  # tap: HIToolbox carries its own Globe handler inside every process, below the
+  # event stream a tap can see, so the stock emoji picker kept opening alongside
+  # pounce's. Costs Fn's other jobs — no Fn+arrows, Fn+Delete, Fn+F1-F12 — which
+  # is a trade this Mac can make, since Fn here is only ever the emoji key.
+  haus.launcher.fnKey = "remap";
+
   # `exclude` REPLACES pounce's default, so Finder is restated. The rest are
   # apps on THIS Mac that keep working with no window open (VM/tunnel/mesh,
   # notifications, global hotkeys, in-flight uploads). Tailscale is accessory
