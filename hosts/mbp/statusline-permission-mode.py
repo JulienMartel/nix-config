@@ -34,7 +34,7 @@ the nix build loudly rather than silently shipping a statusline whose mode chip
 has quietly gone back to lying. To re-derive: search the binary for
 'exceeds_200k_tokens:' and read outward.
 
-The consumer is nebelhaus's modules/den/statusline.sh, which prefers
+The consumer is haus's modules/core/statusline.sh, which prefers
 `.permission_mode` and falls back to the transcript tail — so a stock,
 unpatched claude-code still renders a (turn-boundary) mode chip, and this patch
 is a pure upgrade rather than a dependency.

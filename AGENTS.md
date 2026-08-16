@@ -13,7 +13,7 @@ needs per-client wiring (a hook, a slash command), the wiring lives in that
 client's own file and the *content* stays here or in `.agents/`. The map of
 which tool reads which file is [`.agents/README.md`](./.agents/README.md).
 
-- `flake.nix` — ~18 lines: calls `nebelhaus.mkNebelhaus { username; hostname; host; }`.
+- `flake.nix` — ~18 lines: calls `haus.mkHaus { username; hostname; host; }`.
 - `hosts/mbp/default.nix` — the personal layer: identity, private apps, secrets.
 
 The rice itself lives in sibling repos (checked out under `~/code/workshop/`,
@@ -71,25 +71,25 @@ errors are verbose; read from the *bottom* up for the actual cause.
 | **Pounce** (the app or its commands)               | edit `~/code/workshop/pounce`, test with `bench try` (or `rebuild-pounce`), commit, then `bench ship` |
 
 To pull the latest rice + theme + pounce: `haus update` (the rice CLI: pulls
-the latest rice and rebuilds), or by hand `nix flake update nebelhaus` then
+the latest rice and rebuilds), or by hand `nix flake update haus` then
 rebuild.
 
 ## Theme / colors
 
 Colors aren't defined here — the source of truth is the
 [nebelung](https://github.com/hausfold/nebelung) flake (whiskers palette +
-`name → #hex` map), which `nebelhaus` consumes to theme every tool. One palette
+`name → #hex` map), which `haus` consumes to theme every tool. One palette
 edit re-colors everything at once. To recolor: edit the palette in
 `~/code/workshop/nebelung`, judge it with `bench try switch` (no pushing), then
 commit and `bench ship` — it pushes nebelung, ripples the lock updates through
-pounce and nebelhaus, and updates this repo's lock.
+pounce and haus, and updates this repo's lock.
 
 ## Pounce dev loop
 
 `rebuild-pounce` (alias in `hosts/mbp`) rebuilds the system against the **local**
 `~/code/workshop/pounce` checkout via `--override-input`, so you can iterate on
 uncommitted pounce edits. A plain `darwin-rebuild` uses the pinned GitHub input
-(reproducible). When happy: commit + push pounce, then `nix flake update nebelhaus`.
+(reproducible). When happy: commit + push pounce, then `nix flake update haus`.
 
 ## Deeper docs
 

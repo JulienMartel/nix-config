@@ -1,7 +1,7 @@
 # nix-config
 
 Personal machine config for one Apple Silicon Mac (host `mbp`). This repo is a
-**thin consumer** of the public [nebelhaus](https://github.com/hausfold/hausfold)
+**thin consumer** of the public [haus](https://github.com/hausfold/haus)
 rice — it pulls the whole system + shell from there and adds only what's personal.
 
 > Working on this config? See [`CLAUDE.md`](./CLAUDE.md).
@@ -9,13 +9,13 @@ rice — it pulls the whole system + shell from there and adds only what's perso
 ## Layout
 
 ```
-flake.nix               # ~18 lines: nebelhaus.mkNebelhaus { username; hostname; host; }
+flake.nix               # ~18 lines: haus.mkHaus { username; hostname; host; }
 hosts/mbp/default.nix   # the personal layer: identity, private apps, secrets
 ```
 
 Everything else — macOS defaults, AeroSpace, SketchyBar, the shell/terminal, the
 pounce palette, the Nebelung theme — lives in the public modules, consumed via the
-`nebelhaus` flake input.
+`haus` flake input.
 
 ## New machine
 
@@ -35,7 +35,7 @@ sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp
 
 Then open a fresh terminal. Secrets (SSH/GPG keys, API tokens, `.gitcookies`) are
 **not** in this repo — regenerate/transfer them by hand under `~/.secrets/` and
-`~/.ssh`. Pounce needs a one-time Accessibility approval (see the nebelhaus README).
+`~/.ssh`. Pounce needs a one-time Accessibility approval (see the haus README).
 
 ## Daily use
 
@@ -44,7 +44,7 @@ Then open a fresh terminal. Secrets (SSH/GPG keys, API tokens, `.gitcookies`) ar
 nix build .#darwinConfigurations.mbp.system && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp
 
 # Pull the latest rice/theme/pounce, then apply
-nix flake update nebelhaus && sudo darwin-rebuild switch --flake .#mbp
+nix flake update haus && sudo darwin-rebuild switch --flake .#mbp
 
 # Rollback / inspect
 darwin-rebuild --list-generations

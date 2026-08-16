@@ -1,4 +1,4 @@
-# mbp — Julien's machine. The personal layer on top of the nebelhaus rice:
+# mbp — Julien's machine. The personal layer on top of the haus desktop:
 # identity, private apps, secrets. Everything else lives in the public modules.
 {
   config,
@@ -427,7 +427,7 @@ in
     session gets its own checkout on a `worktree-<name>` branch, branched from the
     repo's local HEAD, living OUTSIDE the repo (under `~/.cache/claude-worktrees/` —
     the path name is historical, every client shares it). The lifecycle hooks are wired
-    globally, so **any** repo I open can be worktree'd — not just nebelhaus.
+    globally, so **any** repo I open can be worktree'd — not just haus.
 
     **Detect it:** `git rev-parse --git-common-dir` points outside your toplevel → you're
     in a linked worktree.
@@ -531,7 +531,7 @@ in
     ## Repos nested inside other repos
 
     Some of my solo repos live *inside* another checkout — e.g. the whole
-    hausfold family (`nebelung`, `pounce`, `nebelhaus`, …) sits under the
+    hausfold family (`nebelung`, `pounce`, `haus`, …) sits under the
     `~/code/workshop` dir, whose `.gitignore` lists each child. **That
     nesting is purely to keep the outer tree clean; each child is a full,
     independent repo I own solo.** So:
@@ -663,7 +663,7 @@ in
       programs.zsh.shellAliases.rebuild-pounce = ''
         (cd "$HOME/.config/nix" \
           && nix build .#darwinConfigurations.mbp.system \
-               --override-input nebelhaus/pounce "path:$HOME/code/workshop/pounce" \
+               --override-input haus/pounce "path:$HOME/code/workshop/pounce" \
           && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp)
       '';
 

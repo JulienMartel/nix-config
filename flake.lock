@@ -36,49 +36,7 @@
         "type": "github"
       }
     },
-    "holt": {
-      "inputs": {
-        "nixpkgs": [
-          "nebelhaus",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1786886190,
-        "narHash": "sha256-TDf5UdFAjekX6SEyQzJ/Oii1NPCjhqj5WgGs2ANnNJ4=",
-        "owner": "hausfold",
-        "repo": "holt",
-        "rev": "69a4ca31320098b2ee569f26489e15d56f410147",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hausfold",
-        "repo": "holt",
-        "type": "github"
-      }
-    },
-    "home-manager": {
-      "inputs": {
-        "nixpkgs": [
-          "nebelhaus",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1782881387,
-        "narHash": "sha256-HvlS1KDGXDjd1bNzzPvH1mkDJATlDAfVYfTh//wJBEA=",
-        "owner": "nix-community",
-        "repo": "home-manager",
-        "rev": "d32537981c036473cf6990ae03176a5d84c43b29",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-community",
-        "repo": "home-manager",
-        "type": "github"
-      }
-    },
-    "nebelhaus": {
+    "haus": {
       "inputs": {
         "catppuccin": "catppuccin",
         "holt": "holt",
@@ -105,14 +63,56 @@
         "type": "github"
       }
     },
+    "holt": {
+      "inputs": {
+        "nixpkgs": [
+          "haus",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786886190,
+        "narHash": "sha256-TDf5UdFAjekX6SEyQzJ/Oii1NPCjhqj5WgGs2ANnNJ4=",
+        "owner": "hausfold",
+        "repo": "holt",
+        "rev": "69a4ca31320098b2ee569f26489e15d56f410147",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hausfold",
+        "repo": "holt",
+        "type": "github"
+      }
+    },
+    "home-manager": {
+      "inputs": {
+        "nixpkgs": [
+          "haus",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1782881387,
+        "narHash": "sha256-HvlS1KDGXDjd1bNzzPvH1mkDJATlDAfVYfTh//wJBEA=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "d32537981c036473cf6990ae03176a5d84c43b29",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "type": "github"
+      }
+    },
     "nebelung": {
       "inputs": {
         "catppuccin": [
-          "nebelhaus",
+          "haus",
           "catppuccin"
         ],
         "nixpkgs": [
-          "nebelhaus",
+          "haus",
           "nixpkgs"
         ]
       },
@@ -133,7 +133,7 @@
     "nix-darwin": {
       "inputs": {
         "nixpkgs": [
-          "nebelhaus",
+          "haus",
           "nixpkgs"
         ]
       },
@@ -155,7 +155,7 @@
     "nix-index-database": {
       "inputs": {
         "nixpkgs": [
-          "nebelhaus",
+          "haus",
           "nixpkgs"
         ]
       },
@@ -220,7 +220,7 @@
     "perch": {
       "inputs": {
         "nixpkgs": [
-          "nebelhaus",
+          "haus",
           "nixpkgs"
         ],
         "prebuilt": "prebuilt"
@@ -242,11 +242,11 @@
     "pounce": {
       "inputs": {
         "nebelung": [
-          "nebelhaus",
+          "haus",
           "nebelung"
         ],
         "nixpkgs": [
-          "nebelhaus",
+          "haus",
           "nixpkgs"
         ]
       },
@@ -275,13 +275,13 @@
         "type": "path"
       },
       "parent": [
-        "nebelhaus",
+        "haus",
         "perch"
       ]
     },
     "root": {
       "inputs": {
-        "nebelhaus": "nebelhaus"
+        "haus": "haus"
       }
     },
     "systems": {

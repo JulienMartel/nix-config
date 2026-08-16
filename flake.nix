@@ -1,15 +1,15 @@
 {
-  description = "julienmartel's machine — a nebelhaus";
+  description = "julienmartel's machine — a haus desktop";
 
-  # The whole rice (system + shell + pounce + nebelung) comes from the public
-  # nebelhaus flake. This private config holds only what's personal: the host.
-  # Update everything with:  nix flake update nebelhaus
-  inputs.nebelhaus.url = "github:hausfold/haus";
+  # The whole desktop (system + shell + pounce + nebelung) comes from the public
+  # haus flake. This private config holds only what's personal: the host.
+  # Update everything with:  nix flake update haus
+  inputs.haus.url = "github:hausfold/haus";
 
   outputs =
-    { nebelhaus, ... }:
+    { haus, ... }:
     {
-      darwinConfigurations.mbp = nebelhaus.mkNebelhaus {
+      darwinConfigurations.mbp = haus.mkHaus {
         username = "julienmartel";
         hostname = "mbp";
         host = ./hosts/mbp;

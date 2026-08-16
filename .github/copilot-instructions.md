@@ -8,7 +8,7 @@ duplication below; if the two ever disagree, `AGENTS.md` wins.)
 The short version:
 
 - This repo is **one Mac's personal layer** (host `mbp`), consuming the public
-  [nebelhaus](https://github.com/nebelhaus/nebelhaus) rice as a flake input. It
+  [haus](https://github.com/hausfold/haus) layer as a flake input. It
   is deliberately thin: `flake.nix` and `hosts/mbp/default.nix`.
 - **Almost nothing belongs here.** System defaults, tiling, the bar, the shell,
   theming — all of that is the rice's, in its own repo. What belongs here is
@@ -17,7 +17,7 @@ The short version:
   next time the lock moves.
 - **Colors are never defined here** — the source of truth is the `nebelung`
   flake.
-- **Prefer a `nebelhaus.*` option** to a raw `system.defaults.*` / `homebrew.*`
+- **Prefer a `haus.*` option** to a raw `system.defaults.*` / `homebrew.*`
   line when one exists.
 - **Never commit secrets.** They load at runtime from `~/.secrets/`; the
   `.gitignore` is deliberately aggressive about `*secrets*`, keys and `.env`.
