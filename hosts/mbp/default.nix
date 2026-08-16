@@ -21,13 +21,13 @@ in
   haus.git.signingKey = "6F7BD6F43A7C1420";
   # By SHA, not name, so the generated launch-agent script doesn't carry my
   # legal name. Refresh with `security find-identity -v -p codesigning`.
-  haus.pounce.signingIdentity = "4D2693E75A214534ACE299861AE7FC3086573136";
+  haus.launcher.signingIdentity = "4D2693E75A214534ACE299861AE7FC3086573136";
 
   # `exclude` REPLACES pounce's default, so Finder is restated. The rest are
   # apps on THIS Mac that keep working with no window open (VM/tunnel/mesh,
   # notifications, global hotkeys, in-flight uploads). Tailscale is accessory
   # today and listed anyway, in case upstream's packaging changes.
-  haus.pounce.autoQuit = {
+  haus.launcher.autoQuit = {
     enable = true;
     exclude = [
       "com.apple.finder"
@@ -44,14 +44,14 @@ in
   };
 
   # Double-clicked json/md/ts/… open in Helix, matching the hx-everywhere default.
-  haus.hearth.hijackFileAssociations = true;
+  haus.terminal.hijackFileAssociations = true;
 
   # The review queue. Everything generic is the rice's; only this machine's
   # checkout paths / keys / column widths stay in programs.gh-dash below.
-  haus.hearth.ghDash.enable = true;
+  haus.terminal.ghDash.enable = true;
 
   # Agent lanes open into their own zmx session + Ghostty window, tiled by
-  # prowl onto T, instead of a zellij pane. The win worth the switch: closing
+  # the tiler onto T, instead of a zellij pane. The win worth the switch: closing
   # the window no longer means parking the work — a zmx session outlives every
   # client attached to it, so ⌘W detaches and the agent keeps thinking, and
   # `holt <name>` reopens a window onto the LIVE conversation rather than
@@ -61,7 +61,7 @@ in
   # so it changes `holt new` and `holt <name>`; ⌘A (Claude Code's own
   # WorktreeCreate hook, which returns a path and opens the client in the pane
   # it was run from) and the palette's Spawn Agent still make zellij panes.
-  haus.hearth.lanes.backend = "zmx";
+  haus.terminal.lanes.backend = "zmx";
   haus.git.org = "hausfold";
 
   # ---- coding agents ----
@@ -113,7 +113,7 @@ in
   system.defaults.trackpad.Clicking = false;
 
   # Obsidian themes per vault; this is the one to theme.
-  haus.hearth.obsidianVaults = [
+  haus.terminal.obsidianVaults = [
     "Library/Mobile Documents/iCloud~md~obsidian/Documents/notes"
   ];
 
@@ -248,7 +248,7 @@ in
     gcloud-cli = {
       cask = "gcloud-cli";
     };
-    # Also sill's when the calendar pill is on; same id, so they merge.
+    # Also the bar's when the calendar pill is on; same id, so they merge.
     ical-buddy = {
       brew = "ical-buddy";
     };
@@ -336,9 +336,9 @@ in
   # so caskArgs makes every new cask install fail the rebuild's `brew bundle`.
   homebrew.onActivation.extraEnv.HOMEBREW_CASK_OPTS = "--no-quarantine";
 
-  # Which pills exist; `haus.sill.bottom.items` below places them.
+  # Which pills exist; `haus.bar.bottom.items` below places them.
   # Off on purpose: wifi/volume (menu bar + HUD already say it) and harvest.
-  haus.sill.items = {
+  haus.bar.items = {
     agents = true;
     aiUsage = true;
     elgato = true;
@@ -351,16 +351,16 @@ in
     wifi = false;
   };
 
-  haus.sill.battery.hideOver = 80;
-  haus.sill.clock.mode = "compact";
+  haus.bar.battery.hideOver = 80;
+  haus.bar.clock.mode = "compact";
 
   # This machine tracks the rice, so the "haus update" nag is wanted.
-  haus.sill.logo.updateCheck = true;
+  haus.bar.logo.updateCheck = true;
 
   # Both bars. `top` is load-bearing: `auto` would drop the menu bar down beside
   # the second bar whenever this Mac is docked.
-  haus.sill.position = "top";
-  haus.sill.bottom = {
+  haus.bar.position = "top";
+  haus.bar.bottom = {
     enable = true;
     items = {
       # Agent readouts under the panes they describe; media alone in the center.
@@ -370,7 +370,7 @@ in
       weather = "right";
       cpu = "right";
       memory = "right";
-      hush = "right";
+      focus = "right";
       elgato = "right";
       caffeinate = "right";
     };
@@ -679,7 +679,7 @@ in
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
       };
 
-      # ---- gh-dash: my half of it (see haus.hearth.ghDash above) ----
+      # ---- gh-dash: my half of it (see haus.terminal.ghDash above) ----
       # Only what can't be shipped to anyone else: my checkout paths, my keys,
       # a laptop's column widths. The rice's lists are mkDefault, so overriding
       # one means restating it whole (gh-dash reads a section list as a unit).

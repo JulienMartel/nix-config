@@ -2,7 +2,7 @@
 
 Personal machine config for one Apple Silicon Mac (host `mbp`, user `julienmartel`).
 
-This repo is **thin**: it consumes the public [nebelhaus](https://github.com/hausfold/hausfold)
+This repo is **thin**: it consumes the public [haus](https://github.com/hausfold/haus)
 rice and adds only what's personal. The actual system/shell config lives in the
 public modules, not here.
 
@@ -18,8 +18,9 @@ which tool reads which file is [`.agents/README.md`](./.agents/README.md).
 
 The rice itself lives in sibling repos (checked out under `~/code/workshop/`,
 the [workshop](https://github.com/hausfold/workshop)):
-- **[nebelhaus](https://github.com/hausfold/hausfold)** — the flake + modules
-  (`den` `hearth` `prowl` `sill` `collar` `pounce`). System, shell, everything.
+- **[haus](https://github.com/hausfold/haus)** — the flake + modules
+  (`core` `terminal` `windows` `bar` `security` `launcher` `shelf` `focus`).
+  System, shell, everything. The desktop it ships is `hacker`.
 - **[pounce](https://github.com/hausfold/pounce)** — the command-palette app.
 - **[nebelung](https://github.com/hausfold/nebelung)** — the theme.
 
@@ -39,14 +40,14 @@ identity, secrets, host tweaks. The rice itself lives elsewhere.
 | Want to change… | Repo |
 |---|---|
 | this machine's apps / identity / secrets / host tweaks | `~/.config/nix` ← **you are here** |
-| the rice: macOS defaults, tiling (prowl), bar (sill), shell (hearth), security (collar) | `~/code/workshop/hausfold` |
+| the desktop: macOS defaults, tiling (`windows`), the menu bar (`bar`), the shell (`terminal`), Touch ID + firewall (`security`) | `~/code/workshop/haus` |
 | the pounce palette app or its commands | `~/code/workshop/pounce` |
 | colors / the theme palette | `~/code/workshop/nebelung` |
 
 > **Whatever agent you are, enforce this.** If a request targets a different repo
 > than the one whose files you're in, STOP and say so before editing — e.g.
-> "That's a bar tweak; it lives in the rice at
-> `~/code/workshop/hausfold/modules/sill`. Want me to switch to that repo?"
+> "That's a bar tweak; it lives in the layer at
+> `~/code/workshop/haus/modules/bar`. Want me to switch to that repo?"
 > Don't make the change in the wrong place. After the owning repo is edited +
 > pushed, the consumer here pulls it via `nix flake update <input>` + rebuild.
 
@@ -64,9 +65,9 @@ errors are verbose; read from the *bottom* up for the actual cause.
 | You're changing…                                   | Do this |
 |----------------------------------------------------|---------|
 | A personal app (cask/brew), for this machine only  | `hosts/mbp/default.nix` → `homebrew.casks`/`brews` |
-| Your identity (git name/email/signing, pounce cert)| `hosts/mbp/default.nix` → `haus.git.*` / `haus.pounce.signingIdentity` |
+| Your identity (git name/email/signing, pounce cert)| `hosts/mbp/default.nix` → `haus.git.*` / `haus.launcher.signingIdentity` |
 | A personal package / secret / private alias        | `hosts/mbp/default.nix` → `home-manager.users.${username}` |
-| **The rice** (system defaults, WM, bar, shell, theming) | edit the module in `~/code/workshop/hausfold`, test with `bench try`, commit, then `bench ship` |
+| **The rice** (system defaults, WM, bar, shell, theming) | edit the module in `~/code/workshop/haus`, test with `bench try`, commit, then `bench ship` |
 | **Pounce** (the app or its commands)               | edit `~/code/workshop/pounce`, test with `bench try` (or `rebuild-pounce`), commit, then `bench ship` |
 
 To pull the latest rice + theme + pounce: `haus update` (the rice CLI: pulls
@@ -94,7 +95,7 @@ uncommitted pounce edits. A plain `darwin-rebuild` uses the pinned GitHub input
 
 Operational gotchas that used to live here (launchd GUI race, pounce self-signing,
 Homebrew tap-trust, Touch ID + zellij reattach, Determinate GC) now live with the
-code that embodies them — see `~/code/workshop/hausfold/AGENTS.md`.
+code that embodies them — see `~/code/workshop/haus/AGENTS.md`.
 
 ## Conventions
 
