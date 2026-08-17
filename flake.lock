@@ -50,11 +50,11 @@
         "zmx": "zmx"
       },
       "locked": {
-        "lastModified": 1786948560,
-        "narHash": "sha256-BQCBSpDVCzAxtYOnPfl9302jRUhaBavACxTKHAjALaY=",
+        "lastModified": 1786991628,
+        "narHash": "sha256-3QRA+i95Fpvc4v7akdM+8BcmTAse8xrPAm2HODuGt9I=",
         "owner": "hausfold",
         "repo": "haus",
-        "rev": "456ffc19256ed8e5fdfe888b661a3b4bc23d7f90",
+        "rev": "1257135bc50fb6265a6316f321815d8a5159e490",
         "type": "github"
       },
       "original": {
