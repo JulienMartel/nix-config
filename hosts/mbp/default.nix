@@ -58,18 +58,6 @@ in
   # checkout paths / keys / column widths stay in programs.gh-dash below.
   haus.terminal.ghDash.enable = true;
 
-  # Agent lanes open into their own zmx session + Ghostty window, tiled by
-  # the tiler onto T, instead of a zellij pane. The win worth the switch: closing
-  # the window no longer means parking the work — a zmx session outlives every
-  # client attached to it, so ⌘W detaches and the agent keeps thinking, and
-  # `holt <name>` reopens a window onto the LIVE conversation rather than
-  # resuming a transcript.
-  #
-  # Additive, not a replacement. It only answers holt's `open`/`resume` seams,
-  # so it changes `holt new` and `holt <name>`; ⌘A (Claude Code's own
-  # WorktreeCreate hook, which returns a path and opens the client in the pane
-  # it was run from) and the palette's Spawn Agent still make zellij panes.
-  haus.terminal.lanes.backend = "zmx";
   haus.git.org = "hausfold";
 
   # ---- coding agents ----
