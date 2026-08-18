@@ -18,24 +18,6 @@
         "type": "github"
       }
     },
-    "flake-utils": {
-      "inputs": {
-        "systems": "systems"
-      },
-      "locked": {
-        "lastModified": 1731533236,
-        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "type": "github"
-      }
-    },
     "haus": {
       "inputs": {
         "catppuccin": "catppuccin",
@@ -46,15 +28,14 @@
         "nix-index-database": "nix-index-database",
         "nixpkgs": "nixpkgs_2",
         "perch": "perch",
-        "pounce": "pounce",
-        "zmx": "zmx"
+        "pounce": "pounce"
       },
       "locked": {
-        "lastModified": 1787017738,
-        "narHash": "sha256-zRTtXw3ySeyigDQgUlFD57oPS61Xg3PfwtZPr/GP7BU=",
+        "lastModified": 1787028400,
+        "narHash": "sha256-agx2dWWdDSHfBJa/GFqWLVMis2YPigrhx8xA7sJYZvM=",
         "owner": "hausfold",
         "repo": "haus",
-        "rev": "dd153194f62cacf06711f3faf560e3006653b91c",
+        "rev": "b7654201c81f7d2624d15a1352b23e1c360fb7f9",
         "type": "github"
       },
       "original": {
@@ -202,21 +183,6 @@
         "type": "github"
       }
     },
-    "nixpkgs_3": {
-      "locked": {
-        "lastModified": 1778556142,
-        "narHash": "sha256-n6P0m0ahFtMMkubMcHe4ole6N01B2Ywhz8ROq6ncSxk=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "dcddeceb5be51a26d1d4440c50c591bea424073f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "perch": {
       "inputs": {
         "nixpkgs": [
@@ -226,11 +192,11 @@
         "prebuilt": "prebuilt"
       },
       "locked": {
-        "lastModified": 1787001914,
-        "narHash": "sha256-1yida+XPtcGfC2ceJTKCN060rkyrP4xgj6D0WO8MOzw=",
+        "lastModified": 1787019201,
+        "narHash": "sha256-1G3VKLBBUif1UdGt1i9Cip8DZLiz0CRMrFzjK31pb+o=",
         "owner": "hausfold",
         "repo": "perch",
-        "rev": "39226b3bee2bfa94142f49540dc7647715f80669",
+        "rev": "90c7307add1a3ed4f7dec49dd23bf007f089353f",
         "type": "github"
       },
       "original": {
@@ -251,11 +217,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1786998457,
-        "narHash": "sha256-NtYWOIxS/mKuYp36Rmr3ZUpZ4q440a5/MfOv4jIfooc=",
+        "lastModified": 1787019129,
+        "narHash": "sha256-LhQcZqeRjHyG9OJIoxCjRNklgX45HGknaWCQjOjoPnM=",
         "owner": "hausfold",
         "repo": "pounce",
-        "rev": "1f5104a95e59489ef7559617039840faa4cf8917",
+        "rev": "0edd2274a33e7a8ffb4077df416da5c9a7e2f3b6",
         "type": "github"
       },
       "original": {
@@ -282,58 +248,6 @@
     "root": {
       "inputs": {
         "haus": "haus"
-      }
-    },
-    "systems": {
-      "locked": {
-        "lastModified": 1681028828,
-        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
-        "owner": "nix-systems",
-        "repo": "default",
-        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-systems",
-        "repo": "default",
-        "type": "github"
-      }
-    },
-    "zig2nix": {
-      "inputs": {
-        "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs_3"
-      },
-      "locked": {
-        "lastModified": 1778610364,
-        "narHash": "sha256-0rhkhp+Vi2gfwblOB138lOpfHTKOvR0xHZYWnRcA0DU=",
-        "owner": "Cloudef",
-        "repo": "zig2nix",
-        "rev": "4541f97bd2f114e304c518fc058d1ebc45440315",
-        "type": "github"
-      },
-      "original": {
-        "owner": "Cloudef",
-        "repo": "zig2nix",
-        "type": "github"
-      }
-    },
-    "zmx": {
-      "inputs": {
-        "zig2nix": "zig2nix"
-      },
-      "locked": {
-        "lastModified": 1786706658,
-        "narHash": "sha256-dqn+Fk11yE40IS4PfDEiH4E+2ahZS5yfPAqw8BXNyyU=",
-        "owner": "neurosnap",
-        "repo": "zmx",
-        "rev": "cd88d1b9dd04805b628d609058559cef2e920d38",
-        "type": "github"
-      },
-      "original": {
-        "owner": "neurosnap",
-        "repo": "zmx",
-        "type": "github"
       }
     }
   },
