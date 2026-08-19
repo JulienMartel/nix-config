@@ -80,9 +80,9 @@ in
     # stays claude until it has been driven for a while; naming it here only
     # installs it, writes its instructions and skill, and lights its rows in the
     # bar.
-    "jcode"
+    # "jcode"
   ];
-  haus.ai.default = "jcode";
+  haus.ai.default = "claude";
 
   # ---- text expansion ----
   haus.snippets = {
@@ -158,15 +158,6 @@ in
       appId = "com.tinyspeck.slackmacgap";
       label = "Slack";
       cask = "slack";
-    };
-    # No trill here: opt-in in the rice and left off, so `m` / workspace M are free.
-    swather = {
-      order = 70;
-      key = "h";
-      name = "Swather";
-      appId = "com.swather.app";
-      label = "Swather";
-      # No source field: installed by hand.
     };
     claude = {
       order = 80;
@@ -303,12 +294,6 @@ in
       icon = ":slack:";
       apps = [ "slack" ];
     };
-    H = {
-      key = "h";
-      # No app-font glyph for Swather — fa-hourglass (U+F254) in the Nerd Font.
-      icon = builtins.fromJSON ''"\uf254"'';
-      apps = [ "swather" ];
-    };
     C = {
       key = "c";
       icon = ":claude:";
@@ -394,20 +379,6 @@ in
       elgato = "right";
       caffeinate = "right";
     };
-  };
-
-  # Two scenes, here to feel-test haus#376 — the paths that act on this Mac
-  # (the real hotkey 175, caffeinate, the audio switch) can only be exercised
-  # from a host. `recording` takes every lever; `reading` exists for the one
-  # job restorePreviousState = false has: leaving always ends quiet-off.
-  haus.focus.scenes.recording = {
-    description = "camera on, nothing interrupts";
-    preventSleep = true;
-    audio.input = "Julien’s iPhone 16 Microphone"; # exact, curly apostrophe
-  };
-  haus.focus.scenes.reading = {
-    description = "quiet, and leaving always un-quiets";
-    restorePreviousState = false;
   };
 
   # Written once per installed client, so keep this CLIENT-NEUTRAL and universal;
