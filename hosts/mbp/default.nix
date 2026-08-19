@@ -396,6 +396,20 @@ in
     };
   };
 
+  # Two scenes, here to feel-test haus#376 — the paths that act on this Mac
+  # (the real hotkey 175, caffeinate, the audio switch) can only be exercised
+  # from a host. `recording` takes every lever; `reading` exists for the one
+  # job restorePreviousState = false has: leaving always ends quiet-off.
+  haus.focus.scenes.recording = {
+    description = "camera on, nothing interrupts";
+    preventSleep = true;
+    audio.input = "Julien’s iPhone 16 Microphone"; # exact, curly apostrophe
+  };
+  haus.focus.scenes.reading = {
+    description = "quiet, and leaving always un-quiets";
+    restorePreviousState = false;
+  };
+
   # Written once per installed client, so keep this CLIENT-NEUTRAL and universal;
   # repo-specific rules belong in each project's own AGENTS.md.
   haus.ai.instructions = ''
