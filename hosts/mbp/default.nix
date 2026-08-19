@@ -82,7 +82,7 @@ in
     # bar.
     "jcode"
   ];
-  haus.ai.default = "claude";
+  haus.ai.default = "jcode";
 
   # ---- text expansion ----
   haus.snippets = {
