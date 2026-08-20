@@ -31,11 +31,11 @@
         "pounce": "pounce"
       },
       "locked": {
-        "lastModified": 1787244966,
-        "narHash": "sha256-SGZoTa4QDiStKEanNHrF9lD3LHd0KRmwZ4k/okQFhWs=",
+        "lastModified": 1787250040,
+        "narHash": "sha256-LZhQLhByyyBFD9P0km3MY0scB6LuyoumVQQwtiyFYYg=",
         "owner": "hausfold",
         "repo": "haus",
-        "rev": "257bc201fa19fab4a8703f7daa7fb13999dbc44c",
+        "rev": "bf50de6f7b8b4e0b351e3523893256fad9a76829",
         "type": "github"
       },
       "original": {
