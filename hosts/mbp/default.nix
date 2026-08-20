@@ -699,6 +699,21 @@ in
 
     in
     {
+      # ---- pi ----
+      # Not `haus.ai.clients`: that option's enum is claude/codex/opencode, so
+      # pi can only be a plain package until the rice learns it as a client.
+      # Which means no generated instructions file, no skills dir and no
+      # Spawn Agent pane for it — just `pi` on PATH, on trial.
+      #
+      # nixpkgs builds it from the earendil-works/pi source (plus the official
+      # npm tarball, for a model catalog upstream gitignores) and has a
+      # nix-update updateScript, so it tracks npm closely — nixpkgs and npm
+      # were both on 0.84.2 the day this landed, and our pin gave 0.84.1. So
+      # version lag here is `haus update` cadence, not the package's. Pi's own
+      # self-update, if it has one, can't work against the read-only store;
+      # bump the input instead.
+      home.packages = [ pkgs.pi-coding-agent ];
+
       # Dev loop for hacking on pounce: rebuild against the LOCAL checkout
       # (uncommitted edits) instead of the pinned input. See AGENTS.md.
       # `things today`, `things add …` at a prompt. An alias rather than a
