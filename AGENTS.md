@@ -100,6 +100,9 @@ code that embodies them — see `~/code/workshop/haus/AGENTS.md`.
 ## Conventions
 
 - Commits are GPG-signed. Keep messages imperative.
-- Never commit secrets — they're loaded at runtime from `~/.secrets/` in the host's
-  zsh `initContent`.
+- Never commit secret VALUES. `secretspec.toml` here declares which secrets this
+  machine needs; the values live in the macOS login keychain (the rice sets
+  `haus.secrets.provider = "keyring"`). `secretspec check` says what's missing,
+  `secretspec set NAME` fills one, `secretspec run -- cmd` injects them into just
+  that process. The old plaintext `~/.secrets/` dir is what this replaces.
 - `nixfmt` formats `.nix` files.

@@ -19,8 +19,10 @@ The short version:
   flake.
 - **Prefer a `haus.*` option** to a raw `system.defaults.*` / `homebrew.*`
   line when one exists.
-- **Never commit secrets.** They load at runtime from `~/.secrets/`; the
-  `.gitignore` is deliberately aggressive about `*secrets*`, keys and `.env`.
+- **Never commit secret values.** `secretspec.toml` declares the names; the values
+  live in the macOS login keychain via `secretspec`. The `.gitignore` is
+  deliberately aggressive about `*secrets*`, keys and `.env` (with one negation
+  so `secretspec.toml` itself stays committable).
 - **Build before you switch:** `nix build .#darwinConfigurations.mbp.system`
   first — a failed build must never reach the running system. Nix errors read
   from the *bottom* up.
