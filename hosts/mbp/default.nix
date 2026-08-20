@@ -96,7 +96,19 @@ in
   haus.theme.accent = "pink";
 
   # Accent-stamped userstyles in Zen (hausfold#208); import stays a click.
+  # Kept alongside the compiled sheet below for what only it can do: per-site
+  # toggles, styles that update themselves, and adding one without a rebuild.
   haus.zen.extensions.stylus = { };
+
+  # The two sites worth having right on every machine, compiled into Zen's
+  # userContent.css instead — no import, no state, and pink follows on a
+  # rebuild (haus#416). Keep this list short: a user sheet is applied to every
+  # document, and these two are already ~320 KB. Anything else stays in Stylus,
+  # and a site belongs to one of the two, never both.
+  haus.zen.userStyles = [
+    "github"
+    "youtube"
+  ];
 
   # Tab list → bar, so the media pill's ⌘ click lands on the noisy tab
   # (hausfold#311).
