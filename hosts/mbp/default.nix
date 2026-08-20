@@ -110,7 +110,7 @@ in
   # Gecko reads that file once, at startup, so Zen has to be restarted.
   #
   # Size is why this is a list and not a bool: all 134 compile to ~7 MB. These
-  # forty compile to 3.2 MB (measured), and every declaration in them is
+  # forty-one compile to 3.3 MB (measured), and every declaration in them is
   # applied to every document — cheap per page, but not free, so a site earns
   # its slug by being one you actually open. wikipedia (501 KB),
   # stack-overflow (438) and go.dev (310) are 39% of the sheet between them;
@@ -149,6 +149,7 @@ in
     "nixos-search"
     "npm"
     "perplexity"
+    "pypi"
     "react.dev"
     "reddit"
     "regex101"
