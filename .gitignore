@@ -11,6 +11,9 @@ result-*
 *secrets*
 *_secrets*
 secrets/
+# …but secretspec.toml declares WHICH secrets exist, never a value —
+# it is meant to be committed, and `*secrets*` above would eat it.
+!secretspec.toml
 .env
 .envrc
 
