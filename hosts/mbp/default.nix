@@ -102,20 +102,39 @@ in
 
   # The sites worth having right on every machine, compiled into Zen's
   # userContent.css instead — no import, no state, and pink follows on a
-  # rebuild (haus#416). Keep this list short: a user sheet is applied to every
-  # document, and these eight already compile to ~517 KB (github + youtube are
-  # ~330 KB of it). Anything else stays in Stylus, and a site belongs to one of
-  # the two, never both — so these eight are OFF in Stylus.
+  # rebuild (haus#416). Anything not here stays in Stylus, and a site belongs
+  # to one of the two, never both — so every slug below is OFF in Stylus.
+  #
+  # Size is the reason this is a list and not a bool: the whole set is 7 MB of
+  # CSS. These eighteen compile to ~1.4 MB, which Zen parses once at startup —
+  # the per-page cost after that is matching a domain, not re-reading the file.
+  # wikipedia (475 KB) and github (217 KB) are a third of it on their own.
+  # Deliberately absent: search engines (google/duckduckgo/brave are ~60 KB
+  # each and only one of them is yours), and stack-overflow, which is 419 KB
+  # whose code blocks Firefox then drops (see below) — Stylus has it whole.
+  #
+  # Six of these land with their code blocks unthemed — ghostty.org, mdn,
+  # nixos-manual, regex101, wiki.nixos.org, wikipedia: the highlighting is a
+  # remote @import, invalid inside @-moz-document, so Firefox drops that one
+  # rule and the rest of each style applies. The build prints the list.
   haus.zen.userStyles = [
-    # wiki.nixos.org lands with its code blocks unthemed: they're a remote
-    # @import, which is invalid inside @-moz-document and Firefox drops it.
+    "chatgpt"
     "claude"
+    "ghostty.org"
     "github"
+    "gmail"
+    "google-drive"
     "hacker-news"
     "home-manager-options-search"
+    "mdn"
+    "nixos-manual"
     "nixos-search"
+    "npm"
     "reddit"
+    "regex101"
+    "twitter"
     "wiki.nixos.org"
+    "wikipedia"
     "youtube"
   ];
 
