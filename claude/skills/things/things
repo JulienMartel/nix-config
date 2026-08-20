@@ -1,0 +1,290 @@
+#!/usr/bin/env bash
+# things — read/write the local Things 3 database from a shell or an agent.
+#
+#   READS  go straight at the app's SQLite file, opened -readonly. No app
+#          interaction, no TCC prompt, no focus stolen from whoever is at the
+#          keyboard. Never, ever write to that file: Things' sync layer keeps
+#          its own journal and a hand-written row corrupts the account.
+#   WRITES go through the documented URL scheme, dispatched with `open -g` so
+#          Things applies them in the background without coming to the front.
+#          https://culturedcode.com/things/support/articles/2803573/
+#
+# Live-edited out of ~/.config/nix/claude/skills/things/things (out-of-store
+# symlink) — no rebuild needed to change it.
+
+set -euo pipefail
+
+die() { printf 'things: %s\n' "$*" >&2; exit 1; }
+
+# ---------------------------------------------------------------- database ---
+
+find_db() {
+  local d
+  for d in "$HOME/Library/Group Containers/JLMPQHK86H.com.culturedcode.ThingsMac"/ThingsData-*/"Things Database.thingsdatabase/main.sqlite"; do
+    [ -f "$d" ] && { printf '%s' "$d"; return 0; }
+  done
+  die "no Things database found — is Things 3 installed for this user?"
+}
+DB="${THINGS_DB:-$(find_db)}"
+
+q() { sqlite3 -readonly -noheader -separator $'\t' "$DB" "$1"; }
+
+# Things packs dates as bitfields, not epochs: year<<16 | month<<12 | day<<7.
+D()  { echo "printf('%04d-%02d-%02d', $1>>16, ($1>>12)&15, ($1>>7)&31)"; }
+# ...and the same field compared as a plain yyyymmdd integer, for range tests.
+DI() { echo "(($1>>16)*10000 + (($1>>12)&15)*100 + (($1>>7)&31))"; }
+TODAY="cast(strftime('%Y%m%d','now','localtime') as integer)"
+
+# status: 0 open · 2 canceled · 3 completed.  type: 0 to-do · 1 project · 2 heading.
+# start: 0 Inbox · 1 Anytime/scheduled · 2 Someday.  startBucket 1 = Evening.
+OPEN="t.status=0 and t.trashed=0"
+
+# One row per to-do: id, when, deadline, tags, project/area, title.
+SEL="select t.uuid as id,
+  (case when t.startDate is null then '' else $(D t.startDate) end) as \"when\",
+  (case when t.deadline  is null then '' else $(D t.deadline)  end) as deadline,
+  ifnull((select group_concat(g.title,',') from TMTaskTag tt join TMTag g on g.uuid=tt.tags where tt.tasks=t.uuid),'') as tags,
+  ifnull(p.title, ifnull(a.title,'')) as list,
+  t.title as title
+from TMTask t
+  left join TMTask h  on h.uuid  = t.heading
+  left join TMTask p  on p.uuid  = coalesce(t.project, h.project)
+  left join TMArea a  on a.uuid  = t.area
+  left join TMArea pa on pa.uuid = p.area"
+
+# Plain, greppable output: id<TAB>when<TAB>deadline<TAB>tags<TAB>list<TAB>title
+emit() {
+  if [ "${AS_JSON:-0}" = 1 ]; then
+    sqlite3 -readonly -json "$DB" "$1"
+  else
+    q "$1" | awk -F'\t' 'BEGIN{n=0}
+      { n++; printf "%s  %-10s %-11s %-16s %-20s %s\n", $1, ($2==""?"—":$2), ($3==""?"":"due "$3), ($4==""?"":"#"$4), ($5==""?"":"["$5"]"), $6 }
+      END{ if(n==0) print "(nothing)" ; else printf "\n%d item(s)\n", n }'
+  fi
+}
+
+# ------------------------------------------------------------------- lists ---
+
+cmd_today()    { emit "$SEL where t.type=0 and $OPEN and t.start=1 and t.startDate is not null and $(DI t.startDate) <= $TODAY order by t.todayIndex, t.\"index\";"; }
+cmd_inbox()    { emit "$SEL where t.type=0 and $OPEN and t.start=0 order by t.\"index\";"; }
+cmd_anytime()  { emit "$SEL where t.type=0 and $OPEN and t.start=1 and t.startDate is null order by t.\"index\";"; }
+cmd_someday()  { emit "$SEL where t.type=0 and $OPEN and t.start=2 order by t.\"index\";"; }
+cmd_upcoming() { local n="${1:-14}"; emit "$SEL where t.type=0 and $OPEN and t.startDate is not null and $(DI t.startDate) > $TODAY and $(DI t.startDate) <= cast(strftime('%Y%m%d','now','localtime','+$n day') as integer) order by t.startDate;"; }
+cmd_deadlines(){ local n="${1:-30}"; emit "$SEL where t.type=0 and $OPEN and t.deadline is not null and $(DI t.deadline) <= cast(strftime('%Y%m%d','now','localtime','+$n day') as integer) order by t.deadline;"; }
+cmd_logbook()  { local n="${1:-20}";
+  q "select t.uuid, date(t.stopDate,'unixepoch','localtime'),
+            case t.status when 2 then 'canceled' else 'done' end, t.title
+     from TMTask t where t.type=0 and t.trashed=0 and t.status in (2,3)
+     order by t.stopDate desc limit $n;" \
+  | awk -F'\t' '{printf "%s  %-10s %-9s %s\n", $1, $2, $3, $4}'; }
+cmd_search()   { [ $# -ge 1 ] || die "usage: things search <text>"; local e; e=$(sql_quote "%$*%"); emit "$SEL where t.type=0 and t.trashed=0 and (t.title like $e or t.notes like $e) order by t.status, t.\"index\" limit 50;"; }
+
+cmd_list() {  # everything under a project or area, by name or id
+  [ $# -ge 1 ] || die "usage: things list <project-or-area name|id>"
+  local e f; e=$(sql_quote "%$*%"); f=$(sql_quote "$*")
+  emit "$SEL where t.type=0 and $OPEN and (
+          p.title like $e or a.title like $e or pa.title like $e
+          or t.project = $f or t.area = $f)
+        order by t.\"index\";"
+}
+
+cmd_projects() { q "select t.uuid, ifnull((select title from TMArea where uuid=t.area),''), t.title, t.openUntrashedLeafActionsCount from TMTask t where t.type=1 and $OPEN order by t.\"index\";" \
+                 | awk -F'\t' '{printf "%s  %-14s %-34s %s open\n", $1, ($2==""?"":"["$2"]"), $3, $4}'; }
+cmd_areas()    { q "select uuid, title from TMArea order by \"index\";" | awk -F'\t' '{printf "%s  %s\n", $1, $2}'; }
+cmd_tags()     { q "select uuid, title from TMTag order by title;" | awk -F'\t' '{printf "%s  #%s\n", $1, $2}'; }
+
+cmd_show() {  # full detail for one to-do or project, including notes + checklist
+  [ $# -ge 1 ] || die "usage: things show <id|title>"
+  local id; id=$(resolve "$*")
+  q "select
+       t.title, 
+       case t.status when 0 then 'open' when 2 then 'canceled' else 'completed' end,
+       case t.type when 1 then 'project' when 2 then 'heading' else 'to-do' end,
+       case when t.startDate is null
+            then (case t.start when 0 then 'inbox' when 2 then 'someday' else 'anytime' end)
+            else $(D t.startDate) || (case t.startBucket when 1 then ' (evening)' else '' end) end,
+       case when t.deadline is null then '' else $(D t.deadline) end,
+       ifnull(p.title, ifnull(a.title,'')),
+       ifnull(h.title,''),
+       ifnull((select group_concat(g.title,', ') from TMTaskTag tt join TMTag g on g.uuid=tt.tags where tt.tasks=t.uuid),''),
+       date(t.creationDate,'unixepoch','localtime')
+     from TMTask t
+       left join TMTask h  on h.uuid = t.heading
+       left join TMTask p  on p.uuid = coalesce(t.project, h.project)
+       left join TMArea a  on a.uuid = t.area
+     where t.uuid = '$id';" \
+  | awk -F'\t' '{
+      printf "title:     %s\n", $1
+      printf "id:        '"$id"'\n"
+      printf "status:    %s (%s)\n", $2, $3
+      printf "when:      %s\n", $4
+      if ($5 != "") printf "deadline:  %s\n", $5
+      if ($6 != "") printf "list:      %s%s\n", $6, ($7==""?"":" › "$7)
+      if ($8 != "") printf "tags:      %s\n", $8
+      printf "created:   %s\n", $9 }'
+
+  local notes; notes=$(q "select ifnull(notes,'') from TMTask where uuid='$id';")
+  [ -n "$notes" ] && { printf 'notes:\n'; printf '%s\n' "$notes" | sed 's/^/  /'; }
+
+  q "select (case status when 0 then '  [ ] ' else '  [x] ' end) || title
+     from TMChecklistItem where task='$id' order by \"index\";" \
+  | { IFS= read -r first || exit 0; printf 'checklist:\n%s\n' "$first"; cat; }
+
+  if [ "$(q "select type from TMTask where uuid='$id';")" = "1" ]; then
+    printf 'to-dos:\n'
+    q "select '  ' || t.title from TMTask t
+         left join TMTask h on h.uuid = t.heading
+       where coalesce(t.project, h.project) = '$id' and $OPEN and t.type=0
+       order by t.\"index\";"
+  fi
+}
+
+# ------------------------------------------------------------------ writes ---
+
+enc() { printf '%s' "${1-}" | jq -sRr @uri; }
+sql_quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/''/g")"; }
+
+token() {
+  local t; t=$(q "select ifnull(uriSchemeAuthenticationToken,'') from TMSettings limit 1;")
+  [ -n "$t" ] || die "Things URLs aren't enabled — Things → Settings → General → Enable Things URLs"
+  printf '%s' "$t"
+}
+
+fire() {  # fire "add" "title=Foo" "when=today" ...
+  local cmd="$1"; shift
+  local url="things:///$cmd?" first=1 kv
+  for kv in "$@"; do
+    [ -n "$kv" ] || continue
+    [ $first = 1 ] && first=0 || url+="&"
+    url+="$kv"
+  done
+  [ "${DRY_RUN:-0}" = 1 ] && { printf '%s\n' "$url"; return 0; }
+  open -g "$url"          # -g: background. Never let this steal the screen.
+  sleep 0.6               # the URL handler is async; give Things a beat to land it
+}
+
+# Resolve an id, or a unique open to-do whose title matches, to a uuid.
+resolve() {
+  local s="$1"
+  case "$s" in
+    ????????????????????*) if [ -n "$(q "select 1 from TMTask where uuid=$(sql_quote "$s");")" ]; then printf '%s' "$s"; return 0; fi ;;
+  esac
+  local hits; hits=$(q "select uuid||char(9)||title from TMTask where type in (0,1) and trashed=0 and status=0 and title like $(sql_quote "%$s%") limit 5;")
+  local n; n=$(printf '%s' "$hits" | grep -c . || true)
+  [ "$n" = 0 ] && die "no open item matches \"$s\""
+  [ "$n" -gt 1 ] && { printf 'things: "%s" is ambiguous:\n%s\n' "$s" "$hits" >&2; exit 1; }
+  printf '%s' "${hits%%$'\t'*}"
+}
+
+cmd_add() {
+  local title="" args=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --notes)     args+=("notes=$(enc "$2")"); shift 2 ;;
+      --when)      args+=("when=$(enc "$2")"); shift 2 ;;
+      --deadline)  args+=("deadline=$(enc "$2")"); shift 2 ;;
+      --tags)      args+=("tags=$(enc "$2")"); shift 2 ;;
+      --list)      args+=("list=$(enc "$2")"); shift 2 ;;
+      --list-id)   args+=("list-id=$(enc "$2")"); shift 2 ;;
+      --heading)   args+=("heading=$(enc "$2")"); shift 2 ;;
+      --checklist) args+=("checklist-items=$(printf '%s' "$2" | tr '|' '\n' | jq -sRr @uri)"); shift 2 ;;
+      --reveal)    args+=("reveal=true"); shift ;;
+      -*)          die "unknown flag $1" ;;
+      *)           title="${title:+$title }$1"; shift ;;
+    esac
+  done
+  [ -n "$title" ] || die "usage: things add <title> [--notes X] [--when today] [--deadline yyyy-mm-dd] [--tags a,b] [--list Project] [--checklist 'a|b|c']"
+  fire add "title=$(enc "$title")" "${args[@]:-}"
+  [ "${DRY_RUN:-0}" = 1 ] || printf 'added: %s\n' "$title"
+}
+
+cmd_add_project() {
+  local title="" args=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --notes)    args+=("notes=$(enc "$2")"); shift 2 ;;
+      --when)     args+=("when=$(enc "$2")"); shift 2 ;;
+      --deadline) args+=("deadline=$(enc "$2")"); shift 2 ;;
+      --tags)     args+=("tags=$(enc "$2")"); shift 2 ;;
+      --area)     args+=("area=$(enc "$2")"); shift 2 ;;
+      --todos)    args+=("to-dos=$(printf '%s' "$2" | tr '|' '\n' | jq -sRr @uri)"); shift 2 ;;
+      -*)         die "unknown flag $1" ;;
+      *)          title="${title:+$title }$1"; shift ;;
+    esac
+  done
+  [ -n "$title" ] || die "usage: things add-project <title> [--area X] [--todos 'a|b|c'] …"
+  fire add-project "title=$(enc "$title")" "${args[@]:-}"
+  printf 'added project: %s\n' "$title"
+}
+
+cmd_update() {
+  [ $# -ge 1 ] || die "usage: things update <id|title> [--title X] [--when today] [--deadline d] [--add-tags a,b] [--append-notes X] [--list P]"
+  local id; id=$(resolve "$1"); shift
+  local args=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --title)        args+=("title=$(enc "$2")"); shift 2 ;;
+      --notes)        args+=("notes=$(enc "$2")"); shift 2 ;;
+      --append-notes) args+=("append-notes=$(enc "$2")"); shift 2 ;;
+      --when)         args+=("when=$(enc "$2")"); shift 2 ;;
+      --deadline)     args+=("deadline=$(enc "$2")"); shift 2 ;;
+      --tags)         args+=("tags=$(enc "$2")"); shift 2 ;;
+      --add-tags)     args+=("add-tags=$(enc "$2")"); shift 2 ;;
+      --list)         args+=("list=$(enc "$2")"); shift 2 ;;
+      --completed)    args+=("completed=true"); shift ;;
+      --canceled)     args+=("canceled=true"); shift ;;
+      -*)             die "unknown flag $1" ;;
+      *)              die "unexpected argument $1" ;;
+    esac
+  done
+  [ ${#args[@]} -gt 0 ] || die "nothing to update"
+  fire update "auth-token=$(token)" "id=$id" "${args[@]}"
+  printf 'updated: %s\n' "$(q "select title from TMTask where uuid='$id';")"
+}
+
+cmd_complete() { [ $# -ge 1 ] || die "usage: things complete <id|title>"; local id t; id=$(resolve "$*"); t=$(q "select title from TMTask where uuid='$id';"); fire update "auth-token=$(token)" "id=$id" "completed=true"; printf '✓ %s\n' "$t"; }
+cmd_cancel()   { [ $# -ge 1 ] || die "usage: things cancel <id|title>";   local id t; id=$(resolve "$*"); t=$(q "select title from TMTask where uuid='$id';"); fire update "auth-token=$(token)" "id=$id" "canceled=true";  printf '✗ %s\n' "$t"; }
+
+cmd_json() {  # bulk create/update — pass a JSON array, or a file, or - for stdin
+  local data
+  case "${1:-}" in
+    "" ) die "usage: things json '<json-array>' | things json <file> | things json -" ;;
+    - )  data=$(cat) ;;
+    * )  if [ -f "$1" ]; then data=$(cat "$1"); else data="$1"; fi ;;
+  esac
+  printf '%s' "$data" | jq -e 'type=="array"' >/dev/null || die "data must be a JSON array"
+  fire json "auth-token=$(token)" "data=$(enc "$data")"
+  printf 'sent %s item(s)\n' "$(printf '%s' "$data" | jq 'length')"
+}
+
+cmd_sql() { [ $# -ge 1 ] || die "usage: things sql '<select …>'"; case "$*" in [Ss][Ee][Ll][Ee][Cc][Tt]*|[Ww][Ii][Tt][Hh]*) ;; *) die "read-only: only SELECT/WITH" ;; esac; sqlite3 -readonly -header -column "$DB" "$*"; }
+
+cmd_help() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; cat <<'USAGE'
+
+READ   things today | inbox | anytime | someday | upcoming [days] | deadlines [days]
+       things logbook [n] | search <text> | list <project-or-area> | show <id|title>
+       things projects | areas | tags | sql '<select …>'
+WRITE  things add <title> [--notes X] [--when today|tomorrow|2026-09-01|"next tuesday"]
+                          [--deadline yyyy-mm-dd] [--tags a,b] [--list Project]
+                          [--heading H] [--checklist 'step one|step two']
+       things add-project <title> [--area A] [--todos 'a|b|c'] [--when …]
+       things update <id|title> [--title X] [--when …] [--add-tags a] [--append-notes X] [--list P]
+       things complete <id|title>   ·   things cancel <id|title>
+       things json '<array>' | <file> | -        (bulk, nested projects/checklists)
+FLAGS  --json  machine-readable read output      DRY_RUN=1  print the URL, don't fire it
+USAGE
+}
+
+# -------------------------------------------------------------------- main ---
+
+AS_JSON=0
+args=(); for a in "$@"; do case "$a" in --json) AS_JSON=1 ;; *) args+=("$a") ;; esac; done
+set -- "${args[@]:-help}"
+
+sub="${1:-help}"; shift || true
+case "$sub" in
+  today|inbox|anytime|someday|upcoming|deadlines|logbook|search|list|projects|areas|tags|show|add|update|complete|cancel|json|sql) "cmd_${sub}" "$@" ;;
+  add-project) cmd_add_project "$@" ;;
+  help|-h|--help) cmd_help ;;
+  *) die "unknown command '$sub' — try: things help" ;;
+esac
