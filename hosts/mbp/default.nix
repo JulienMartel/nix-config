@@ -95,47 +95,74 @@ in
   # ---- theme ----
   haus.theme.accent = "pink";
 
-  # Accent-stamped userstyles in Zen (hausfold#208); import stays a click.
-  # Kept alongside the compiled sheet below for what only it can do: per-site
-  # toggles, styles that update themselves, and adding one without a rebuild.
-  haus.zen.extensions.stylus = { };
-
-  # The sites worth having right on every machine, compiled into Zen's
-  # userContent.css instead — no import, no state, and pink follows on a
-  # rebuild (haus#416). Anything not here stays in Stylus, and a site belongs
-  # to one of the two, never both — so every slug below is OFF in Stylus.
+  # Stylus is retired (2026-08-20). It held the same 134 nebelung styles this
+  # list compiles from, and on this machine it was doing none of the three
+  # things it alone can do: every style was still enabled and untouched since
+  # the Jul 5 import, none carried an `updateUrl` (they came from haus's own
+  # stamped bundle, so "styles that update themselves" was never true here),
+  # and eighteen of them were dead weight under the compiled sheet, which wins
+  # the cascade outright. haus#442 took the last real gap with it — code blocks
+  # are themed now — so the choice left was coverage, and coverage is this list.
+  # `haus.zen.extensions.stylus` is what to put back if that turns out wrong.
   #
-  # Size is the reason this is a list and not a bool: the whole set is 7 MB of
-  # CSS. These eighteen compile to ~1.4 MB, which Zen parses once at startup —
-  # the per-page cost after that is matching a domain, not re-reading the file.
-  # wikipedia (475 KB) and github (217 KB) are a third of it on their own.
-  # Deliberately absent: search engines (google/duckduckgo/brave are ~60 KB
-  # each and only one of them is yours), and stack-overflow, which is 419 KB
-  # whose code blocks Firefox then drops (see below) — Stylus has it whole.
+  # The sites are compiled into Zen's userContent.css — no import, no state,
+  # and pink follows on a rebuild (haus#416). A rebuild alone doesn't apply it:
+  # Gecko reads that file once, at startup, so Zen has to be restarted.
   #
-  # Six of these land with their code blocks unthemed — ghostty.org, mdn,
-  # nixos-manual, regex101, wiki.nixos.org, wikipedia: the highlighting is a
-  # remote @import, invalid inside @-moz-document, so Firefox drops that one
-  # rule and the rest of each style applies. The build prints the list.
+  # Size is why this is a list and not a bool: all 134 compile to ~7 MB. These
+  # forty compile to 3.2 MB (measured), and every declaration in them is
+  # applied to every document — cheap per page, but not free, so a site earns
+  # its slug by being one you actually open. wikipedia (501 KB),
+  # stack-overflow (438) and go.dev (310) are 39% of the sheet between them;
+  # drop those three and it's 1.9 MB.
+  #
+  # Deliberately absent: search engines, because the default here is Kagi and
+  # nebelung has no Kagi style — google/duckduckgo/brave/startpage are ~25-65 KB
+  # each to theme a page that isn't the one this machine searches from. Also
+  # out: google-photos (107 KB, and photos live in Photos.app), alternativeto
+  # (116 KB, the biggest style in the set), chess.com/lichess, and the whole
+  # education, anime and Minecraft end of the bundle.
   haus.zen.userStyles = [
+    "arch-wiki"
+    "bsky"
     "chatgpt"
     "claude"
+    "crates.io"
+    "deepl"
+    "dev.to"
+    "devdocs"
+    "docs.rs"
     "ghostty.org"
     "github"
     "gmail"
+    "go.dev"
     "google-drive"
+    "google-gemini"
     "hacker-news"
     "home-manager-options-search"
+    "instagram"
+    "linkedin"
+    "lobste.rs"
+    "mdbook"
     "mdn"
     "nixos-manual"
     "nixos-search"
     "npm"
+    "perplexity"
+    "react.dev"
     "reddit"
     "regex101"
+    "spotify-web"
+    "stack-overflow"
+    "substack"
+    "twitch"
     "twitter"
+    "vercel"
+    "whatsapp-web"
     "wiki.nixos.org"
     "wikipedia"
     "youtube"
+    "zen-browser-docs"
   ];
 
   # Tab list → bar, so the media pill's ⌘ click lands on the noisy tab
