@@ -33,10 +33,11 @@ nix build .#darwinConfigurations.mbp.system
 sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp
 ```
 
-Then open a fresh terminal. Secret VALUES are **not** in this repo. API tokens are
-declared in `secretspec.toml` and stored in the macOS login keychain — run
-`secretspec check` to see what still needs entering, `secretspec set NAME` to fill
-one. SSH/GPG keys and `.gitcookies` still transfer by hand under `~/.ssh`. Pounce needs a one-time Accessibility approval (see the haus README).
+Then open a fresh terminal. Secret VALUES are **not** in this repo, and this
+machine currently needs none: nothing here reads a secret. If that changes, add a
+`secretspec.toml` declaring the NAME (never the value) and `secretspec set NAME`
+stores it in the macOS login keychain. SSH/GPG keys and `.gitcookies` still
+transfer by hand under `~/.ssh`. Pounce needs a one-time Accessibility approval (see the haus README).
 
 ## Daily use
 
