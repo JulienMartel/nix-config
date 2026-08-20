@@ -19,16 +19,16 @@ The table below is only what's wired in *this* repo.
 
 | Path | Read by | What it actually is |
 |---|---|---|
-| `AGENTS.md` | Codex, OpenCode, Cursor, Zed, Amp, Copilot-in-editor, and anything else that speaks [agents.md](https://agents.md) | **The source of truth.** Every rule for this machine's config, starting with the routing rule that keeps rice changes out of here. |
+| `AGENTS.md` | Codex, OpenCode, Cursor, Zed, Amp, Copilot-in-editor, and anything else that speaks [agents.md](https://agents.md) | **The source of truth.** Every rule for this machine's config, starting with the routing rule that keeps layer changes out of here. |
 | `CLAUDE.md` | Claude Code (CLI, desktop, web) | `@AGENTS.md` import + a table of Claude-only wiring. Claude Code reads only `CLAUDE.md`, so the import is how it gets the real file. |
 | `GEMINI.md` | Gemini CLI | Symlink → `AGENTS.md`. |
 | `opencode.json` | OpenCode | Names `AGENTS.md` explicitly. Belt and braces — OpenCode finds it anyway. |
 | `.github/copilot-instructions.md` | GitHub Copilot coding agent + code review | A **real file**, not a symlink: Copilot reads through the GitHub API, where a symlink is just a path string. |
-| `.agents/skills/rebuild/SKILL.md` | Codex (scans project `.agents/skills/`), and every other client via the links below | The `/rebuild` flow: build, then switch, and how to read a Nix error when it fails. Was `.claude/commands/rebuild.md`, where only one client could reach it. |
+| `.agents/skills/rebuild/SKILL.md` | Codex (scans project `.agents/skills/`), and every other client via the links below | The `/rebuild` flow: build, then switch, and how to read a Nix error when it fails. |
 | `.claude/skills/rebuild/SKILL.md` | Claude Code | Symlink → `.agents/skills/rebuild/SKILL.md`. |
 | `.opencode/skills/rebuild` | OpenCode | Symlink → `.agents/skills/rebuild`. |
 | `.opencode/commands/rebuild.md` | OpenCode | Four-line command that says "read the shared body and follow it" — guarantees `/rebuild` exists even if skill discovery doesn't fire. |
-| `.agents/setup.sh` | all of them, via the hooks below | Installs Determinate Nix in a bare cloud container, persists `PATH` + `NIX_SSL_CERT_FILE`. No-ops on macOS and where Nix already exists. Replaces the old Claude-only `.claude/hooks/session-start.sh`. |
+| `.agents/setup.sh` | all of them, via the hooks below | Installs Determinate Nix in a bare cloud container, persists `PATH` + `NIX_SSL_CERT_FILE`. No-ops on macOS and where Nix already exists. |
 | `.claude/settings.json` | Claude Code | `SessionStart` → `.agents/setup.sh`. |
 | `.codex/hooks.json` + `.codex/config.toml` | Codex CLI | `SessionStart` → `.agents/setup.sh`, plus the flag that enables hooks. |
 | `.opencode/plugins/nix-bootstrap.js` | OpenCode | Plugin load *is* session start; runs the same script, swallowing every error. |
@@ -38,8 +38,8 @@ pre-approved tool-call allowlist — machine-local permission state, not a proje
 rule — so it stays exactly where its client expects it, and other clients keep
 their own.
 
-**Also not here: the `haus` skill.** It is installed by the rice
-(`haus.agents.skill`) — one copy per client the machine runs
+**Also not here: the `haus` skill.** It is installed by haus
+(`haus.ai.skill`) — one copy per client the machine runs
 (`~/.claude/skills/haus/`, `~/.codex/skills/haus/`,
 `~/.config/opencode/skills/haus/`) — and generated from the revision this
 machine pins, so it can't drift from what's actually settable. It's outside this

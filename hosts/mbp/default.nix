@@ -445,175 +445,112 @@ in
   haus.ai.instructions = ''
     # Global instructions
 
-    Personal defaults for how I (julienmartel) like to work, across every repo, in
-    whichever client the pane is running. Kept deliberately short and universal —
-    repo-specific detail lives in each project's own AGENTS.md, not here.
+    How I (julienmartel) like to work, across every repo and every client.
+    Repo-specific detail lives in each project's own AGENTS.md, not here.
 
     ## How to answer me
 
-    Load the `brief` skill at the start of every session and follow its shape for the
-    whole session: verdict first, ≤5 anchored steps, and escalate to me only at ≥3/5
-    (my usual bar) with a recommendation and a reversal cost. It governs code work,
-    research, and anything I paste. Say "drop brief" / "full mode" to turn it off. The
-    skill body lives at `~/.config/nix/claude/skills/brief/SKILL.md` and is linked into
-    both `~/.claude/skills/brief` and `~/.agents/skills/brief` (Codex and OpenCode read
-    the second) as an OUT-of-store symlink — edit it and the next pane has it, no
-    rebuild. Same for the other host-installed skills: `ship`, `park`, `handoff`, and
-    `things` (read/write my Things 3 to-dos — see its SKILL.md before touching my list).
-    If your client doesn't load skills at all, read the SKILL.md by path; it's plain
-    markdown.
+    Load the `brief` skill at the start of every session and hold its shape all
+    session: verdict first, at most 5 anchored steps, and escalate to me only at
+    3/5 or above, with a recommendation and a reversal cost. It governs code
+    work, research and anything I paste. "drop brief" / "full mode" turns it off.
+    The body is `~/.config/nix/claude/skills/brief/SKILL.md`, linked
+    OUT-of-store into both `~/.claude/skills/brief` and `~/.agents/skills/brief`
+    (Codex and OpenCode read the second), so editing it is live in the next pane
+    with no rebuild. Same for `ship`, `park`, `handoff` and `things` (my Things 3
+    to-dos — read its SKILL.md before touching my list). If your client does not
+    load skills, read the SKILL.md by path; it is plain markdown.
 
     ## Working in a git worktree
 
-    My super+a (`⌘A`) zellij hotkey spawns each agent pane into its own worktree —
-    Claude Code through its native `--worktree` flag, Codex and OpenCode through
-    `holt new`, which produces the identical checkout from the outside. Either way the
-    session gets its own checkout on a `worktree-<name>` branch, branched from the
-    repo's local HEAD, living OUTSIDE the repo (under `~/.cache/claude-worktrees/` —
-    the path name is historical, every client shares it). The lifecycle hooks are wired
-    globally, so **any** repo I open can be worktree'd — not just haus.
+    Detect it: `git rev-parse --git-common-dir` points outside your toplevel.
+    When it does:
 
-    **Detect it:** `git rev-parse --git-common-dir` points outside your toplevel → you're
-    in a linked worktree.
+    - **Commit, push and open the PR without asking.** Standing permission, all
+      three. The only step that waits for me is *merging*. A verified change
+      left uncommitted, unpushed or without a PR is an unfinished task.
+    - **Build and verify without asking.** A build is read-only toward every
+      checkout, a child repo's included, so it is exactly what a worktree is for
+      — do not stop at "the diff is ready". Only *activation* (`darwin-rebuild
+      switch` and its wrappers) is mine: it is machine-wide and serial, so five
+      parallel agents each with a good reason to switch would silently overwrite
+      one another. Build, then hand me the exact command. Where a repo's tooling
+      enforces this it names its own override in the refusal — use that if I
+      have already asked you to activate, rather than asking again.
+    - **Running a repo's push/ship step is fine** — it only pushes commits that
+      already exist and never activates.
+    - **Land through a PR — never a direct push or a local `git merge` into
+      `main`,** and never touch the main checkout's files. Parallel agents
+      pushing straight to main have clobbered each other; a PR is
+      conflict-detected and atomic. Merging is my call, which means do not merge
+      *unprompted*, not "never merge": when I say `/ship`, "ship it" or "merge
+      and clean up", that IS the go-ahead — `gh pr merge`, still never a local
+      merge. Absent that, stop at "PR open" and give me the link.
+    - **Do not sync with main unless a real conflict forces it, and then
+      rebase.** GitHub merges a PR that is merely behind. `git rebase
+      origin/main`, then force-push: my `worktree-*` branches are single-agent
+      and nobody bases on them, so rewriting them is free. Never `git merge
+      origin/main` into a branch — it puts commits I did not write in my PR's
+      commit list. `flake.lock` is never hand-merged: take main's wholesale
+      (`git checkout --theirs flake.lock`), then re-run `nix flake update
+      <input>` if the branch genuinely needed a newer pin.
+    - **`/ship` finishes the whole job**: merge the PR, then clean up every
+      worktree this session spun up — a sibling-repo worktree is not
+      auto-reaped, so merge its PR too and `git worktree remove` it. Then report
+      and stop. It does not close this pane or open one. The current worktree is
+      not reaped (you are still in it); it goes when I close the pane.
 
-    **Etiquette when you're in a worktree** (i.e. the detection above says you are):
-    - **Committing, pushing, and opening the PR are standing permission — just
-      do all three, never ask first.** The default answer to "want me to commit
-      / push / open a PR?" is always yes, so don't ask the question — do the
-      work and report the PR link. The ONLY thing that waits for me is *merging*
-      the PR (see below); everything up to and including "PR is open" is yours to
-      drive unprompted, in default mode. A verified change left uncommitted,
-      unpushed, or without a PR is an unfinished task, not a finished one.
-    - Commit on your `worktree-*` branch as usual.
-    - **Building/verifying is always allowed — you have standing permission, in
-      default mode, to build without asking.** A build (`nix build`, a project's
-      own run/verify skill) is read-only toward every checkout and never
-      activates anything, so it's exactly what a worktree is for — don't stop at
-      "the diff is ready" when you could have built it. This holds even when the
-      build compiles a **child** repo from a parent dir's worktree session: the
-      child's checkout is only read, not mutated, so go ahead. Only *activation*
-      — anything that switches this machine's running state, `darwin-rebuild
-      switch` and the wrappers around it — stays off-limits **to you** from a
-      worktree. Not because worktree code is unsafe to activate (I do it myself,
-      routinely, to feel one branch alone), but because activation is
-      machine-wide and serial: five parallel agents each with a good reason to
-      switch would silently overwrite one another. So build, then hand me the
-      exact command to run from a pane in your worktree and let me run it. Where
-      a repo's own tooling enforces this, it refuses you by name and its
-      refusal (or the repo's AGENTS.md) names the override — if I've explicitly
-      asked you to activate, use that override rather than asking again.
-    - **Pushing already-committed work is fine from a worktree.** You have my
-      standing permission, in default mode, to run a repo's push/ship step from
-      a worktree without asking — it only pushes commits that already exist and
-      never activates anything. (A repo's ship step may operate on the *main*
-      checkouts to ripple merged/released work downstream; it does not push your
-      unmerged `worktree-*` branch.)
-    - **Don't sync with main unless you have to — and when you do, rebase.**
-      GitHub merges a PR that's merely *behind* main; only a genuine conflict
-      forces a sync, so most branches never need one. When one does: `git
-      rebase origin/main`, then force-push. Rebase replays *your* commits onto
-      main's tip — main's commits become the new base and are never re-resolved
-      — so the cost is one resolution per commit on YOUR branch, not per commit
-      on main; with my small PRs that's usually one. My `worktree-*` branches
-      are single-agent and nobody bases on them, so rewriting them is free:
-      "never rebase published history" doesn't apply here. Never `git merge
-      origin/main` into a branch — it puts commits I didn't write in my PR's
-      commit list. `flake.lock` is never hand-merged either way: take main's
-      wholesale (`git checkout --theirs flake.lock`), then re-run `nix flake
-      update <input>` if the branch genuinely needed a newer pin.
-    - **Land your work through a PR — never a direct push or a local `git merge`
-      into `main`.** When the branch is ready, push it and open a PR (`gh pr
-      create`) against `main`. Don't `git merge` your `worktree-*` branch into
-      `main` yourself, don't push to `main` directly, and don't touch the main
-      checkout's files — parallel agents pushing/merging straight to main have
-      clobbered each other's commits, and a PR is conflict-detected and atomic,
-      so nothing gets silently overwritten. Merging the PR is my call — but
-      **"my call" means don't merge *unprompted*, not "never merge."** When I
-      explicitly tell you to land it (`/ship`, "ship it", "merge and clean up"),
-      that IS the go-ahead: merge with `gh pr merge` (still never a local merge
-      or direct push — the PR's atomicity is the point). Absent that, stop at
-      "PR open." Shipping isn't merging: a repo's ship step pushes committed
-      state (and bumps locks), it never folds your branch into main.
-    - **When I say ship/land/merge, `/ship` finishes the whole job** (see the
-      ship skill): merge the PR, then clean up every worktree *this session*
-      spun up — a session often hand-creates a sibling-repo worktree for
-      out-of-repo work, and those aren't auto-reaped, so merge their PRs too and
-      `git worktree remove` them. When it's all landed and nothing ≥3/5 needs my
-      attention (don't wait on CI unless that's the point), `/ship` reports and
-      stops. It does **not** close this pane or open a new one — I open and close
-      my own panes (see "Don't drive my multiplexer" below). The current worktree
-      isn't reaped here (you're still in it); it's cleaned up when I close the
-      pane myself (the `holt` remove hook) or by a later `holt reap`.
-    - When done, push the branch, open the PR, and — if I didn't say ship — tell
-      me the PR link. The worktree dies with the pane; the branch + PR survive
-      until merged.
-
-    This etiquette is worktree-specific. Sometimes I open a plain (non-worktree)
-    session directly on `main` for a small one-off — usually when no worktrees are
-    active. In that mode, working on and committing to `main` directly is fine and
-    expected; the "don't touch main" and PR-to-land rules only bind when you're
-    actually in a worktree — they exist to stop *parallel* agents from clobbering
-    each other, which a lone editor on main can't do.
+    A plain non-worktree session on `main` is fine for a small one-off, and
+    committing to main directly is expected there. The PR rule exists to stop
+    *parallel* agents clobbering each other.
 
     ## How I ship
 
-    **Ship by default, sized to the change — but only in repos I own solo** (my personal
-    infra: the hausfold family, qnap-mediastack, ~/.config/nix, and the like). In shared or
-    client repos, default to caution: prepare the change, then ask before pushing.
+    **Ship by default, sized to the change — in repos I own solo** (my personal
+    infra: the hausfold family, qnap-mediastack, `~/.config/nix`). In shared or
+    client repos, prepare the change and ask before pushing.
 
-    In a solo repo:
-    - **Small change** (bugfix, typo, config/theme tweak, version bump, docs): commit,
-      verify, and ship in the same turn without asking. A verified fix left uncommitted,
-      unpushed, or undeployed is a bug, not a finished task.
-    - **Big or risky change** (new feature, refactor, anything hard to roll back, anything
-      a user could feel break): verify it works, then stop and ask before shipping. Once
-      approved, drive it all the way to shipped — don't stop at "the diff is ready."
-    - **Releases / user-facing publishes are always gated.** Propose one after shipping
-      user-facing changes, but never tag/publish unprompted.
-    - When unsure which bucket a change is in, ask.
+    - **Small** (bugfix, typo, config/theme tweak, version bump, docs): commit,
+      verify and ship in the same turn without asking. A verified fix left
+      unshipped is a bug, not a finished task.
+    - **Big or risky** (new feature, refactor, anything hard to roll back,
+      anything a user could feel break): verify it works, then ask. Once
+      approved, drive it all the way to shipped.
+    - **Releases and user-facing publishes are always gated.** Propose one after
+      shipping user-facing changes; never tag or publish unprompted.
+    - Unsure which bucket? Ask.
 
     ## Repos nested inside other repos
 
-    Some of my solo repos live *inside* another checkout — e.g. the whole
-    hausfold family (`nebelung`, `pounce`, `haus`, …) sits under the
-    `~/code/workshop` dir, whose `.gitignore` lists each child. **That
-    nesting is purely to keep the outer tree clean; each child is a full,
-    independent repo I own solo.** So:
+    The hausfold family (`nebelung`, `pounce`, `haus`, …) sits under
+    `~/code/workshop`, whose `.gitignore` lists each child. **That nesting only
+    keeps the outer tree clean; each child is a full, independent repo I own
+    solo.** `cd` into it and commit / push / ship it under its own rules and the
+    policy above — a child being gitignored by the parent says nothing about
+    committing inside it, and is not a signal that git ops there are risky. When
+    I ask for a cross-repo flow, run it end to end, landing each branch by
+    merging its PR, without re-confirming each repo word for word.
 
-    - To change a child, `cd` into it and commit / push / ship it under its own
-      rules and the ship-by-default policy above. A child being gitignored *by
-      the parent* says nothing about committing *inside the child* — that's a
-      different repo, and it is NOT a signal that git ops there are risky or
-      need extra confirmation.
-    - When I ask for a cross-repo flow from the main checkout — merge the open
-      `worktree-*` PRs, sync locks, rebuild, ship — run it end-to-end. Land each
-      branch by merging its **PR** (`gh pr merge`), never a local `git merge` +
-      push to `main` — the PR is what stops two agents' branches from clobbering
-      each other. Don't re-confirm each repo word-for-word. "Merging is my call"
-      means don't merge *unprompted*, not "re-ask after I've told you to."
+    ## Do not drive my terminal
 
-    ## Don't drive my multiplexer
-
-    **Don't open or close zellij panes/tabs for me — mostly.** I manage my own
-    panes: opening a pane, spawning a "landing" pane, or closing the one you're
-    in is obtrusive and I don't want it as a default (it's how `/ship` used to
-    end — that's gone). If a task genuinely needs a pane (e.g. I explicitly ask
-    you to launch something in one), ask first or tell me the command to run
-    myself. When you need to do a main-checkout-only thing from a worktree (like
-    activating after a ship), `cd` to the main checkout and run it in place —
-    don't spawn a pane to carry it.
+    Do not open or close Ghostty windows for me. If a task genuinely needs one,
+    ask first or hand me the command. To do a main-checkout-only thing from a
+    worktree (activating after a ship), `cd` to the main checkout and run it in
+    place rather than spawning a window to carry it.
 
     ## How I verify
 
-    **Verify by actually running it**, not by eyeballing the diff. Testing in prod is
-    acceptable house style for my personal infra — build it, run it, observe the real
-    behavior. Prefer a project's own run/verify skill if it has one.
+    **Verify by actually running it**, not by eyeballing the diff. Testing in
+    prod is acceptable house style for my personal infra: build it, run it,
+    observe the real behavior. Prefer a project's own run/verify skill.
 
     ## Keeping docs honest
 
-    If you find something in an AGENTS.md, CLAUDE.md, README, or docs file that's wrong or
-    stale, fix it in the same change — don't just work around it. Keep these files short;
-    push detail into the matching docs file rather than growing the top-level one.
+    If something in an AGENTS.md, CLAUDE.md, README or docs file is wrong or
+    stale, fix it in the same change rather than working around it. Keep those
+    files short and *current* — state what is true now, not how it got that way.
+    Push detail into the matching docs file rather than growing the top-level
+    one.
   '';
 
   # ---- Claude Code, patched, as an OVERLAY rather than a package ----
