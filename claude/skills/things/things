@@ -45,7 +45,8 @@ SEL="select t.uuid as id,
   (case when t.deadline  is null then '' else $(D t.deadline)  end) as deadline,
   ifnull((select group_concat(g.title,',') from TMTaskTag tt join TMTag g on g.uuid=tt.tags where tt.tasks=t.uuid),'') as tags,
   ifnull(p.title, ifnull(a.title,'')) as list,
-  t.title as title
+  t.title as title,
+  ifnull(h.title,'') as heading
 from TMTask t
   left join TMTask h  on h.uuid  = t.heading
   left join TMTask p  on p.uuid  = coalesce(t.project, h.project)
@@ -57,8 +58,10 @@ emit() {
   if [ "${AS_JSON:-0}" = 1 ]; then
     sqlite3 -readonly -json "$DB" "$1"
   else
-    q "$1" | awk -F'\t' 'BEGIN{n=0}
-      { n++; printf "%s  %-10s %-11s %-16s %-20s %s\n", $1, ($2==""?"—":$2), ($3==""?"":"due "$3), ($4==""?"":"#"$4), ($5==""?"":"["$5"]"), $6 }
+    q "$1" | awk -F'\t' -v sect="${SECTIONS:-0}" 'BEGIN{n=0; prev="\001"}
+      { n++
+        if (sect==1 && $7 != prev) { if ($7 != "") printf "%s── %s ──\n", (n>1?"\n":""), $7; prev=$7 }
+        printf "%s  %-10s %-11s %-16s %-20s %s\n", $1, ($2==""?"—":$2), ($3==""?"":"due "$3), ($4==""?"":"#"$4), ($5==""?"":"["$5"]"), $6 }
       END{ if(n==0) print "(nothing)" ; else printf "\n%d item(s)\n", n }'
   fi
 }
@@ -82,10 +85,10 @@ cmd_search()   { [ $# -ge 1 ] || die "usage: things search <text>"; local e; e=$
 cmd_list() {  # everything under a project or area, by name or id
   [ $# -ge 1 ] || die "usage: things list <project-or-area name|id>"
   local e f; e=$(sql_quote "%$*%"); f=$(sql_quote "$*")
-  emit "$SEL where t.type=0 and $OPEN and (
+  SECTIONS=1 emit "$SEL where t.type=0 and $OPEN and (
           p.title like $e or a.title like $e or pa.title like $e
           or t.project = $f or t.area = $f)
-        order by t.\"index\";"
+        order by h.\"index\", t.\"index\";"
 }
 
 cmd_projects() { q "select t.uuid, ifnull((select title from TMArea where uuid=t.area),''), t.title, t.openUntrashedLeafActionsCount from TMTask t where t.type=1 and $OPEN order by t.\"index\";" \
@@ -132,10 +135,13 @@ cmd_show() {  # full detail for one to-do or project, including notes + checklis
 
   if [ "$(q "select type from TMTask where uuid='$id';")" = "1" ]; then
     printf 'to-dos:\n'
-    q "select '  ' || t.title from TMTask t
+    q "select ifnull(h.title,'') || char(9) || t.title from TMTask t
          left join TMTask h on h.uuid = t.heading
        where coalesce(t.project, h.project) = '$id' and $OPEN and t.type=0
-       order by t.\"index\";"
+       order by h.\"index\", t.\"index\";" \
+    | awk -F'\t' 'BEGIN{prev="\001"}
+        { if ($1 != prev) { if ($1 != "") printf "  ── %s ──\n", $1; prev=$1 }
+          printf "%s%s\n", ($1==""?"  ":"    "), $2 }'
   fi
 }
 
