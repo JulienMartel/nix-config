@@ -45,7 +45,7 @@ things upcoming [days]       # default 14
 things deadlines [days]      # default 30, sorted by due date
 things anytime | someday
 things logbook [n]           # recently completed/canceled, with the date
-things list <project|area>   # e.g. `things list hausfold`, `things list code`
+things list <project|area>   # e.g. `things list hausfold` — grouped under the project's own `── heading ──` sections
 things search <text>         # title + notes, open and completed
 things show <id|title>       # one item in full: notes, checklist, tags, project
 things projects | areas | tags
@@ -54,7 +54,12 @@ things sql '<select …>'      # escape hatch; refuses anything but SELECT/WITH
 
 Every read line starts with the item's id — that's what `update`/`complete` take.
 Add `--json` to any read for machine-readable output
-(`{id, when, deadline, tags, list, title}`).
+(`{id, when, deadline, tags, list, title, heading}`).
+
+`list` and `show <project>` print the project's headings as `── name ──` section
+breaks, in the order Things shows them; to-dos above the first heading come first.
+The other lists (`today`, `search`, …) span projects, so they stay flat — read
+`heading` from `--json` if you need it there.
 
 ## Writing
 
