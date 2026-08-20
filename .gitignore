@@ -11,8 +11,9 @@ result-*
 *secrets*
 *_secrets*
 secrets/
-# …but secretspec.toml declares WHICH secrets exist, never a value —
-# it is meant to be committed, and `*secrets*` above would eat it.
+# …but a secretspec.toml declares WHICH secrets exist, never a value — it is
+# meant to be committed, and `*secrets*` above would eat it. This machine has
+# no such file today; the negation stays so adding one back just works.
 !secretspec.toml
 .env
 .envrc

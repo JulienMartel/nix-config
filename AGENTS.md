@@ -97,10 +97,13 @@ update haus`.
 ## Conventions
 
 - Commits are GPG-signed. Keep messages imperative.
-- Never commit secret VALUES. `secretspec.toml` declares which secrets this
-  machine needs; the values live in the macOS login keychain (`haus.secrets.provider
-  = "keyring"`). `secretspec check` says what's missing, `secretspec set NAME`
-  fills one, `secretspec run -- cmd` injects them into just that process.
+- Never commit secret VALUES. This machine declares none right now — there is no
+  `secretspec.toml` here, because nothing on it reads one. When something does,
+  add the file declaring the NAME only; values live in the macOS login keychain
+  (`haus.secrets.provider = "keyring"`). `secretspec check` says what's missing,
+  `secretspec set NAME` fills one, `secretspec run -- cmd` injects them into just
+  that process. Don't re-add a declaration speculatively: an unused one makes
+  `haus doctor` and a fresh-Mac setup ask for keys nobody uses.
 - `nixfmt` formats `.nix` files.
 - Operational gotchas (launchd GUI race, pounce self-signing, Homebrew
   tap-trust, Touch ID + reattach, Determinate GC) live with the code that
