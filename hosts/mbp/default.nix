@@ -402,7 +402,8 @@ in
     skill body lives at `~/.config/nix/claude/skills/brief/SKILL.md` and is linked into
     both `~/.claude/skills/brief` and `~/.agents/skills/brief` (Codex and OpenCode read
     the second) as an OUT-of-store symlink — edit it and the next pane has it, no
-    rebuild. Same for the other three host-installed skills: `ship`, `park`, `handoff`.
+    rebuild. Same for the other host-installed skills: `ship`, `park`, `handoff`, and
+    `things` (read/write my Things 3 to-dos — see its SKILL.md before touching my list).
     If your client doesn't load skills at all, read the SKILL.md by path; it's plain
     markdown.
 
@@ -644,6 +645,11 @@ in
     {
       # Dev loop for hacking on pounce: rebuild against the LOCAL checkout
       # (uncommitted edits) instead of the pinned input. See AGENTS.md.
+      # `things today`, `things add …` at a prompt. An alias rather than a
+      # PATH entry: the script is only ever a thin wrapper and lives in this
+      # repo, so it should follow the checkout, not get copied to the store.
+      programs.zsh.shellAliases.things = "$HOME/.config/nix/claude/skills/things/things";
+
       programs.zsh.shellAliases.rebuild-pounce = ''
         (cd "$HOME/.config/nix" \
           && nix build .#darwinConfigurations.mbp.system \
@@ -778,7 +784,7 @@ in
         };
       };
 
-      # My four personal skills. The instructions above are what make `brief`
+      # My five personal skills. The instructions above are what make `brief`
       # load every session; these just put the bodies on disk. mkOutOfStoreSymlink
       # so editing a SKILL.md is live in the next pane with no rebuild, and the
       # targets are in THIS repo, which always lives at ~/.config/nix.
@@ -802,6 +808,15 @@ in
       home.file.".claude/skills/handoff".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/handoff";
 
+      # things — my Things 3 to-do list. Reads go at the app's SQLite file
+      # -readonly (no Automation prompt, nothing stolen from the screen);
+      # writes go through the documented `things:///` URL scheme, dispatched
+      # with `open -g` so Things never comes to the front. The dir carries a
+      # `things` helper script beside SKILL.md, which is why it's a whole-dir
+      # out-of-store symlink like the rest — edit either, live next pane.
+      home.file.".claude/skills/things".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/things";
+
       # The same four, linked again under ~/.agents/skills — the dir BOTH Codex
       # and OpenCode scan (verified with `codex debug prompt-input` /
       # `opencode debug skill`). Otherwise "load the `brief` skill" is an order
@@ -815,6 +830,8 @@ in
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
       home.file.".agents/skills/handoff".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/handoff";
+      home.file.".agents/skills/things".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/things";
 
       # Claude Code — reinstate our hooks in settings.json on every rebuild.
       #  • WorktreeCreate/Remove → `holt hook create|remove` (note the `hook`
