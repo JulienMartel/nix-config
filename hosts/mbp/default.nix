@@ -100,13 +100,22 @@ in
   # toggles, styles that update themselves, and adding one without a rebuild.
   haus.zen.extensions.stylus = { };
 
-  # The two sites worth having right on every machine, compiled into Zen's
+  # The sites worth having right on every machine, compiled into Zen's
   # userContent.css instead — no import, no state, and pink follows on a
   # rebuild (haus#416). Keep this list short: a user sheet is applied to every
-  # document, and these two are already ~320 KB. Anything else stays in Stylus,
-  # and a site belongs to one of the two, never both.
+  # document, and these eight already compile to ~517 KB (github + youtube are
+  # ~330 KB of it). Anything else stays in Stylus, and a site belongs to one of
+  # the two, never both — so these eight are OFF in Stylus.
   haus.zen.userStyles = [
+    # wiki.nixos.org lands with its code blocks unthemed: they're a remote
+    # @import, which is invalid inside @-moz-document and Firefox drops it.
+    "claude"
     "github"
+    "hacker-news"
+    "home-manager-options-search"
+    "nixos-search"
+    "reddit"
+    "wiki.nixos.org"
     "youtube"
   ];
 
