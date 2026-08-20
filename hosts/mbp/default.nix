@@ -336,7 +336,6 @@ in
   # Which pills exist; `haus.bar.bottom.items` below places them.
   # Off on purpose: wifi/volume (menu bar + HUD already say it) and harvest.
   haus.bar.items = {
-    page = true;
     agents = true;
     aiUsage = true;
     elgato = true;
@@ -361,12 +360,11 @@ in
   haus.bar.bottom = {
     enable = true;
     items = {
-      # First on the left, and ahead of the agent readouts on purpose: it answers
-      # WHERE this window is (which `T/<repo>` page), which is the question the
-      # ones after it are all about — what my work is doing, and how much of it
-      # has landed. It draws nothing outside the terminal pages, so on every
-      # other workspace the left group simply starts at the paw.
-      page = "left";
+      # No `page` here any more — the page readout is not a movable pill. It
+      # answers WHERE this window is, which is a property of the workspace, so
+      # it lives beside the front app in the menu bar's left group and haus
+      # draws it wherever a workspace carries pages. This left group is now
+      # "what is my work doing", start to finish.
       # Agent readouts under the panes they describe; media alone in the center.
       agents = "left";
       aiUsage = "left";
