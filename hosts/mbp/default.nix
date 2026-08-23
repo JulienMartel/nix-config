@@ -457,9 +457,17 @@ in
     The body is `~/.config/nix/claude/skills/brief/SKILL.md`, linked
     OUT-of-store into both `~/.claude/skills/brief` and `~/.agents/skills/brief`
     (Codex and OpenCode read the second), so editing it is live in the next pane
-    with no rebuild. Same for `ship`, `park`, `handoff` and `things` (my Things 3
+    with no rebuild. Same for `ship`, `park` and `things` (my Things 3
     to-dos — read its SKILL.md before touching my list). If your client does not
     load skills, read the SKILL.md by path; it is plain markdown.
+
+    `/handoff` is NOT one of those any more — it ships with holt now
+    (`ai/handoff/SKILL.md` in hausfold/holt), because it is the missing half of
+    `holt spawn --prompt`: how to write a brief a cold session can act on. Same
+    two jobs, one extra ending — `/handoff` copies it to the clipboard as
+    before, and `/handoff spawn [repo]` opens it as a real lane with its own
+    checkout, branch and window. Editing it means editing that repo, not this
+    one.
 
     ## Working in a git worktree
 
@@ -811,10 +819,13 @@ in
       home.file.".claude/skills/park".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
 
-      # handoff — turn a paste (or this session) into a self-contained prompt
-      # for a COLD agent, on the clipboard and between begin/end markers.
-      home.file.".claude/skills/handoff".source =
-        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/handoff";
+      # handoff moved OUT of here and into holt — it is `holt spawn --prompt`'s
+      # missing half (how to write the brief a cold lane opens on), so it lives
+      # with the flag and ships to everyone who installs holt. haus's
+      # `ai.skill` links it, and this file must NOT also define
+      # ~/.claude/skills/handoff — two definitions of one home.file path is an
+      # eval conflict, not a last-wins. Edit it at hausfold/holt's
+      # ai/handoff/SKILL.md; it is a store path here, so no longer live-editable.
 
       # things — my Things 3 to-do list. Reads go at the app's SQLite file
       # -readonly (no Automation prompt, nothing stolen from the screen);
@@ -836,8 +847,6 @@ in
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/ship";
       home.file.".agents/skills/park".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
-      home.file.".agents/skills/handoff".source =
-        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/handoff";
       home.file.".agents/skills/things".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/things";
 
