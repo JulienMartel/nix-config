@@ -179,6 +179,15 @@ in
   # No desktop icons; files stay in ~/Desktop. Also makes the desktop unclickable.
   system.defaults.finder.CreateDesktop = false;
 
+  # ---- displays ----
+  # The Studio Display, by UUID rather than `main` so docking the laptop doesn't
+  # hand the built-in panel a 27" monitor's setting. Its own default (2560x1440)
+  # is small at desk distance and `larger-text` overshoots to 1440x810 — this
+  # panel reports nine rungs, so the halfway rule jumps four of them
+  # (hausfold/haus#478 added the rung in between). Skipped with a note, not an
+  # error, when the display isn't plugged in.
+  haus.displays."136A50A4-8937-4C6F-B95B-9F1031C62BB3".uiScale = "slightly-larger-text";
+
   # ---- trackpad ----
   # No tap-to-click: palm rests fire stray clicks mid-type.
   system.defaults.trackpad.Clicking = false;
