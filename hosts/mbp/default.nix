@@ -690,16 +690,12 @@ in
       # nix-update updateScript, so it tracks npm closely — nixpkgs and npm
       # were both on 0.84.2 the day this landed, and our pin gave 0.84.1. So
       # version lag here is `haus update` cadence, not the package's. Pi's own
-      # self-update can't work against the read-only store; bump the input
-      # instead — which is also why PI_SKIP_VERSION_CHECK is set below.
+      # self-update can't work against the read-only store, so bump the input
+      # instead — and nixpkgs already knows that: its wrapper exports
+      # PI_SKIP_VERSION_CHECK=1 and PI_TELEMETRY=0 as `${VAR-default}`, i.e.
+      # defaults this machine could override but has no reason to. Nothing here
+      # needs to set either.
       home.packages = [ pkgs.pi-coding-agent ];
-
-      # pi checks pi.dev for a newer release on every start. Nothing here can
-      # act on the answer — the binary is a store path — so the check is a
-      # network round-trip that can only ever produce a nag. Update checking is
-      # separate from `enableInstallTelemetry` in settings.json, which is why
-      # both are turned off, in two different places.
-      home.sessionVariables.PI_SKIP_VERSION_CHECK = "1";
 
       # Nebelung, both poles, as store files. Store and not an out-of-store
       # symlink deliberately: pi hot-reloads the active theme file on edit, but
@@ -752,7 +748,10 @@ in
       #                  ~/.claude/skills; naming the directories one by one
       #                  rather than the parent is what keeps the four shared
       #                  ones from being discovered twice.
-      #   telemetry      off. The update-check half is PI_SKIP_VERSION_CHECK.
+      #   telemetry      off. Belt to the wrapper's braces — PI_TELEMETRY=0
+      #                  already covers it for `pi` on PATH, but the setting is
+      #                  the declarative half and survives a pi invoked some
+      #                  other way (`node …/dist/index.js`, an SDK embed).
       #
       # Deliberately NOT seeded: `defaultProvider`/`defaultModel` (pi has never
       # been logged in here — ~/.pi/agent/auth.json is still `{}` — and pinning
