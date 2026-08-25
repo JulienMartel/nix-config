@@ -192,6 +192,34 @@ in
   # No tap-to-click: palm rests fire stray clicks mid-type.
   system.defaults.trackpad.Clicking = false;
 
+  # ---- trill: GitHub bridge tunnel ----
+  # GitHub webhooks → hooks.hausfold.co → this agent → trill's localhost
+  # receiver (trill PR #11; HMAC auth lives in trill, this is only transport).
+  # NOT feel-test wiring and NOT replaced by the holt hook notify verbs
+  # (holt#57): those cover local lanes; this is the only path GitHub-side
+  # events (review requests, CI verdicts, mentions) have into trill. It was
+  # reaped once on exactly that misreading (e181177) — leave it in place even
+  # while ~/.cloudflared is empty and the agent is dormant.
+  # Raw nix-darwin because no haus.* option covers tunnels. Gated on the
+  # tunnel's config file so a machine that hasn't run the one-time bootstrap
+  # (`cloudflared tunnel login` + `tunnel create trill-hooks` + `tunnel route
+  # dns`) gets a dormant agent, not a crash loop. Credentials stay in
+  # ~/.cloudflared, written by cloudflared itself — nothing secret in here.
+  launchd.user.agents.trill-github-tunnel.serviceConfig = {
+    ProgramArguments = [
+      "${pkgs.cloudflared}/bin/cloudflared"
+      "--config"
+      "/Users/${username}/.cloudflared/trill-hooks.yml"
+      "tunnel"
+      "run"
+      "trill-hooks"
+    ];
+    RunAtLoad = true;
+    KeepAlive.PathState."/Users/${username}/.cloudflared/trill-hooks.yml" = true;
+    StandardOutPath = "/Users/${username}/Library/Logs/trill-github-tunnel.log";
+    StandardErrorPath = "/Users/${username}/Library/Logs/trill-github-tunnel.log";
+  };
+
   # Obsidian themes per vault; this is the one to theme.
   haus.terminal.obsidianVaults = [
     "Library/Mobile Documents/iCloud~md~obsidian/Documents/notes"
@@ -332,6 +360,13 @@ in
     };
     # Claude Code is deliberately NOT here: ai.clients installs it and the
     # overlay below patches that copy. A second bin/claude would collide.
+
+    # trill's GitHub bridge rides a Cloudflare tunnel (hooks.hausfold.co →
+    # localhost:42787); the launchd agent below runs it. On PATH for the
+    # one-time `cloudflared tunnel login` and for poking at it by hand.
+    cloudflared = {
+      package = pkgs.cloudflared;
+    };
 
     # ---- system scope ----
     # systemPackages: on PATH for root, launchd jobs and non-login shells.
