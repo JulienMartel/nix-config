@@ -12,6 +12,34 @@ let
   # is home-manager's, which has no haus.* on it. Lets repoPaths (this
   # machine's checkout layout) reuse the org name instead of repeating it.
   ghOrg = config.haus.git.org;
+
+  # ---- trill's rules ----
+  # trill's rules file is the ONLY place that says what happens to a
+  # notification, and since 2026-08-25 it is also the worklist: `trill doctor`
+  # and the Silence Native Banners helper audit exactly the apps these rules
+  # name (`NotificationSettingsAudit.listedBundleIDs`). So a rule here does two
+  # jobs — it decides where the card goes, and it puts that app in the
+  # walkthrough that turns Apple's own banner off. One entry, both halves.
+  #
+  # `source` is a bundle id as it appears in macOS's own notification settings,
+  # case and all: matching lowercases both sides, but the audit looks the id up
+  # in Apple's store by exact key. `delivery` is banner | inbox | digest | drop.
+  #
+  # System Settings itself never posts anything — measured: there is no
+  # `com.apple.systempreferences` row anywhere in usernoted's store. The update
+  # nags that *look* like System Settings come from
+  # `com.apple.SoftwareUpdateNotification`, which on this Mac is set to
+  # PERSISTENT alerts, i.e. the ones that sit there until clicked. That is the
+  # one worth taking over first.
+  #
+  # These are appended after anything hand-written in rules.json, so a rule
+  # typed into the file still wins — first match wins, and nix's are last.
+  trillRules = [
+    {
+      match.source = "com.apple.SoftwareUpdateNotification";
+      delivery = "banner";
+    }
+  ];
 in
 
 {
@@ -914,6 +942,35 @@ in
           ${pkgs.jq}/bin/jq ".secret = \$ENV.SECRET" "$config" > "$tmp" || { rm -f "$tmp"; exit 0; }
           if cmp -s "$tmp" "$config"; then rm -f "$tmp"; else mv "$tmp" "$config"; fi
         ' "$HOME/.config/trill/github.json" "$HOME/.config/nix/secretspec.toml"
+      '';
+
+      # ---- trill's rules file ----
+      # Merged, not owned. `rules.json` also carries `quietHours` and
+      # `resolvers` — a resolver is the only place a command may live, so
+      # clobbering the file from here would silently disarm every `--until`
+      # poller. jq keeps every key and every rule this machine didn't declare,
+      # drops only an older copy of a rule nix names, and appends nix's at the
+      # end so a hand-written rule keeps its priority.
+      #
+      # A missing file is created rather than skipped: an empty rules file is
+      # valid, trill watches it live, and there is nothing here to lose.
+      home.activation.trillRules = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run sh -c '
+          rules="$0"
+          mkdir -p "$(dirname "$rules")"
+          [ -s "$rules" ] || echo "{\"rules\":[]}" > "$rules"
+          MINE="$1"
+          export MINE
+          tmp="$rules.hm-seed"
+          ${pkgs.jq}/bin/jq '"'"'
+            ($ENV.MINE | fromjson) as $mine
+            | ($mine | map(.match.source | ascii_downcase)) as $names
+            | .rules = (((.rules // [])
+                | map(select(((.match.source // "") | ascii_downcase) as $s
+                             | ($names | index($s)) == null))) + $mine)
+          '"'"' "$rules" > "$tmp" || { rm -f "$tmp"; exit 0; }
+          if cmp -s "$tmp" "$rules"; then rm -f "$tmp"; else mv "$tmp" "$rules"; fi
+        ' "$HOME/.config/trill/rules.json" ${lib.escapeShellArg (builtins.toJSON trillRules)}
       '';
 
       # Claude Code — reinstate our hooks in settings.json on every rebuild.
