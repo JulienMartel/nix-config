@@ -1014,6 +1014,45 @@ in
       home.file.".agents/skills/things".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/things";
 
+      # ---- trill's copy of the webhook HMAC secret ----
+      # trill verifies GitHub's signature itself
+      # (Providers/GitHub/GitHubWebhookMapper.swift) and should: haus forwards
+      # each delivery byte for byte, signature header included, precisely so
+      # nothing downstream has to trust the receiver. But that left ONE secret
+      # in TWO hand-maintained places, and the divergence is silent in the worst
+      # way — rotate the hook, update the keychain, and haus keeps verifying
+      # while trill drops every delivery as a forgery, saying nothing.
+      #
+      # So `secret` in github.json is derived, not authored: the login keychain
+      # is the source and this writes trill's copy. `login` and `port` are
+      # trill's own config and are read straight back out untouched. After a
+      # rotation trill needs a rebuild where haus only needs a `launchctl
+      # kickstart` — it reads its secret at agent start, this file at
+      # activation.
+      #
+      # Via $ENV, never `jq --arg`: argv is world-readable in `ps`. Both tools
+      # pinned from the store — activation runs with a bare PATH. A keychain
+      # that won't answer, or a Mac with no trill, leaves the file alone rather
+      # than blanking the secret.
+      home.activation.trillGithubSecret = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run sh -c '
+          config="$0"
+          SECRET=$(${pkgs.secretspec}/bin/secretspec get --file "$1" \
+            --reason "sync trill'"'"'s copy of the hausfold org webhook secret" \
+            GITHUB_WEBHOOK_SECRET 2>/dev/null) || SECRET=""
+          if [ -z "$SECRET" ]; then
+            echo "trill: no GITHUB_WEBHOOK_SECRET from the keychain — leaving $config alone" >&2
+            exit 0
+          fi
+          [ -s "$config" ] || exit 0
+          export SECRET
+          umask 077
+          tmp="$config.hm-seed"
+          ${pkgs.jq}/bin/jq ".secret = \$ENV.SECRET" "$config" > "$tmp" || { rm -f "$tmp"; exit 0; }
+          if cmp -s "$tmp" "$config"; then rm -f "$tmp"; else mv "$tmp" "$config"; fi
+        ' "$HOME/.config/trill/github.json" "$HOME/.config/nix/secretspec.toml"
+      '';
+
       # Claude Code — reinstate our hooks in settings.json on every rebuild.
       #  • WorktreeCreate/Remove → `holt hook create|remove` (note the `hook`
       #    subcommand), so ⌘A's worktrees land under ~/.cache/claude-worktrees,
