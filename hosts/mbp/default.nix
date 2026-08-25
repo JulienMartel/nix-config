@@ -77,6 +77,17 @@ in
   ];
   haus.ai.default = "claude";
 
+  # Name a lane after its task instead of after a word list. holt asks the
+  # adapter at ~/.config/holt/adapters/namer/api.toml, which is
+  # ~/.config/holt/namer-api.sh: one request straight at the Messages API,
+  # measured 0.7-1.1s per spawn against the built-in `claude` namer's 8-12s
+  # (almost all of that the client's own start-up, not the model).
+  #
+  # The key is ANTHROPIC_API_KEY in the login keychain — declared in this
+  # repo's secretspec.toml, valued nowhere. No key just means random lane
+  # names again; it can never cost a lane.
+  haus.ai.namer = "api";
+
   # ---- text expansion ----
   haus.snippets = {
     enable = true;
