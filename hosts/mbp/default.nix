@@ -274,13 +274,26 @@ in
   # rules.json / github.json below stay this machine's to write.
   haus.trill.enable = true;
 
+  # Which secretspec project the ROOM-declared manifest carries. This flake's
+  # own secretspec.toml is project "nix", and its GITHUB_WEBHOOK_SECRET is
+  # already filled in, so sharing the namespace beats a second keychain item
+  # under project "haus" holding the same string.
+  haus.secrets.project = "nix";
+
   # ---- the GitHub webhook bridge ----
   # GitHub -> hooks.hausfold.co -> the receiver here -> trill's own bridge,
   # verbatim. A raw launchd stanza until haus grew a room for it; it got reaped
   # once (e181177) precisely because it had no address.
   haus.github = {
     enable = true;
-    secretCommand = "secretspec get --file /Users/${username}/.config/nix/secretspec.toml GITHUB_WEBHOOK_SECRET";
+    # Empty = haus holds the HMAC secret, rather than "misconfigured": the room
+    # declares the need, the secrets room renders it into
+    # ~/.config/haus/secretspec.toml, and the receiver reads it through
+    # `haus-secret` with its own audit reason. `haus.secrets.project` above
+    # names THIS flake's secretspec project, so the value already in the login
+    # keychain under GITHUB_WEBHOOK_SECRET is the one it finds — nothing to
+    # re-enter, nothing duplicated. `haus-secret --list` / `--status` say so.
+    secretCommand = "";
     forwardTo = [ "127.0.0.1:42787" ];
     backstop = 1800;
     hooks = [ { scope = "org:hausfold"; } ];
