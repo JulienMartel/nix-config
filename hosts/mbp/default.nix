@@ -265,6 +265,15 @@ in
   # No tap-to-click: palm rests fire stray clicks mid-type.
   system.defaults.trackpad.Clicking = false;
 
+  # ---- trill ----
+  # The notification compositor, owned by the layer now that it is a room of its
+  # own: haus copies the pinned, notarized bundle to a fixed /Applications/Trill.app
+  # rather than a store path, so the Full Disk Access grant `trill doctor` and the
+  # Silence Native Banners helper rest on survives every version bump. Nothing
+  # else here changes — `trill` on PATH is core/trill.sh's wrapper either way, and
+  # rules.json / github.json below stay this machine's to write.
+  haus.trill.enable = true;
+
   # ---- the GitHub webhook bridge ----
   # GitHub -> hooks.hausfold.co -> the receiver here -> trill's own bridge,
   # verbatim. A raw launchd stanza until haus grew a room for it; it got reaped
