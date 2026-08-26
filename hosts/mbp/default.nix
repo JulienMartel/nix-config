@@ -34,25 +34,32 @@ let
   #
   # These are appended after anything hand-written in rules.json, so a rule
   # typed into the file still wins — first match wins, and nix's are last.
-  # Claude Code's macOS app is its own bundle, NOT the Claude chat app: the id
-  # is `com.anthropic.claude-code`, read off
-  # `~/Library/Application Support/Claude/claude-code/<version>/claude.app`,
-  # where Claude.app stages it. `com.anthropic.claudefordesktop` is the chat
-  # client and posts its own, unrelated cards; it is deliberately not listed.
+  # Anthropic ships TWO bundles here and they are separate apps, so they need
+  # separate rules — one id can't stand in for the other:
   #
-  # Measured 2026-08-25: the id appears in NEITHER usernoted's store NOR
-  # ncprefs, because the staged bundle has never been launched here — Claude
-  # Code runs as the CLI in Ghostty on this Mac. So this rule is armed, not
-  # active, and the first banner it routes is the first one the app ever
-  # posts. That is the reason to write it now rather than after: the mirror
-  # already banners unlisted apps by default, so what a rule actually buys is
-  # a *named* source — and a named source is what puts the app in `trill
-  # doctor`'s worklist, so the Silence Native Banners walkthrough turns
-  # Apple's copy off before we ever see the pair drawn twice.
+  #   com.anthropic.claude-code        Claude Code's macOS app. Read off
+  #                                    ~/Library/Application Support/Claude/
+  #                                    claude-code/<version>/claude.app, where
+  #                                    Claude.app stages it.
+  #   com.anthropic.claudefordesktop   the chat client, /Applications/Claude.app.
   #
-  # `banner`, not inbox or digest: every notification Claude Code posts is
-  # "your turn" — a permission prompt or a finished run — and a turn-taking
-  # signal held for a digest flush is a signal that arrived too late to be one.
+  # Both post the same *kind* of thing, which is why both get `banner` and
+  # neither gets inbox or digest. Measured 2026-08-25, every card the chat app
+  # has ever drawn on this Mac reads "Claude is waiting for your input" — a
+  # turn-taking signal, same as Claude Code's permission prompts and
+  # end-of-run pings. Held for a digest flush it arrives too late to be one.
+  #
+  # The mirror already banners apps no rule names, so what these buy is a
+  # *named* source: `trill doctor` and the Silence Native Banners helper audit
+  # exactly the sources rules.json lists, so listing them is what turns
+  # Apple's own copy off before the pair is ever drawn twice.
+  #
+  # One caveat, and it only applies to the Code entry: measured the same day,
+  # `com.anthropic.claude-code` is in NEITHER usernoted's store NOR ncprefs,
+  # because the staged bundle has never been launched here — Claude Code runs
+  # as the CLI in Ghostty on this Mac. That rule is armed rather than active,
+  # and the first banner it routes is the first one the app ever posts. The
+  # chat app's is live today.
   trillRules = [
     {
       match.source = "com.apple.SoftwareUpdateNotification";
@@ -60,6 +67,10 @@ let
     }
     {
       match.source = "com.anthropic.claude-code";
+      delivery = "banner";
+    }
+    {
+      match.source = "com.anthropic.claudefordesktop";
       delivery = "banner";
     }
   ];
