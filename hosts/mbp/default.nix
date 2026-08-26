@@ -34,9 +34,32 @@ let
   #
   # These are appended after anything hand-written in rules.json, so a rule
   # typed into the file still wins — first match wins, and nix's are last.
+  # Claude Code's macOS app is its own bundle, NOT the Claude chat app: the id
+  # is `com.anthropic.claude-code`, read off
+  # `~/Library/Application Support/Claude/claude-code/<version>/claude.app`,
+  # where Claude.app stages it. `com.anthropic.claudefordesktop` is the chat
+  # client and posts its own, unrelated cards; it is deliberately not listed.
+  #
+  # Measured 2026-08-25: the id appears in NEITHER usernoted's store NOR
+  # ncprefs, because the staged bundle has never been launched here — Claude
+  # Code runs as the CLI in Ghostty on this Mac. So this rule is armed, not
+  # active, and the first banner it routes is the first one the app ever
+  # posts. That is the reason to write it now rather than after: the mirror
+  # already banners unlisted apps by default, so what a rule actually buys is
+  # a *named* source — and a named source is what puts the app in `trill
+  # doctor`'s worklist, so the Silence Native Banners walkthrough turns
+  # Apple's copy off before we ever see the pair drawn twice.
+  #
+  # `banner`, not inbox or digest: every notification Claude Code posts is
+  # "your turn" — a permission prompt or a finished run — and a turn-taking
+  # signal held for a digest flush is a signal that arrived too late to be one.
   trillRules = [
     {
       match.source = "com.apple.SoftwareUpdateNotification";
+      delivery = "banner";
+    }
+    {
+      match.source = "com.anthropic.claude-code";
       delivery = "banner";
     }
   ];
