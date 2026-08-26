@@ -28,14 +28,15 @@
         "nix-index-database": "nix-index-database",
         "nixpkgs": "nixpkgs_2",
         "perch": "perch",
-        "pounce": "pounce"
+        "pounce": "pounce",
+        "trill": "trill"
       },
       "locked": {
-        "lastModified": 1787663402,
-        "narHash": "sha256-IGZ4D5WSGSwBEamxQGU+Rse5bhHXgD8L8MPlK5L37LM=",
+        "lastModified": 1787720175,
+        "narHash": "sha256-35RxAJCpfBEivcI/+SOC7Z92zJzdKpuPfzjePoQmyQc=",
         "owner": "hausfold",
         "repo": "haus",
-        "rev": "babfa75b7f7fc151554a9c35a8cfab3305ae8455",
+        "rev": "1a8c67c698573dffd16d7cc80d9a0be485b5d3fe",
         "type": "github"
       },
       "original": {
@@ -245,9 +246,46 @@
         "perch"
       ]
     },
+    "prebuilt_2": {
+      "flake": false,
+      "locked": {
+        "path": "./nix/dev-app",
+        "type": "path"
+      },
+      "original": {
+        "path": "./nix/dev-app",
+        "type": "path"
+      },
+      "parent": [
+        "haus",
+        "trill"
+      ]
+    },
     "root": {
       "inputs": {
         "haus": "haus"
+      }
+    },
+    "trill": {
+      "inputs": {
+        "nixpkgs": [
+          "haus",
+          "nixpkgs"
+        ],
+        "prebuilt": "prebuilt_2"
+      },
+      "locked": {
+        "lastModified": 1787669782,
+        "narHash": "sha256-7f6BV31fP9errmKy5ea83LedFMqZqaP2nAU+vfg7oao=",
+        "owner": "hausfold",
+        "repo": "trill",
+        "rev": "23291308a917001c80947f911ef7d47f05593763",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hausfold",
+        "repo": "trill",
+        "type": "github"
       }
     }
   },
