@@ -265,14 +265,21 @@ in
   # No tap-to-click: palm rests fire stray clicks mid-type.
   system.defaults.trackpad.Clicking = false;
 
-  # ---- trill ----
+  # ---- notifications ----
   # The notification compositor, owned by the layer now that it is a room of its
   # own: haus copies the pinned, notarized bundle to a fixed /Applications/Trill.app
   # rather than a store path, so the Full Disk Access grant `trill doctor` and the
   # Silence Native Banners helper rest on survives every version bump. Nothing
   # else here changes — `trill` on PATH is core/trill.sh's wrapper either way, and
   # rules.json / github.json below stay this machine's to write.
-  haus.trill.enable = true;
+  #
+  # `compositor`, not `enable`, and the room is `notifications`, not `trill`:
+  # haus draws notifications on this Mac whatever this line says (haus-notify
+  # falls back to Apple's banner), so the only question here is whether haus owns
+  # and pins the bundle. Named for the subject like every other room since the
+  # 2026-08-16 sweep; this was `haus.trill.enable` until haus#521, which took no
+  # alias, so the old spelling is simply gone.
+  haus.notifications.compositor = true;
 
   # Which secretspec project the ROOM-declared manifest carries. This flake's
   # own secretspec.toml is project "nix", and its GITHUB_WEBHOOK_SECRET is
@@ -533,8 +540,8 @@ in
     # trill's inbox, one click from a bar that is always on screen: the app's
     # own menu-bar item is unreachable here, since `haus.bar.enable` hides
     # macOS's menu bar outright. Draws nothing at all without Trill.app, so it
-    # is safe to state unconditionally — and `haus.trill.enable` above means
-    # this Mac always has it.
+    # is safe to state unconditionally — and `haus.notifications.compositor`
+    # above means this Mac always has it.
     trill = true;
     wifi = false;
   };
