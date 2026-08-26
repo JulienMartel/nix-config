@@ -504,7 +504,8 @@ in
   # so caskArgs makes every new cask install fail the rebuild's `brew bundle`.
   homebrew.onActivation.extraEnv.HOMEBREW_CASK_OPTS = "--no-quarantine";
 
-  # Which pills exist; `haus.bar.bottom.items` below places them.
+  # Which pills exist; `haus.bar.bottom.items` below places them, and anything
+  # this list switches on but that list never names stays on the menu bar.
   # Off on purpose: wifi/volume (menu bar + HUD already say it) and harvest.
   haus.bar.items = {
     agents = true;
@@ -516,6 +517,12 @@ in
     calendar = true;
     weather = true;
     github = true;
+    # trill's inbox, one click from a bar that is always on screen: the app's
+    # own menu-bar item is unreachable here, since `haus.bar.enable` hides
+    # macOS's menu bar outright. Draws nothing at all without Trill.app, so it
+    # is safe to state unconditionally — and `haus.trill.enable` above means
+    # this Mac always has it.
+    trill = true;
     wifi = false;
   };
 
@@ -546,10 +553,15 @@ in
       # own readouts, and this is not one of those.
       github = "left";
       media = "center";
-      weather = "right";
+      # The right group down here is the machine's own vitals and switches —
+      # what it is spending and what is toggled. `weather` and `focus` are
+      # neither: the forecast is the world outside the Mac, and the moon is the
+      # one thing I reach for mid-sentence to shut everything up. Both now sit
+      # in the menu bar's right corner beside the clock and the trill bell,
+      # which is the always-visible strip — naming a pill here MOVES it, so
+      # leaving them out is what puts them up top.
       cpu = "right";
       memory = "right";
-      focus = "right";
       elgato = "right";
       caffeinate = "right";
     };
