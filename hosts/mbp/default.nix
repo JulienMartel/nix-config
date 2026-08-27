@@ -252,6 +252,10 @@ in
   # No desktop icons; files stay in ~/Desktop. Also makes the desktop unclickable.
   system.defaults.finder.CreateDesktop = false;
 
+  # Screenshots go to ~/Downloads. With CreateDesktop off above they'd otherwise
+  # pile up unseen in ~/Desktop.
+  haus.screenshots.location = "~/Downloads";
+
   # ---- displays ----
   # The Studio Display, by UUID rather than `main` so docking the laptop doesn't
   # hand the built-in panel a 27" monitor's setting. Its own default (2560x1440)
