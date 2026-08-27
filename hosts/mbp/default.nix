@@ -1028,131 +1028,108 @@ in
       # kickstart` — it reads its secret at agent start, this file at
       # activation.
       #
-      # Via $ENV, never `jq --arg`: argv is world-readable in `ps`. Both tools
-      # pinned from the store — activation runs with a bare PATH. A keychain
-      # that won't answer, or a Mac with no trill, leaves the file alone rather
-      # than blanking the secret.
+      # Via $SECRET in the environment, never argv: `ps` shows arguments to
+      # every user on the box. Both tools pinned from the store — activation
+      # runs with a bare PATH. A keychain that won't answer, or a Mac with no
+      # trill, leaves the file alone rather than blanking the secret.
       home.activation.trillGithubSecret = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run sh -c '
           config="$0"
-          SECRET=$(${pkgs.secretspec}/bin/secretspec get --file "$1" \
+          py="$1"
+          spec="$2"
+          SECRET=$(${pkgs.secretspec}/bin/secretspec get --file "$spec" \
             --reason "sync trill'"'"'s copy of the hausfold org webhook secret" \
             GITHUB_WEBHOOK_SECRET 2>/dev/null) || SECRET=""
           if [ -z "$SECRET" ]; then
             echo "trill: no GITHUB_WEBHOOK_SECRET from the keychain — leaving $config alone" >&2
             exit 0
           fi
-          [ -s "$config" ] || exit 0
           export SECRET
-          umask 077
-          tmp="$config.hm-seed"
-          ${pkgs.jq}/bin/jq ".secret = \$ENV.SECRET" "$config" > "$tmp" || { rm -f "$tmp"; exit 0; }
-          if cmp -s "$tmp" "$config"; then rm -f "$tmp"; else mv "$tmp" "$config"; fi
-        ' "$HOME/.config/trill/github.json" "$HOME/.config/nix/secretspec.toml"
+          "$py" ${./json-patch.py} set-env "$config" secret SECRET
+        ' "$HOME/.config/trill/github.json" "${pkgs.python3}/bin/python3" "$HOME/.config/nix/secretspec.toml"
       '';
 
       # ---- trill's rules file ----
       # Merged, not owned. `rules.json` also carries `quietHours` and
       # `resolvers` — a resolver is the only place a command may live, so
       # clobbering the file from here would silently disarm every `--until`
-      # poller. jq keeps every key and every rule this machine didn't declare,
-      # drops only an older copy of a rule nix names, and appends nix's at the
-      # end so a hand-written rule keeps its priority.
+      # poller. The patch keeps every key and every rule this machine didn't
+      # declare, drops only an older copy of a rule nix names, and appends
+      # nix's at the end so a hand-written rule keeps its priority.
       #
       # A missing file is created rather than skipped: an empty rules file is
       # valid, trill watches it live, and there is nothing here to lose.
       home.activation.trillRules = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        run sh -c '
-          rules="$0"
-          mkdir -p "$(dirname "$rules")"
-          [ -s "$rules" ] || echo "{\"rules\":[]}" > "$rules"
-          MINE="$1"
-          export MINE
-          tmp="$rules.hm-seed"
-          ${pkgs.jq}/bin/jq '"'"'
-            ($ENV.MINE | fromjson) as $mine
-            | ($mine | map(.match.source | ascii_downcase)) as $names
-            | .rules = (((.rules // [])
-                | map(select(((.match.source // "") | ascii_downcase) as $s
-                             | ($names | index($s)) == null))) + $mine)
-          '"'"' "$rules" > "$tmp" || { rm -f "$tmp"; exit 0; }
-          if cmp -s "$tmp" "$rules"; then rm -f "$tmp"; else mv "$tmp" "$rules"; fi
-        ' "$HOME/.config/trill/rules.json" ${lib.escapeShellArg (builtins.toJSON trillRules)}
+        run env MINE=${lib.escapeShellArg (builtins.toJSON trillRules)} \
+          ${pkgs.python3}/bin/python3 ${./json-patch.py} rules \
+          "$HOME/.config/trill/rules.json" MINE
       '';
 
-      # Claude Code — reinstate our hooks in settings.json on every rebuild.
+      # ---- Claude Code's settings.json ----
+      # Merged, not owned: Claude rewrites this file itself, so everything it or
+      # `/config` put there has to survive. What nix declares here:
       #  • WorktreeCreate/Remove → `holt hook create|remove` (note the `hook`
       #    subcommand), so ⌘A's worktrees land under ~/.cache/claude-worktrees,
       #    get parked on pane close, and stay resumable.
       #  • UserPromptSubmit/Notification/Stop/SessionEnd → agents-hook.sh, which
       #    feeds the `agents` bar paw. Host-side because it names a plugin path.
-      # Claude owns settings.json, so we jq-merge only our keys and never own the
-      # file. jq is pinned from the store: activation runs with a bare PATH.
-      home.activation.claudeCodeHooks = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        run sh -c '
-          settings="$0"
-          holtbin="$1"
-          hook="$2"
-          mkdir -p "''${settings%/*}"
-          tmp="$settings.hm-seed"
-          if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
-          ${pkgs.jq}/bin/jq \
-            ".hooks.WorktreeCreate = [{hooks:[{type:\"command\",command:\"''${holtbin} hook create\"}]}]
-             | .hooks.WorktreeRemove = [{hooks:[{type:\"command\",command:\"''${holtbin} hook remove\"}]}]
-             | .hooks.UserPromptSubmit = [{hooks:[{type:\"command\",command:\"''${hook} working\"}]}]
-             | .hooks.Notification = [{hooks:[{type:\"command\",command:\"''${hook} waiting\"}]}]
-             | .hooks.Stop = [{hooks:[{type:\"command\",command:\"''${hook} idle\"}]}]
-             | .hooks.SessionEnd = [{hooks:[{type:\"command\",command:\"''${hook} remove\"}]}]" \
-            "$base" > "$tmp"
-          mv "$tmp" "$settings"
-          rm -f "$tmp.base"
-        ' "$HOME/.claude/settings.json" "/run/current-system/sw/bin/holt" "$HOME/.config/sketchybar/plugins/agents-hook.sh"
-      '';
-
-      # Pre-approve what auto mode still escalates (git/gh/worktree/push) — the
-      # agent-worktree flow's bread and butter. Personal, not rice: leash length
-      # is a per-user call and `git:*`/`gh:*` are broad. UNIONed into Claude's
-      # own grants; auto mode's background safety checks still apply.
-      home.activation.claudeCodePermissionAllow = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        run sh -c '
-          settings="$0"
-          mkdir -p "''${settings%/*}"
-          tmp="$settings.hm-seed"
-          if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
-          ${pkgs.jq}/bin/jq \
-            ".permissions.allow = ((.permissions.allow // []) + [
-                \"Bash(git:*)\",
-                \"Bash(git worktree:*)\",
-                \"Bash(gh:*)\",
-                \"Bash(bench:*)\",
-                \"Bash(wt:*)\",
-                \"Bash(holt:*)\",
-                \"Bash(haus:*)\"
-             ] | unique)" \
-            "$base" > "$tmp"
-          mv "$tmp" "$settings"
-          rm -f "$tmp.base"
-        ' "$HOME/.claude/settings.json"
-      '';
-
-      # Personal UI prefs on top of the rice's house-style defaults.
-      # verbose = false: new sessions start with tool output collapsed (⌃O still
-      # expands). Toggling it via `/config` lasts only until the next rebuild.
-      # autoMemoryEnabled = false: Claude Code's auto-memory is off machine-wide
-      # — no reads from or writes to ~/.claude/projects/*/memory. The repo is the
-      # source of truth for code work (see the Memory stanza in ai.instructions).
-      # Account-level memory in the Claude apps is a separate, untouched setting.
-      home.activation.claudeCodePrefs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        run sh -c '
-          settings="$0"
-          mkdir -p "''${settings%/*}"
-          tmp="$settings.hm-seed"
-          if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
-          ${pkgs.jq}/bin/jq ".verbose = false | .autoMemoryEnabled = false" "$base" > "$tmp"
-          mv "$tmp" "$settings"
-          rm -f "$tmp.base"
-        ' "$HOME/.claude/settings.json"
-      '';
+      #  • verbose = false: new sessions start with tool output collapsed (⌃O
+      #    still expands).
+      #  • autoMemoryEnabled = false: auto-memory is off machine-wide — no reads
+      #    from or writes to ~/.claude/projects/*/memory. The repo is the source
+      #    of truth for code work (see the Memory stanza in ai.instructions).
+      #    Account-level memory in the Claude apps is a separate, untouched
+      #    setting.
+      # Toggling any of these via `/config` lasts only until the next rebuild.
+      #
+      # The allowlist is UNIONed rather than set, so a grant Claude earned at a
+      # prompt is never dropped. It pre-approves what auto mode still escalates
+      # (git/gh/worktree/push) — the agent-worktree flow's bread and butter.
+      # Personal, not rice: leash length is a per-user call and `git:*`/`gh:*`
+      # are broad, and auto mode's background safety checks still apply.
+      home.activation.claudeCodePersonal =
+        let
+          settings = "${config.home.homeDirectory}/.claude/settings.json";
+          agentsHook = "${config.home.homeDirectory}/.config/sketchybar/plugins/agents-hook.sh";
+          cmd = command: [
+            {
+              hooks = [
+                {
+                  type = "command";
+                  inherit command;
+                }
+              ];
+            }
+          ];
+          patch = {
+            hooks = {
+              WorktreeCreate = cmd "/run/current-system/sw/bin/holt hook create";
+              WorktreeRemove = cmd "/run/current-system/sw/bin/holt hook remove";
+              UserPromptSubmit = cmd "${agentsHook} working";
+              Notification = cmd "${agentsHook} waiting";
+              Stop = cmd "${agentsHook} idle";
+              SessionEnd = cmd "${agentsHook} remove";
+            };
+            verbose = false;
+            autoMemoryEnabled = false;
+          };
+          allow = [
+            "Bash(git:*)"
+            "Bash(git worktree:*)"
+            "Bash(gh:*)"
+            "Bash(bench:*)"
+            "Bash(wt:*)"
+            "Bash(holt:*)"
+            "Bash(haus:*)"
+          ];
+          patchWith = args: ''
+            run ${pkgs.python3}/bin/python3 ${./json-patch.py} ${args}
+          '';
+        in
+        lib.hm.dag.entryAfter [ "writeBoundary" ] (
+          patchWith "merge ${settings} ${lib.escapeShellArg (builtins.toJSON patch)}"
+          + patchWith "union ${settings} permissions.allow ${lib.escapeShellArg (builtins.toJSON allow)}"
+        );
 
       # Private tooling that shouldn't live in the public rice.
       programs.zsh.initContent = lib.mkAfter ''
