@@ -608,13 +608,10 @@ in
     to-dos — read its SKILL.md before touching my list). If your client does not
     load skills, read the SKILL.md by path; it is plain markdown.
 
-    `/handoff` is NOT one of those any more — it ships with holt now
-    (`ai/handoff/SKILL.md` in hausfold/holt), because it is the missing half of
-    `holt spawn --prompt`: how to write a brief a cold session can act on. Same
-    two jobs, one extra ending — `/handoff` copies it to the clipboard as
-    before, and `/handoff spawn [repo]` opens it as a real lane with its own
-    checkout, branch and window. Editing it means editing that repo, not this
-    one.
+    `/handoff` ships with holt, not this repo (`ai/handoff/SKILL.md` in
+    hausfold/holt). It writes a brief a cold session can act on: `/handoff`
+    copies it to the clipboard, `/handoff spawn [repo]` opens it as a real lane
+    with its own checkout, branch and window. Edit it there.
 
     ## Working in a git worktree
 
@@ -698,6 +695,20 @@ in
     **Verify by actually running it**, not by eyeballing the diff. Testing in
     prod is acceptable house style for my personal infra: build it, run it,
     observe the real behavior. Prefer a project's own run/verify skill.
+
+    ## Memory
+
+    Auto-memory is off, deliberately: `autoMemoryEnabled = false` in
+    `~/.claude/settings.json`, set on every rebuild by `hosts/mbp/default.nix`.
+    **The code, the git history and each repo's own AGENTS.md are the source of
+    truth for code work.** Do not ask for it back on, and do not keep a parallel
+    note store anywhere else. Something worth carrying between sessions goes in
+    the repo it belongs to: a line in AGENTS.md, a comment beside the code that
+    embodies it, or a commit message. If it fits none of those, it was probably
+    not worth keeping.
+
+    Account-level memory in the Claude apps (iOS, web chat) is a separate
+    setting and stays on. That is for non-code conversations, not this.
 
     ## Keeping docs honest
 
@@ -1106,13 +1117,17 @@ in
       # Personal UI prefs on top of the rice's house-style defaults.
       # verbose = false: new sessions start with tool output collapsed (⌃O still
       # expands). Toggling it via `/config` lasts only until the next rebuild.
+      # autoMemoryEnabled = false: Claude Code's auto-memory is off machine-wide
+      # — no reads from or writes to ~/.claude/projects/*/memory. The repo is the
+      # source of truth for code work (see the Memory stanza in ai.instructions).
+      # Account-level memory in the Claude apps is a separate, untouched setting.
       home.activation.claudeCodePrefs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         run sh -c '
           settings="$0"
           mkdir -p "''${settings%/*}"
           tmp="$settings.hm-seed"
           if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
-          ${pkgs.jq}/bin/jq ".verbose = false" "$base" > "$tmp"
+          ${pkgs.jq}/bin/jq ".verbose = false | .autoMemoryEnabled = false" "$base" > "$tmp"
           mv "$tmp" "$settings"
           rm -f "$tmp.base"
         ' "$HOME/.claude/settings.json"

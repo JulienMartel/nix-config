@@ -62,6 +62,24 @@ nix build .#darwinConfigurations.mbp.system && sudo ./result/sw/bin/darwin-rebui
 Build first, switch second — a failed build never touches the running system.
 Nix errors are verbose; read from the *bottom* up for the actual cause.
 
+`switch` doesn't prompt for a password: `/etc/sudoers.d/darwin-rebuild` grants
+`NOPASSWD` for the `darwin-rebuild` store path only. That file is **hand-managed
+on purpose** — a nix-managed sudoers file with a syntax error wedges all of sudo,
+and you'd need sudo to rebuild the fix. Don't move it into this repo. If the
+prompt comes back, the store path changed shape: re-check the glob against
+`readlink -f /run/current-system/sw/bin/darwin-rebuild`.
+
+## Deliberately not in this repo
+
+Things installed on `mbp` by hand, so nothing here declares them:
+
+| What | Where | Why it stays out |
+|---|---|---|
+| passwordless `darwin-rebuild` | `/etc/sudoers.d/darwin-rebuild` | lockout risk (above) |
+| meridian proxy + the `pi` agent | `~/.local/meridian-trial`, LaunchAgent `co.hausfold.meridian` | a trial that churns upstream; `rm -rf` to undo |
+
+Don't propose folding either into `hosts/mbp/default.nix` unless asked.
+
 ## Where does a change go?
 
 | You're changing… | Do this |
@@ -97,13 +115,13 @@ update haus`.
 ## Conventions
 
 - Commits are GPG-signed. Keep messages imperative.
-- Never commit secret VALUES. This machine declares none right now — there is no
-  `secretspec.toml` here, because nothing on it reads one. When something does,
-  add the file declaring the NAME only; values live in the macOS login keychain
-  (`haus.secrets.provider = "keyring"`). `secretspec check` says what's missing,
-  `secretspec set NAME` fills one, `secretspec run -- cmd` injects them into just
-  that process. Don't re-add a declaration speculatively: an unused one makes
-  `haus doctor` and a fresh-Mac setup ask for keys nobody uses.
+- Never commit secret VALUES. `secretspec.toml` declares NAMES only
+  (`GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`, optional `ANTHROPIC_API_KEY`);
+  values live in the macOS login keychain (`haus.secrets.provider = "keyring"`).
+  `secretspec check` says what's missing, `secretspec set NAME` fills one,
+  `secretspec run -- cmd` injects them into just that process. Don't declare one
+  speculatively: an unused NAME makes `haus doctor` and a fresh-Mac setup ask for
+  a key nobody uses.
 - `nixfmt` formats `.nix` files.
 - Operational gotchas (launchd GUI race, pounce self-signing, Homebrew
   tap-trust, Touch ID + reattach, Determinate GC) live with the code that
