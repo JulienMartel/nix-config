@@ -506,12 +506,29 @@ in
     };
   };
 
-  # Leader then Return → Things3's Quick Entry panel.
+  # Leader then space → Spawn Agent: pick a repo, type the task, and the lane is
+  # built on that repo's page while you carry on. The palette's own ⌘Space is one
+  # keystroke away from the same command, but it costs a fuzzy search for a thing
+  # I reach for many times a day — and the leader is already where "start
+  # something" lives on this keyboard.
+  #
+  # `pounce run cmd:<id>`, not the script's own path: `run` goes through the
+  # DAEMON, so the command resolves exactly as it does from the palette (same
+  # command dirs, same shadowing) and runs in the daemon's launchd environment —
+  # which is the only place HAUS_REPO_ROOTS and HAUS_LANE_NAMER exist. Exec'ing
+  # the script from AeroSpace instead would silently drop both: every repo root
+  # back to the fallback list, and lane names back to the stopword slug.
+  #
+  # `space` is free in launch mode — the built-ins are letters, punctuation and
+  # arrows (modules/windows/launch-keys.nix), and haus refuses a collision at
+  # eval rather than letting one silently lose.
+  #
+  # It replaces leader-Return → Things3 Quick Entry, which I never once used.
   haus.keys.leaderExtras = [
     {
-      key = "enter";
-      command = "osascript -e 'tell application \"Things3\" to show quick entry panel'";
-      caption = "Things Quick Entry";
+      key = "space";
+      command = "/etc/profiles/per-user/${username}/bin/pounce run cmd:spawn-agent";
+      caption = "Spawn Agent";
     }
   ];
 
