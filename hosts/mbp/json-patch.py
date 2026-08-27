@@ -25,6 +25,11 @@ Modes:
                          value (scalars, arrays) replaces wholesale.
   union FILE PATH JSON   Union a JSON array into the array at a dotted PATH,
                          de-duplicated and sorted. Creates the path if absent.
+  drop FILE PATH JSON    Remove every listed value from the array at a dotted
+                         PATH. Missing path, or a value that isn't an array: a
+                         no-op. This is the half `union` structurally cannot do
+                         — a string it added once survives every later rebuild,
+                         so retiring one needs its own step.
   set-env FILE KEY VAR   Set top-level KEY to the string in environment VAR.
                          No-op if VAR is unset or empty.
   rules FILE VAR         trill's rules merge: the JSON array in environment VAR
@@ -69,6 +74,26 @@ def mode_union(doc, args):
     return doc
 
 
+def mode_drop(doc, args):
+    """Remove named values from an array. The undo `union` doesn't have.
+
+    Reaching a missing key or a non-array leaves the document alone: this runs
+    against a file another program owns, so "the shape isn't what I expected"
+    means don't touch it, not repair it.
+    """
+    path, removals = args[0].split("."), set(json.loads(args[1]))
+    node = doc
+    for part in path[:-1]:
+        node = node.get(part)
+        if not isinstance(node, dict):
+            return doc
+    existing = node.get(path[-1])
+    if not isinstance(existing, list):
+        return doc
+    node[path[-1]] = [v for v in existing if v not in removals]
+    return doc
+
+
 def mode_set_env(doc, args):
     key, value = args[0], os.environ.get(args[1], "")
     if not value:
@@ -92,6 +117,7 @@ def mode_rules(doc, args):
 MODES = {
     "merge": mode_merge,
     "union": mode_union,
+    "drop": mode_drop,
     "set-env": mode_set_env,
     "rules": mode_rules,
 }

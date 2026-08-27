@@ -139,13 +139,13 @@ in
     "pi"
   ];
   # pi is the default as of 2026-08-27. Claude Code stays installed and every
-  # parked Claude lane still reopens in Claude — holt records the client per
+  # parked Claude lane still reopens in Claude — scruff records the client per
   # lane, so this only decides what a NEW ⌘↵ pane spawns.
   #
   # What pi needs beyond the binary, haus now ships: the four packages in
   # `haus.ai.pi.packages` (sub-agents, todo, ask-a-question, web access — pi
   # ships without them on purpose), the display keys merged into
-  # ~/.pi/agent/settings.json at rebuild, and holt copying this machine's pi
+  # ~/.pi/agent/settings.json at rebuild, and scruff copying this machine's pi
   # trust decision onto each new lane so a worktree outside ~/code doesn't
   # prompt.
   haus.ai.default = "pi";
@@ -168,9 +168,9 @@ in
   # writes no client's config. Dropping it puts pi back on a metered key.
   haus.ai.meridian.enable = true;
 
-  # Name a lane after its task instead of after a word list. holt asks the
-  # adapter at ~/.config/holt/adapters/namer/api.toml, which is
-  # ~/.config/holt/namer-api.sh: one request straight at the Messages API,
+  # Name a lane after its task instead of after a word list. scruff asks the
+  # adapter at ~/.config/scruff/adapters/namer/api.toml, which is
+  # ~/.config/scruff/namer-api.sh: one request straight at the Messages API,
   # measured 0.7-1.1s per spawn against the built-in `claude` namer's 8-12s
   # (almost all of that the client's own start-up, not the model).
   #
@@ -658,8 +658,8 @@ in
     to-dos — read its SKILL.md before touching my list). If your client does not
     load skills, read the SKILL.md by path; it is plain markdown.
 
-    `/handoff` ships with holt, not this repo (`ai/handoff/SKILL.md` in
-    hausfold/holt). It writes a brief a cold session can act on: `/handoff`
+    `/handoff` ships with scruff, not this repo (`ai/handoff/SKILL.md` in
+    hausfold/scruff). It writes a brief a cold session can act on: `/handoff`
     copies it to the clipboard, `/handoff spawn [repo]` opens it as a real lane
     with its own checkout, branch and window. Edit it there.
 
@@ -944,17 +944,17 @@ in
           };
 
           # Commands BLOCK the TUI until they exit, so only things I want to
-          # take over the pane (holt, lazygit) — never `bench try`.
+          # take over the pane (scruff, lazygit) — never `bench try`.
           # Custom keys silently SHADOW built-ins with no warning, so check
           # keys.go / prKeys.go before adding one. Free today: b f i n and most
           # capitals (B D E F I J K M N O S T U Z).
           keybindings.prs = [
             {
-              # Jump into the agent session behind this PR (holt names the
+              # Jump into the agent session behind this PR (scruff names the
               # worktree after the branch minus the `worktree-` prefix).
               key = "H";
-              name = "holt session";
-              command = ''holt "$(printf '%s' {{.HeadRefName}} | sed 's/^worktree-//')"'';
+              name = "scruff session";
+              command = ''scruff "$(printf '%s' {{.HeadRefName}} | sed 's/^worktree-//')"'';
             }
             {
               key = "z";
@@ -1010,12 +1010,12 @@ in
       home.file.".claude/skills/park".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
 
-      # handoff moved OUT of here and into holt — it is `holt spawn --prompt`'s
+      # handoff moved OUT of here and into scruff — it is `scruff spawn --prompt`'s
       # missing half (how to write the brief a cold lane opens on), so it lives
-      # with the flag and ships to everyone who installs holt. haus's
+      # with the flag and ships to everyone who installs scruff. haus's
       # `ai.skill` links it, and this file must NOT also define
       # ~/.claude/skills/handoff — two definitions of one home.file path is an
-      # eval conflict, not a last-wins. Edit it at hausfold/holt's
+      # eval conflict, not a last-wins. Edit it at hausfold/scruff's
       # ai/handoff/SKILL.md; it is a store path here, so no longer live-editable.
 
       # things — my Things 3 to-do list. Reads go at the app's SQLite file
@@ -1097,7 +1097,7 @@ in
       # ---- Claude Code's settings.json ----
       # Merged, not owned: Claude rewrites this file itself, so everything it or
       # `/config` put there has to survive. What nix declares here:
-      #  • WorktreeCreate/Remove → `holt hook create|remove` (note the `hook`
+      #  • WorktreeCreate/Remove → `scruff hook create|remove` (note the `hook`
       #    subcommand), so ⌘A's worktrees land under ~/.cache/claude-worktrees,
       #    get parked on pane close, and stay resumable.
       #  • UserPromptSubmit/Notification/Stop/SessionEnd → agents-hook.sh, which
@@ -1132,8 +1132,8 @@ in
           ];
           patch = {
             hooks = {
-              WorktreeCreate = cmd "/run/current-system/sw/bin/holt hook create";
-              WorktreeRemove = cmd "/run/current-system/sw/bin/holt hook remove";
+              WorktreeCreate = cmd "/run/current-system/sw/bin/scruff hook create";
+              WorktreeRemove = cmd "/run/current-system/sw/bin/scruff hook remove";
               UserPromptSubmit = cmd "${agentsHook} working";
               Notification = cmd "${agentsHook} waiting";
               Stop = cmd "${agentsHook} idle";
@@ -1148,9 +1148,16 @@ in
             "Bash(gh:*)"
             "Bash(bench:*)"
             "Bash(wt:*)"
-            "Bash(holt:*)"
+            "Bash(scruff:*)"
             "Bash(haus:*)"
           ];
+          # `union` adds and never removes, so a name this list used to carry
+          # outlives the rebuild that stopped declaring it. `drop` is the other
+          # half, and it runs after the union. `Bash(holt:*)` is scruff's old
+          # spelling (renamed 2026-08-27) and the binary is gone at scruff
+          # 1.1.0 — delete this list, and the `drop` call below, once a rebuild
+          # has run with it.
+          retire = [ "Bash(holt:*)" ];
           patchWith = args: ''
             run ${pkgs.python3}/bin/python3 ${./json-patch.py} ${args}
           '';
@@ -1158,6 +1165,7 @@ in
         lib.hm.dag.entryAfter [ "writeBoundary" ] (
           patchWith "merge ${settings} ${lib.escapeShellArg (builtins.toJSON patch)}"
           + patchWith "union ${settings} permissions.allow ${lib.escapeShellArg (builtins.toJSON allow)}"
+          + patchWith "drop ${settings} permissions.allow ${lib.escapeShellArg (builtins.toJSON retire)}"
         );
 
       # Private tooling that shouldn't live in the public rice.
