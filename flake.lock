@@ -21,7 +21,6 @@
     "haus": {
       "inputs": {
         "catppuccin": "catppuccin",
-        "holt": "holt",
         "home-manager": "home-manager",
         "nebelung": "nebelung",
         "nix-darwin": "nix-darwin",
@@ -29,40 +28,20 @@
         "nixpkgs": "nixpkgs_2",
         "perch": "perch",
         "pounce": "pounce",
+        "scruff": "scruff",
         "trill": "trill"
       },
       "locked": {
-        "lastModified": 1787818378,
-        "narHash": "sha256-PWMaHyRSAfRvXDls0f1LLkwIB+KtPEbiQiQaGr0RoYY=",
+        "lastModified": 1787820508,
+        "narHash": "sha256-lGjdxlW6iaRlVdCTtyACJmlpKNmCN9kkXXLRrFITKFg=",
         "owner": "hausfold",
         "repo": "haus",
-        "rev": "c504e129e576b594739e9c0bd2394354f5222a3e",
+        "rev": "2ea65dc4412d29a05e6f384762f82ebbfa12dc02",
         "type": "github"
       },
       "original": {
         "owner": "hausfold",
         "repo": "haus",
-        "type": "github"
-      }
-    },
-    "holt": {
-      "inputs": {
-        "nixpkgs": [
-          "haus",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1787817449,
-        "narHash": "sha256-MDa/cB3ug0KbPG3VKQv4Gxi/gSfH6kiGh386L++uF0U=",
-        "owner": "hausfold",
-        "repo": "holt",
-        "rev": "74bef2d77158e0f807a19de530af0506dae19f38",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hausfold",
-        "repo": "holt",
         "type": "github"
       }
     },
@@ -264,6 +243,27 @@
     "root": {
       "inputs": {
         "haus": "haus"
+      }
+    },
+    "scruff": {
+      "inputs": {
+        "nixpkgs": [
+          "haus",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1787817449,
+        "narHash": "sha256-MDa/cB3ug0KbPG3VKQv4Gxi/gSfH6kiGh386L++uF0U=",
+        "owner": "hausfold",
+        "repo": "holt",
+        "rev": "74bef2d77158e0f807a19de530af0506dae19f38",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hausfold",
+        "repo": "holt",
+        "type": "github"
       }
     },
     "trill": {
