@@ -136,8 +136,27 @@ in
   haus.ai.clients = [
     "claude"
     "opencode"
+    "pi"
   ];
-  haus.ai.default = "claude";
+  # pi is the default as of 2026-08-27, after a fortnight on the hand-installed
+  # trial under ~/.local/meridian-trial. Claude Code stays installed and every
+  # parked Claude lane still reopens in Claude — holt records the client per
+  # lane, so this only decides what a NEW ⌘↵ pane spawns.
+  #
+  # What pi needs beyond the binary, haus now ships: the four packages in
+  # `haus.ai.pi.packages` (sub-agents, todo, ask-a-question, web access — pi
+  # ships without them on purpose), the display keys merged into
+  # ~/.pi/agent/settings.json at rebuild, and holt copying this machine's pi
+  # trust decision onto each new lane so a worktree outside ~/code doesn't
+  # prompt.
+  #
+  # What haus deliberately does NOT ship, and this machine still holds by hand:
+  # `~/.pi/agent/models.json`, which points pi's `anthropic` provider at the
+  # meridian proxy on 127.0.0.1:3456 rather than at api.anthropic.com. That is
+  # provider wiring for a launchd agent installed outside Nix
+  # (~/Library/LaunchAgents/co.hausfold.meridian.plist), so it is not a haus
+  # option yet — and dropping it would put pi back on a metered API key.
+  haus.ai.default = "pi";
 
   # Name a lane after its task instead of after a word list. holt asks the
   # adapter at ~/.config/holt/adapters/namer/api.toml, which is
