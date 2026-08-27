@@ -76,9 +76,14 @@ Things installed on `mbp` by hand, so nothing here declares them:
 | What | Where | Why it stays out |
 |---|---|---|
 | passwordless `darwin-rebuild` | `/etc/sudoers.d/darwin-rebuild` | lockout risk (above) |
-| meridian proxy + the `pi` agent | `~/.local/meridian-trial`, LaunchAgent `co.hausfold.meridian` | a trial that churns upstream; `rm -rf` to undo |
 
-Don't propose folding either into `hosts/mbp/default.nix` unless asked.
+Don't propose folding it into `hosts/mbp/default.nix` unless asked.
+
+meridian used to be on that list and no longer is: it's a haus room
+(`haus.ai.meridian.enable`, set in `hosts/mbp/default.nix`), and its activation
+boots out the old hand-installed `co.hausfold.meridian` agent. The leftover
+`~/.local/meridian-trial` npm prefix is inert — remove it by hand when you're
+happy. `pi` is a haus client (`haus.ai.clients`), not a hand-install either.
 
 ## Where does a change go?
 

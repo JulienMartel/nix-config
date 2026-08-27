@@ -138,8 +138,7 @@ in
     "opencode"
     "pi"
   ];
-  # pi is the default as of 2026-08-27, after a fortnight on the hand-installed
-  # trial under ~/.local/meridian-trial. Claude Code stays installed and every
+  # pi is the default as of 2026-08-27. Claude Code stays installed and every
   # parked Claude lane still reopens in Claude — holt records the client per
   # lane, so this only decides what a NEW ⌘↵ pane spawns.
   #
@@ -149,14 +148,25 @@ in
   # ~/.pi/agent/settings.json at rebuild, and holt copying this machine's pi
   # trust decision onto each new lane so a worktree outside ~/code doesn't
   # prompt.
-  #
-  # What haus deliberately does NOT ship, and this machine still holds by hand:
-  # `~/.pi/agent/models.json`, which points pi's `anthropic` provider at the
-  # meridian proxy on 127.0.0.1:3456 rather than at api.anthropic.com. That is
-  # provider wiring for a launchd agent installed outside Nix
-  # (~/Library/LaunchAgents/co.hausfold.meridian.plist), so it is not a haus
-  # option yet — and dropping it would put pi back on a metered API key.
   haus.ai.default = "pi";
+
+  # The endpoint every non-Claude client on this machine talks to: a loopback
+  # proxy serving the Claude Max subscription, so pi and opencode cost what the
+  # subscription already costs instead of billing a metered key.
+  #
+  # It ran for a fortnight as a hand-installed trial under
+  # ~/.local/meridian-trial, whose own plist carried
+  # `KeepAlive.SuccessfulExit = false` — so the first SIGTERM exited 0 and
+  # launchd left the proxy down with nothing on screen but `Connection error.`
+  # from every client. The room declares the agent unconditionally KeepAlive,
+  # which is that bug's fix, and its activation script boots out the stray
+  # co.hausfold.meridian plist on every rebuild.
+  #
+  # The one file that stays hand-held is `~/.pi/agent/models.json`, pointing
+  # pi's `anthropic` provider at 127.0.0.1:3456. That is deliberate on haus's
+  # side, not an oversight — the room's job ends at "the port answers" and it
+  # writes no client's config. Dropping it puts pi back on a metered key.
+  haus.ai.meridian.enable = true;
 
   # Name a lane after its task instead of after a word list. holt asks the
   # adapter at ~/.config/holt/adapters/namer/api.toml, which is
