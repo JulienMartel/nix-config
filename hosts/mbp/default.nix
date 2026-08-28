@@ -699,7 +699,8 @@ in
       origin/main` into a branch — it puts commits I did not write in my PR's
       commit list. `flake.lock` is never hand-merged: take main's wholesale
       (`git checkout --theirs flake.lock`), then re-run `nix flake update
-      <input>` if the branch genuinely needed a newer pin.
+      <input>` if the branch genuinely needed a newer pin (raw on purpose — no
+      wrapper covers a branch-local repin; `bench ship` works on main checkouts).
     - **`/ship` finishes the whole job**: merge the PR, then clean up every
       worktree this session spun up — a sibling-repo worktree is not
       auto-reaped, so merge its PR too and `git worktree remove` it. Then report
@@ -749,6 +750,24 @@ in
     **Verify by actually running it**, not by eyeballing the diff. Testing in
     prod is acceptable house style for my personal infra: build it, run it,
     observe the real behavior. Prefer a project's own run/verify skill.
+
+    ## Command vocabulary — hand me verbs, never the raw incantation
+
+    Every command you put in front of me — a step, a "Need from you" block, a
+    wrap-up — is the family wrapper, never the raw command it wraps: the lock
+    ripple is `bench ship` (or `bench ship <repo>` for one repo's downstream),
+    never `nix flake update <input>` + commit per repo; this machine's update
+    is `haus update` and its rebuild `haus rebuild`, never a `nix build` +
+    `darwin-rebuild switch` pipeline; rollback is `haus rollback`; catching
+    checkouts up is `bench pull`; setting work aside is `scruff park`, never
+    `git stash`. The wrappers carry the guards (ship's
+    fast-forward-then-verify, rebuild's build-before-switch) — a raw
+    suggestion sheds them and teaches the wrong habit, even when it would
+    work. Raw `nix`/`git` is right only when no wrapper covers the operation;
+    say "no wrapper for this" when so. On a haus machine that is not mine (an
+    end user, no workshop checkout), the `haus` CLI is the whole vocabulary —
+    a step it cannot express is a missing verb to report to me as a gap, never
+    a nix command to hand the user.
 
     ## Memory
 

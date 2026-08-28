@@ -51,16 +51,26 @@ host tweaks. The layer itself lives elsewhere.
 > "That's a bar tweak; it lives in the layer at
 > `~/code/workshop/haus/modules/bar`. Want me to switch to that repo?" Don't
 > make the change in the wrong place. After the owning repo is edited + pushed,
-> the consumer here pulls it via `nix flake update <input>` + rebuild.
+> the consumer here catches up via `bench ship` (it ripples every stale lock
+> edge down the chain — `bench ship <repo>` for just one repo's downstream) or
+> `haus update` (which pulls and rebuilds — but only sees a pounce/nebelung
+> change once haus's own lock carries it, so the ripple is `bench ship`'s
+> job). Never suggest a hand-run `nix flake update <input>` for this — see
+> **Hand me verbs, never raw nix** below.
 
 ## Rebuild (after any change)
+
+The verb is `haus rebuild` (or `/rebuild` in a Claude pane; `bench rebuild`
+from the workshop is the same pinned rebuild) — that is what you run and what
+you tell me to run. Under the hood it is:
 
 ```bash
 nix build .#darwinConfigurations.mbp.system && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp
 ```
 
-Build first, switch second — a failed build never touches the running system.
-Nix errors are verbose; read from the *bottom* up for the actual cause.
+Build first, switch second — a failed build never touches the running system;
+the raw pipeline is documentation of what the verb does, not a thing to hand
+me. Nix errors are verbose; read from the *bottom* up for the actual cause.
 
 `switch` doesn't prompt for a password: `/etc/sudoers.d/darwin-rebuild` grants
 `NOPASSWD` for the `darwin-rebuild` store path only. That file is **hand-managed
@@ -95,8 +105,33 @@ client (`haus.ai.clients`), not a hand-install either.
 | **The layer** (system defaults, WM, bar, shell, theming) | edit the module in `~/code/workshop/haus`, test with `bench try`, commit, then `bench ship` |
 | **Pounce** (the app or its commands) | edit `~/code/workshop/pounce`, test with `bench try` (or `rebuild-pounce`), commit, then `bench ship` |
 
-To pull the latest layer + theme + pounce: `haus update` (pulls and rebuilds),
-or by hand `nix flake update haus` then rebuild.
+To pull the latest layer + theme + pounce: `haus update` (pulls and rebuilds).
+That it is `nix flake update haus` + rebuild underneath is for reading the
+code, not for suggesting — the verb also reports what actually changed.
+
+## Hand me verbs, never raw nix
+
+Every routine operation here has a wrapper that carries its guards, and the
+wrapper's name is what goes in any command you hand me — a numbered step, a
+"Need from you" block, a wrap-up line. This is about what you *say*, not just
+what you run: a report that ends "run `nix flake update pounce` in haus, then
+`nix flake update haus` here + rebuild" is wrong even if every word is
+technically true — that whole ripple is one `bench ship`.
+
+| don't suggest | say instead |
+|---|---|
+| `nix flake update <input>` + commit, in any family repo | `bench ship` — or `bench ship <repo>` for one repo's downstream ripple |
+| `nix flake update haus` here + rebuild | `haus update` |
+| `nix build .#darwinConfigurations…` + `darwin-rebuild switch` | `haus rebuild` (this machine) · `bench rebuild` (same, from the workshop) · `bench try [switch]` (against local checkouts) |
+| `darwin-rebuild --rollback` / `--list-generations` | `haus rollback` / `haus generations` |
+| `git pull` per family checkout | `bench pull [repo…]` |
+| `git stash` in a worktree | `scruff park` / `scruff unpark` |
+
+Raw `nix` / `darwin-rebuild` appears in a suggestion only when no wrapper
+covers the operation — and then say so ("no wrapper for this"). For a **haus
+user who is not a contributor** (no `~/code/workshop`), the `haus` CLI is the
+entire vocabulary: if a step has no `haus` verb, that is a missing verb to
+report as a gap, never a licence to hand them nix.
 
 ## Theme / colors
 
@@ -112,9 +147,9 @@ pounce and haus, and updates this repo's lock.
 
 `rebuild-pounce` (alias in `hosts/mbp`) rebuilds the system against the
 **local** `~/code/workshop/pounce` checkout via `--override-input`, so you can
-iterate on uncommitted pounce edits. A plain `darwin-rebuild` uses the pinned
-GitHub input (reproducible). When happy: commit + push pounce, then `nix flake
-update haus`.
+iterate on uncommitted pounce edits. A plain rebuild uses the pinned
+GitHub input (reproducible). When happy: commit pounce, then `bench ship
+pounce` — it pushes pounce and ripples the lock through haus into this repo.
 
 ## Conventions
 
