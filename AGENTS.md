@@ -53,8 +53,10 @@ host tweaks. The layer itself lives elsewhere.
 > make the change in the wrong place. After the owning repo is edited + pushed,
 > the consumer here catches up via `bench ship` (it ripples every stale lock
 > edge down the chain — `bench ship <repo>` for just one repo's downstream) or
-> `haus update` + rebuild. Never suggest a hand-run `nix flake update <input>`
-> for this — see **Hand me verbs, never raw nix** below.
+> `haus update` (which pulls and rebuilds — but only sees a pounce/nebelung
+> change once haus's own lock carries it, so the ripple is `bench ship`'s
+> job). Never suggest a hand-run `nix flake update <input>` for this — see
+> **Hand me verbs, never raw nix** below.
 
 ## Rebuild (after any change)
 

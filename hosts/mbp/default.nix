@@ -695,7 +695,8 @@ in
       origin/main` into a branch — it puts commits I did not write in my PR's
       commit list. `flake.lock` is never hand-merged: take main's wholesale
       (`git checkout --theirs flake.lock`), then re-run `nix flake update
-      <input>` if the branch genuinely needed a newer pin.
+      <input>` if the branch genuinely needed a newer pin (raw on purpose — no
+      wrapper covers a branch-local repin; `bench ship` works on main checkouts).
     - **`/ship` finishes the whole job**: merge the PR, then clean up every
       worktree this session spun up — a sibling-repo worktree is not
       auto-reaped, so merge its PR too and `git worktree remove` it. Then report
