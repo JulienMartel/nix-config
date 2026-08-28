@@ -41,16 +41,20 @@ transfer by hand under `~/.ssh`. Pounce needs a one-time Accessibility approval 
 
 ## Daily use
 
-```bash
-# Apply changes after editing hosts/mbp
-nix build .#darwinConfigurations.mbp.system && sudo ./result/sw/bin/darwin-rebuild switch --flake .#mbp
+The layer ships its own CLI, `haus` — on PATH from the first switch onward.
+The raw `nix build` + `darwin-rebuild` pipeline above is only for the
+bootstrap, before `haus` exists; after that, the verbs are the interface:
 
-# Pull the latest rice/theme/pounce, then apply
-nix flake update haus && sudo darwin-rebuild switch --flake .#mbp
+```bash
+# Apply changes after editing hosts/mbp (builds first; a failed build never switches)
+haus rebuild
+
+# Pull the latest haus/theme/pounce, then apply
+haus update
 
 # Rollback / inspect
-darwin-rebuild --list-generations
-darwin-rebuild --rollback
+haus generations
+haus rollback
 ```
 
 To change the rice itself (not just this machine), work in the

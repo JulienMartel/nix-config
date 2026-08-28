@@ -3,7 +3,7 @@
 
   # The whole desktop (system + shell + pounce + nebelung) comes from the public
   # haus flake. This private config holds only what's personal: the host.
-  # Update everything with:  nix flake update haus
+  # Update everything with:  haus update
   inputs.haus.url = "github:hausfold/haus";
 
   outputs =

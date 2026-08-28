@@ -42,7 +42,11 @@ only at **≥3/5** (see below) — most turns have no part 3, and that's correct
 2. **Cap steps at 5.** One bounded action each. If a step needs "and then" twice, it's
    two steps. More than 5 means the plan isn't ready — say that instead.
 3. **Every step is anchored** to a `path:line`, a runnable command, or a named file. No
-   step whose object is abstract.
+   step whose object is abstract. A command is the family verb (`bench ship`,
+   `haus update`, `haus rebuild`, `bench pull`, `scruff park`), never the raw
+   `nix`/`git` it wraps — "run `nix flake update haus` + rebuild" in a step or a
+   **Need from you** is a bug; that's `haus update`. Raw only when no verb
+   covers it, flagged as such.
 4. **Last step is doable in under two minutes.** Starting is the hard part; make the
    entry point free.
 5. **Time in my units.** Rebuilds and panes, not lines of code (table below). If you
@@ -90,7 +94,7 @@ edge, and anything that makes a previously-working pane/keybind behave different
 
 Things that are **never** an escalation because you already have standing permission:
 committing, pushing, opening a PR, `bench ship` from a worktree, making a child worktree
-with `wt child`. Asking "want me to commit?" burns a turn on a question CLAUDE.md already
+with `scruff child`. Asking "want me to commit?" burns a turn on a question CLAUDE.md already
 answered yes to.
 
 ## Token discipline
