@@ -1151,13 +1151,6 @@ in
             "Bash(scruff:*)"
             "Bash(haus:*)"
           ];
-          # `union` adds and never removes, so a name this list used to carry
-          # outlives the rebuild that stopped declaring it. `drop` is the other
-          # half, and it runs after the union. `Bash(holt:*)` is scruff's old
-          # spelling (renamed 2026-08-27) and the binary is gone at scruff
-          # 1.1.0 — delete this list, and the `drop` call below, once a rebuild
-          # has run with it.
-          retire = [ "Bash(holt:*)" ];
           patchWith = args: ''
             run ${pkgs.python3}/bin/python3 ${./json-patch.py} ${args}
           '';
@@ -1165,7 +1158,6 @@ in
         lib.hm.dag.entryAfter [ "writeBoundary" ] (
           patchWith "merge ${settings} ${lib.escapeShellArg (builtins.toJSON patch)}"
           + patchWith "union ${settings} permissions.allow ${lib.escapeShellArg (builtins.toJSON allow)}"
-          + patchWith "drop ${settings} permissions.allow ${lib.escapeShellArg (builtins.toJSON retire)}"
         );
 
       # Private tooling that shouldn't live in the public rice.
