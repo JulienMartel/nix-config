@@ -147,7 +147,11 @@ in
   # ships without them on purpose), the display keys merged into
   # ~/.pi/agent/settings.json at rebuild, and scruff copying this machine's pi
   # trust decision onto each new lane so a worktree outside ~/code doesn't
-  # prompt.
+  # prompt. This host adds one more: the agent-worktree statusline as a pi
+  # custom-footer extension (./pi-statusline, wired into
+  # ~/.pi/agent/extensions below) — the same HUD the patched Claude Code
+  # draws, off the same caches, through pi's supported API instead of a
+  # binary patch.
   haus.ai.default = "pi";
 
   # The endpoint every non-Claude client on this machine talks to: a loopback
@@ -772,7 +776,10 @@ in
   # ---- Claude Code, patched, as an OVERLAY rather than a package ----
   # An overlay, not a home.packages entry: the rice already installs
   # `pkgs.claude-code` from ai.clients, and two builds shipping `bin/claude`
-  # would collide. Three things Claude Code has no setting for:
+  # would collide. These stay even though pi is the default now — parked
+  # Claude lanes still reopen in Claude Code, and its panes should keep the
+  # same HUD the pi footer extension (./pi-statusline) draws without any of
+  # this. Three things Claude Code has no setting for:
   #  1. declutter-claude-footer.py — drop the permission-mode footer row and the
   #     right-hand chip strip. Fails the build if an update reshapes them; the
   #     script header says how to re-derive the regexes.
@@ -1040,6 +1047,18 @@ in
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
       home.file.".agents/skills/things".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/things";
+
+      # ---- the pi statusline footer ----
+      # The agent-worktree HUD in a pi pane: haus's Claude Code statusline
+      # (modules/ai/statusline.sh), re-rendered by a pi extension through
+      # ctx.ui.setFooter — pi's supported custom-footer API, so no binary
+      # patch, unlike the Claude Code pair above. It reads the SAME
+      # ~/.cache/claude-statusline files and kicks the same refresher, so a CC
+      # pane and a pi pane show the same numbers. Global auto-discovery dir
+      # (~/.pi/agent/extensions), out-of-store like the skills: editing
+      # index.ts is live in the next pane, `/reload` in a running one.
+      home.file.".pi/agent/extensions/haus-statusline".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/hosts/mbp/pi-statusline";
 
       # ---- trill's copy of the webhook HMAC secret ----
       # trill verifies GitHub's signature itself
