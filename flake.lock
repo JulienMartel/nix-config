@@ -33,11 +33,11 @@
         "trill": "trill"
       },
       "locked": {
-        "lastModified": 1788006967,
-        "narHash": "sha256-qomGSh5RgIZblWE9+473itBiNIYHCj1JmVOprZ+e61c=",
+        "lastModified": 1788007232,
+        "narHash": "sha256-SR7Dz+vMG/yVOJ2ktOMGR+Auv/mGIKm23D3kbgB0Ig8=",
         "owner": "hausfold",
         "repo": "haus",
-        "rev": "409c2c6906acc630d83d63d741326146eb5690a2",
+        "rev": "c37bc31b8881fabfcf5a10446672c8e5759211fd",
         "type": "github"
       },
       "original": {
@@ -254,11 +254,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788006302,
-        "narHash": "sha256-FNLPLPrUepokND2gM6oBrNjaC8wqFa4d8FljMnIO11k=",
+        "lastModified": 1788007062,
+        "narHash": "sha256-5nMgm2tg6WfIr78gTwzIhQDcnLzVbdgEndsKS1ujz9w=",
         "owner": "hausfold",
         "repo": "scruff",
-        "rev": "f92a21116e35d42e111385a0e41e647c7ca1c380",
+        "rev": "62ef56a38825ff8c88a23705a7a47a122993e7c2",
         "type": "github"
       },
       "original": {
