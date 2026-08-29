@@ -18,7 +18,19 @@
  *          beyond — banded on absolute tokens, not the percentage) · cost ·
  *          thinking level (blank when off — pi's analog of the slot the
  *          permission-mode icon fills on Claude Code; pi has no permission
- *          modes) · model tier chip (O5 / S5 / H45 / F5).
+ *          modes) · provider/model chip. The model is not just a CC tier any
+ *          more — pi routes anything through openrouter & co — so the chip
+ *          reads as slang: `or/qwen3`, `ds-chat`; the big-name tiers keep
+ *          their bare letters (O5/S45/H45/F5, F5/M5 tinted) and gain a
+ *          provider tag (`or/S45`) only when NOT on their home provider.
+ * Trunc:  smart truncation, never a mid-chip hard cut. Every right-side chip
+ *          carries a slang ladder (high→hi, $1.23→$1.2→$1,
+ *          or/qwen3-coder-plus→or/qwen3→or/qw3) and a drop priority; the row
+ *          is fitted most-important-first (ctx% > model > cost > child
+ *          cluster > thinking > ⇡nag), so the FIRST thing to disappear is
+ *          always the LEAST important chip and survivors shrink instead of
+ *          vanishing. Row 2+ drops the repo label before it clips a worktree
+ *          name, and a name clips only after every chip has had its chance.
  * Tint   : on Fable/Mythos only, every row gets the same dark amber background
  *          statusline.sh paints, edge-to-edge, so the special model reads from
  *          across a wall of panes.
@@ -362,6 +374,158 @@ function kickRefresherIfStale(): void {
 }
 
 // ---- chips ------------------------------------------------------------------
+// Slang abbreviation for the provider half of the model chip. pi routes
+// through anything (openrouter, vercel-ai-gateway, moonshotai-cn, …), so
+// unknown providers fall back to a de-hyphenated two-letter stub.
+const PROVIDER_ABBR: Record<string, string> = {
+	anthropic: "an",
+	openai: "oa",
+	"openai-codex": "ox",
+	google: "gg",
+	"google-vertex": "gv",
+	openrouter: "or",
+	xai: "x",
+	groq: "gq",
+	mistral: "ms",
+	deepseek: "ds",
+	together: "tg",
+	ollama: "ol",
+	"github-copilot": "cp",
+	"amazon-bedrock": "br",
+	cerebras: "cb",
+	"azure-openai-responses": "az",
+	zai: "z",
+	minimax: "mm",
+	moonshotai: "mo",
+	huggingface: "hf",
+	fireworks: "fw",
+	baseten: "bt",
+	"kimi-coding": "kc",
+	"vercel-ai-gateway": "vg",
+	"cloudflare-workers-ai": "cf",
+	"cloudflare-ai-gateway": "cg",
+	opencode: "oc",
+	radius: "rd",
+	nvidia: "nv",
+	"ant-ling": "al",
+};
+
+function providerAbbr(provider: string): string {
+	const known = PROVIDER_ABBR[provider];
+	if (known) return known;
+	return provider.split("-")[0]?.slice(0, 2) || provider.slice(0, 2);
+}
+
+// Thinking levels read as slang when the row is tight.
+const THINK_SLIM: Record<string, string> = {
+	minimal: "min",
+	low: "lo",
+	medium: "med",
+	high: "hi",
+	xhigh: "xhi",
+	max: "mx",
+};
+
+interface ChipLevels {
+	levels: string[]; // longest → shortest
+	tint: boolean;
+}
+
+// The provider/model chip. Known tiers keep their bare letters (O5/S45/H45,
+// F5/M5 tinted); anything else — openrouter's whole catalogue included —
+// renders as provider-abbr/model-slang: or/qwen3, oa/gpt5.6, ds-chat.
+function modelChip(model: { id?: string; provider?: string } | undefined, R: string): ChipLevels {
+	const id = model?.id;
+	if (!id) return { levels: [], tint: false };
+	let letter = "";
+	let color = DIM;
+	let tint = false;
+	let homeProvider = "";
+	if (id.includes("fable")) [letter, color, tint] = ["F", MAGENTA, true];
+	else if (id.includes("mythos")) [letter, color, tint] = ["M", MAGENTA, true];
+	else if (id.includes("opus")) [letter, homeProvider] = ["O", "anthropic"];
+	else if (id.includes("sonnet")) [letter, homeProvider] = ["S", "anthropic"];
+	else if (id.includes("haiku")) [letter, homeProvider] = ["H", "anthropic"];
+	if (letter) {
+		// {1,2} + the trailing non-digit/end anchor keeps a DATE suffix from
+		// being read as a version (claude-3-5-sonnet-20241022 → bare "S"), same
+		// as the bash =~ in statusline.sh.
+		const m = /(?:fable|mythos|opus|sonnet|haiku)-(\d{1,2})(?:-(\d{1,2}))?(?:[^0-9]|$)/.exec(id);
+		const ver = m ? (m[1] ?? "") + (m[2] ?? "") : "";
+		const core = `${color}${letter}${ver}${R}`;
+		// Provider tag only when the tier is NOT on its home provider;
+		// fable/mythos are always home — the tint already says who they are.
+		const away = homeProvider !== "" && model?.provider !== homeProvider;
+		return {
+			tint,
+			levels: away && model?.provider ? [`${DIM}${providerAbbr(model.provider)}${R}${core}`] : [core],
+		};
+	}
+
+	// Generic model: last path segment with date suffixes and ":free"-style
+	// tags stripped, then a slang ladder — full seg → name+version → stub.
+	const provider = model?.provider ?? "";
+	const abbr = provider ? `${DIM}${providerAbbr(provider)}${R}` : "";
+	let seg = (id.split("/").pop() ?? id).replace(/[-_]?(\d{8}|\d{4}-\d{2}-\d{2})$/, "");
+	seg = seg.replace(/[:.](free|latest|preview|hf|dev|test)$/i, "");
+	const tokens = seg.split(/[-_.]/).filter(Boolean);
+	// openrouter glues the version onto the name ("qwen3-coder-plus" → the
+	// token is "qwen3", not "qwen"+"3") — peel a trailing version off it.
+	const glue = /^([a-z]+)(\d+(\.\d+)*)$/i.exec(tokens[0] ?? "");
+	if (glue?.[1] && glue[2]) {
+		tokens[0] = glue[1];
+		tokens.splice(1, 0, glue[2]);
+	}
+	// "v3.1"-style prefixes are versions too; keep the digits, join with dots.
+	const ver = tokens
+		.filter((t) => /^v?\d+(\.\d+)*$/i.test(t))
+		.map((t) => t.replace(/^v/i, ""))
+		.join(".");
+	const name = tokens.find((t) => /^[a-z]/i.test(t)) ?? "";
+	const wrap = (s: string) => (abbr ? `${abbr}/${s}${R}` : `${s}${R}`);
+	const levels: string[] = [];
+	if (name && seg.length <= 9) levels.push(wrap(seg));
+	if (name) levels.push(wrap(`${name.slice(0, 5)}${ver}`));
+	if (name) levels.push(wrap(`${name.slice(0, 2)}${ver}`));
+	return { levels: levels.length > 0 ? [...new Set(levels)] : seg ? [wrap(seg)] : [], tint: false };
+}
+
+// ---- smart truncation -------------------------------------------------------
+// One rule everywhere: the least important thing disappears first, and what
+// stays is shortened through a slang ladder rather than hard-cut. Each chip
+// offers levels longest → shortest plus a drop priority (LOWER drops FIRST);
+// fitTail walks most-important-first so important chips claim width first.
+interface TailPart {
+	order: number; // display order within the row
+	drop: number; // lower = dropped earlier
+	levels: string[]; // longest → shortest
+}
+
+function fitTail(parts: TailPart[], budget: number): string {
+	const used: Array<{ order: number; text: string }> = [];
+	let left = budget;
+	for (const p of [...parts].sort((a, b) => b.drop - a.drop)) {
+		const pick = p.levels.find((lv) => visibleWidth(lv) <= left);
+		if (pick === undefined) continue;
+		used.push({ order: p.order, text: pick });
+		left -= visibleWidth(pick) + 1; // one space of separator reserved
+	}
+	used.sort((a, b) => a.order - b.order);
+	// The cluster leads, held off the chips by two spaces so a run of bare
+	// numbers can't be misread as part of "⇡3 42% $1.23 or/qw3".
+	const segs = used.map((u) => u.text);
+	const head = segs[0];
+	return segs.length > 1 && used[0]?.order === 0 && head !== undefined
+		? `${head}  ${segs.slice(1).join(" ")}`
+		: segs.join(" ");
+}
+
+// A name is clipped only at the very end, ellipsis'd, never mid-chip.
+function clipName(name: string, budget: number): string {
+	if (budget <= 1) return [...name].slice(0, Math.max(0, budget)).join("");
+	return `${[...name].slice(0, budget - 1).join("")}…`;
+}
+
 function renderNag(R: string): string {
 	const rows = readTsv(NAG);
 	if (rows.length === 0) return "";
@@ -373,25 +537,6 @@ function renderNag(R: string): string {
 	if (lockdate > 0 && (Date.now() / 1000 - lockdate) / 86400 >= NAG_ALERT_DAYS) col = DEL;
 	const text = `${col}⇡${behind}${R}`;
 	return url ? osc8(url, text) : text;
-}
-
-function modelChip(id: string | undefined, R: string): { chip: string; tint: boolean } {
-	if (!id) return { chip: "", tint: false };
-	let letter = "";
-	let color = DIM;
-	let tint = false;
-	if (id.includes("fable")) [letter, color, tint] = ["F", MAGENTA, true];
-	else if (id.includes("mythos")) [letter, color, tint] = ["M", MAGENTA, true];
-	else if (id.includes("opus")) letter = "O";
-	else if (id.includes("sonnet")) letter = "S";
-	else if (id.includes("haiku")) letter = "H";
-	if (!letter) return { chip: "", tint: false };
-	// {1,2} + the trailing non-digit/end anchor keeps a DATE suffix from being
-	// read as a version (claude-3-5-sonnet-20241022 → bare "S"), same as the
-	// bash =~ in statusline.sh.
-	const m = /(?:fable|mythos|opus|sonnet|haiku)-(\d{1,2})(?:-(\d{1,2}))?(?:[^0-9]|$)/.exec(id);
-	const ver = m ? (m[1] ?? "") + (m[2] ?? "") : "";
-	return { chip: `${color}${letter}${ver}${R}`, tint };
 }
 
 // ---- the footer component ---------------------------------------------------
@@ -478,10 +623,12 @@ class HausFooter {
 
 		// Fable/Mythos tint: re-arm the background after every in-row reset so
 		// $R means "back to row context"; R0 stays the real reset at line end.
-		const { chip: model, tint } = modelChip(this.ctx.model?.id, "\x1b[39m");
-		const BG = tint ? TINT_FABLE : "";
+		// The chip is built against the \x1b[39m placeholder because R needs the
+		// tint decision first; the placeholder is swapped for R per level after.
+		const chip = modelChip(this.ctx.model, "\x1b[39m");
+		const BG = chip.tint ? TINT_FABLE : "";
 		const R = BG ? `${R0}${BG}` : R0;
-		const MODEL = model ? model.replaceAll("\x1b[39m", R) : "";
+		const MODEL_LEVELS = chip.levels.map((lv) => lv.replaceAll("\x1b[39m", R));
 
 		const emit = (row: string): string => {
 			if (!BG) return truncateToWidth(row, width);
@@ -500,14 +647,13 @@ class HausFooter {
 		const prnum = ownPr.split(" ")[0] ?? "";
 		const ownUrl = ownPr && st?.slug ? `https://github.com/${st.slug}/pull/${prnum.replace(/^#/, "")}` : "";
 		const prseg = renderPr(ownPr, ownUrl, R);
-		let row1: string;
-		if (st?.isWt) {
-			row1 = `${lead} ${prseg ? `${prseg} ` : ""}${BOLD}${st.wtName}${R}`;
-		} else if (st?.branch) {
-			row1 = `${lead} ${BOLD}${st.branch}${R}`;
-		} else {
-			row1 = `${lead} ${DIM}${basename(cwd)}${R}`;
-		}
+		// The name clips LAST — only when row 1 alone cannot fit the width.
+		const name = st?.isWt ? st.wtName : (st?.branch || basename(cwd));
+		const nameCol = st?.branch ? BOLD : DIM; // non-worktree cwd keeps the dim dir name
+		const prefix = `${lead} ${prseg ? `${prseg} ` : ""}${nameCol}`;
+		const nameBudget = width - visibleWidth(prefix) - 1;
+		const dispName = visibleWidth(name) <= nameBudget ? name : clipName(name, Math.max(1, nameBudget));
+		let row1 = `${prefix}${dispName}${R}`;
 
 		// --- tail group: child-PR cluster · ⇡nag · ctx% · cost · thinking · model
 		let prcluster = "";
@@ -523,9 +669,12 @@ class HausFooter {
 			prcluster = prcluster ? `${prcluster} ${link}` : link;
 		}
 
-		const parts: string[] = [];
+		// Smart truncation: chips are fitted most-important-first, each takes
+		// the longest slang level that still fits, and only then may it drop —
+		// so the least important chip is always the first thing to disappear.
+		const tail: TailPart[] = [];
 		const nag = renderNag(R);
-		if (nag) parts.push(nag);
+		if (nag) tail.push({ order: 1, drop: 0, levels: [nag] }); // the nag is a nudge: first to go
 		// ctx%: banded on ABSOLUTE tokens (green <100k, yellow <200k, red past),
 		// never on the percentage — same mixed-fleet reasoning as statusline.sh.
 		// Unknown tokens (right after compaction) fall back to the dim gray.
@@ -537,7 +686,7 @@ class HausFooter {
 				else if (usage.tokens >= 100_000) CTX = WARN;
 				else CTX = ADD;
 			}
-			parts.push(`${CTX}${Math.round(usage.percent)}%${R}`);
+			tail.push({ order: 2, drop: 5, levels: [`${CTX}${Math.round(usage.percent)}%${R}`] }); // last chip standing
 		}
 		let cost = 0;
 		for (const e of this.ctx.sessionManager.getEntries()) {
@@ -549,19 +698,26 @@ class HausFooter {
 				cost += e.usage.cost.total;
 			}
 		}
-		if (cost > 0) parts.push(`${DIM}$${cost.toFixed(2)}${R}`);
+		if (cost > 0) {
+			const money = (s: string) => `${DIM}${s}${R}`;
+			tail.push({
+				order: 3,
+				drop: 2,
+				levels: [money(`$${cost.toFixed(2)}`), money(`$${cost.toFixed(1)}`), money(`$${Math.round(cost)}`)],
+			});
+		}
 		const thinking = this.ctx.thinkingLevel;
 		if (this.ctx.model?.reasoning && thinking && thinking !== "off") {
-			parts.push(`${DIM}${thinking}${R}`);
+			const slang = THINK_SLIM[thinking] ?? thinking;
+			tail.push({ order: 4, drop: 1, levels: [`${DIM}${thinking}${R}`, `${DIM}${slang}${R}`] });
 		}
-		if (MODEL) parts.push(MODEL);
-		let tailseg = parts.join(" ");
-		// The cluster leads, held off the chips by two spaces so a run of bare
-		// numbers can't be misread as part of "⇡3 42% $1.23 O5".
-		if (prcluster) tailseg = tailseg ? `${prcluster}  ${tailseg}` : prcluster;
+		if (MODEL_LEVELS.length > 0) tail.push({ order: 5, drop: 4, levels: MODEL_LEVELS });
+		if (prcluster) tail.push({ order: 0, drop: 3, levels: [prcluster] });
+		const tailBudget = width - visibleWidth(row1) - 2;
+		const tailseg = tailBudget >= 2 ? fitTail(tail, tailBudget) : "";
 		if (tailseg) {
 			const pad = width - visibleWidth(row1) - visibleWidth(tailseg);
-			row1 = pad >= 3 ? `${row1}${" ".repeat(pad)}${tailseg}` : `${row1}   ${tailseg}`;
+			row1 = `${row1}${" ".repeat(Math.max(2, pad))}${tailseg}`;
 		}
 
 		const lines: string[] = [emit(row1)];
@@ -589,13 +745,20 @@ class HausFooter {
 			const prpill = renderPr(r.pr, url, R);
 			const repo = r.slug.split("/").pop() ?? r.slug;
 			const mark = orphan ? `${PURGE}◇${R}` : "";
-			// width-aware truncation: only clip the name if the row would overflow.
-			const budget = Math.max(
-				8,
-				width - 4 - visibleWidth(bullet) - (orphan ? 1 : 0) - repo.length - (num ? num.length + 1 : 0),
-			);
-			const disp = r.name.length > budget ? `${r.name.slice(0, budget - 1)}…` : r.name;
-			lines.push(emit(`  ${bullet} ${mark}${DIM}${repo}${R} ${prpill ? `${prpill} ` : ""}${disp}`));
+			// Smart truncation ladder: full row → drop the repo label (the name
+			// identifies the worktree; the repo is inferable) → clip the name.
+			// The PR pill never goes mid-cut; emit() is the last-resort floor.
+			const base = `  ${bullet} ${mark}${prpill ? `${prpill} ` : ""}`;
+			const rowWith = (withRepo: boolean, name: string) =>
+				`${base}${withRepo ? `${DIM}${repo}${R} ` : ""}${name}`;
+			let line = rowWith(true, r.name);
+			if (visibleWidth(line) > width) {
+				line = rowWith(false, r.name);
+				if (visibleWidth(line) > width) {
+					line = rowWith(false, clipName(r.name, Math.max(1, width - visibleWidth(base) - 1)));
+				}
+			}
+			lines.push(emit(line));
 			shown++;
 		}
 		if (extra > 0) lines.push(emit(`  ${DIM}+${extra} more${R}`));
