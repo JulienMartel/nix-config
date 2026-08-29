@@ -138,9 +138,9 @@ in
     "opencode"
     "pi"
   ];
-  # pi is the default as of 2026-08-27. Claude Code stays installed and every
-  # parked Claude lane still reopens in Claude — scruff records the client per
-  # lane, so this only decides what a NEW ⌘↵ pane spawns.
+  # pi was the default 2026-08-27; back to Claude Code as of today. pi stays
+  # installed and every parked pi lane still reopens in pi — scruff records the
+  # client per lane, so this only decides what a NEW ⌘↵ pane spawns.
   #
   # What pi needs beyond the binary, haus now ships: the four packages in
   # `haus.ai.pi.packages` (sub-agents, todo, ask-a-question, web access — pi
@@ -152,7 +152,7 @@ in
   # ~/.pi/agent/extensions below) — the same HUD the patched Claude Code
   # draws, off the same caches, through pi's supported API instead of a
   # binary patch.
-  haus.ai.default = "pi";
+  haus.ai.default = "claude";
 
   # The endpoint every non-Claude client on this machine talks to: a loopback
   # proxy serving the Claude Max subscription, so pi and opencode cost what the
