@@ -302,6 +302,21 @@ in
   # No tap-to-click: palm rests fire stray clicks mid-type.
   system.defaults.trackpad.Clicking = false;
 
+  # ---- power ----
+  # Closed-display mode: this Mac never sleeps on a lid close, agents or no
+  # agents. `always` rather than the default `agents` because the lid shuts on
+  # long runs I'm not watching, and a hold that ends with the last turn still
+  # ends whatever starts after it.
+  #
+  # `requirePower` stays at its default (true), so unplugging is still how I say
+  # stop — a closed laptop on battery in a bag is the one case worth refusing.
+  # `maxHold` doesn't apply here: the cap is a failsafe for a leaked agent hold,
+  # and `always` has no signal to leak.
+  haus.power.lidAwake = {
+    enable = true;
+    while = "always";
+  };
+
   # ---- notifications ----
   # The notification compositor, owned by the layer now that it is a room of its
   # own: haus copies the pinned, notarized bundle to a fixed /Applications/Trill.app
