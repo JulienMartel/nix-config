@@ -363,9 +363,12 @@ in
     };
   };
 
-  # Obsidian themes per vault; this is the one to theme.
+  # Obsidian themes per vault. `notes` is the iCloud one; `ops` is the
+  # workshop's ops repo opened as its own vault (kept out of iCloud on
+  # purpose — it is a git checkout, not a note store).
   haus.terminal.obsidianVaults = [
     "Library/Mobile Documents/iCloud~md~obsidian/Documents/notes"
+    "code/workshop/ops"
   ];
 
   # ---- everything this machine has ----
