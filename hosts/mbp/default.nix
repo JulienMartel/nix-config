@@ -138,16 +138,16 @@ in
     "opencode"
     "pi"
   ];
-  # pi is the default. Claude Code stays installed for the panes that ask for
+  # Claude Code is the default. pi stays installed for the panes that ask for
   # it, and every parked lane reopens in the client it was born with — scruff
   # records that per lane — so this only decides what a NEW ⌘↵ pane spawns and
-  # flipping it back never strands a session.
+  # flipping it either way never strands a session.
   #
-  # Which MODEL that pane opens on is pi's file, not this one:
+  # Which MODEL a pi pane opens on is pi's file, not this one:
   # ~/.pi/agent/settings.json pins provider `anthropic`, model `claude-opus-5`
-  # and thinking level `high`. That provider is meridian (below), so a default
-  # pane runs Opus 5 against the Max subscription rather than a metered key.
-  # haus merges only display keys into that file and owns none of those three,
+  # and thinking level `high`. That provider is meridian (below), so a pi pane
+  # runs Opus 5 against the Max subscription rather than a metered key. haus
+  # merges only display keys into that file and owns none of those three,
   # which is why the model choice is not an option in this file.
   #
   # What pi needs beyond the binary, haus now ships: the four packages in
@@ -160,7 +160,7 @@ in
   # ~/.pi/agent/extensions below) — the same HUD the patched Claude Code
   # draws, off the same caches, through pi's supported API instead of a
   # binary patch.
-  haus.ai.default = "pi";
+  haus.ai.default = "claude";
 
   # The endpoint every non-Claude client on this machine talks to: a loopback
   # proxy serving the Claude Max subscription, so pi and opencode cost what the
