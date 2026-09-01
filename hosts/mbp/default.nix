@@ -150,9 +150,10 @@ in
   # merges only display keys into that file and owns none of those three,
   # which is why the model choice is not an option in this file.
   #
-  # What pi needs beyond the binary, haus now ships: the four packages in
-  # `haus.ai.pi.packages` (sub-agents, todo, ask-a-question, web access — pi
-  # ships without them on purpose), the display keys merged into
+  # What pi needs beyond the binary, haus now ships: the packages in
+  # `haus.ai.pi.packages` (sub-agents, ask-a-question, web access — pi
+  # ships without them on purpose) minus the todo list, which this host drops
+  # from the default four on purpose, the display keys merged into
   # ~/.pi/agent/settings.json at rebuild, and scruff copying this machine's pi
   # trust decision onto each new lane so a worktree outside ~/code doesn't
   # prompt. This host adds one more: the agent-worktree statusline as a pi
@@ -160,6 +161,11 @@ in
   # ~/.pi/agent/extensions below) — the same HUD the patched Claude Code
   # draws, off the same caches, through pi's supported API instead of a
   # binary patch.
+  haus.ai.pi.packages = [
+    "npm:pi-web-access"
+    "npm:pi-subagents"
+    "npm:@juicesharp/rpiv-ask-user-question"
+  ];
   haus.ai.default = "claude";
 
   # The endpoint every non-Claude client on this machine talks to: a loopback
