@@ -12,25 +12,33 @@
  * Row 1  : THIS session's git-status token as the leading glyph (⏏/N^/+A -D,
  *          or a muted ● when clean) + its own PR number (left of the name,
  *          colored by PR state, OSC 8-linked to the PR) + worktree name — then
- *          flush right: the child-PR cluster (bare clickable numbers for every
- *          worktree this session spawned) · rice-nag (⇡N — commits the pinned
- *          haus is behind) · ctx% (green <100k tokens, yellow <200k, red
- *          beyond — banded on absolute tokens, not the percentage) · cost ·
- *          thinking level (blank when off — pi's analog of the slot the
- *          permission-mode icon fills on Claude Code; pi has no permission
- *          modes) · provider/model chip. The model is not just a CC tier any
- *          more — pi routes anything through openrouter & co — so the chip
- *          reads as slang: `or/qwen3`, `ds-chat`; the big-name tiers keep
- *          their bare letters (O5/S45/H45/F5, F5/M5 tinted) and gain a
- *          provider tag (`or/S45`) only when NOT on their home provider.
+ *          flush right: the child-PR cluster (clickable numbers for every
+ *          worktree this session spawned — a LADDER: closed/merged links drop
+ *          first, then it collapses to a bare count, never all-or-nothing, so
+ *          a tight row can't lose the PR links while row 2+ is clipped away)
+ *          · rice-nag (⇡N — commits the pinned haus is behind) · ctx% (green
+ *          <100k tokens, yellow <200k, red beyond — banded on absolute tokens,
+ *          not the percentage) · turn stamp (⇱start · elapsed — the one time
+ *          signal calm leaves visible; ticks while the turn runs, frozen at
+ *          its real duration after) · cost · thinking level (blank when off —
+ *          pi's analog of the slot the permission-mode icon fills on Claude
+ *          Code; pi has no permission modes) · provider/model chip. The model
+ *          is not just a CC tier any more — pi routes anything through
+ *          openrouter & co — so the chip reads as slang: `or/qwen3`, `ds-chat`;
+ *          the big-name tiers keep their bare letters (O5/S45/H45/F5, F5/M5
+ *          tinted) and gain a provider tag (`or/S45`) only when NOT on their
+ *          home provider.
  * Trunc:  smart truncation, never a mid-chip hard cut. Every right-side chip
  *          carries a slang ladder (high→hi, $1.23→$1.2→$1,
  *          or/qwen3-coder-plus→or/qwen3→or/qw3) and a drop priority; the row
- *          is fitted most-important-first (ctx% > model > cost > child
- *          cluster > thinking > ⇡nag), so the FIRST thing to disappear is
+ *          is fitted most-important-first (ctx% > model > cost > child cluster
+ *          + turn > thinking > ⇡nag), so the FIRST thing to disappear is
  *          always the LEAST important chip and survivors shrink instead of
  *          vanishing. Row 2+ drops the repo label before it clips a worktree
  *          name, and a name clips only after every chip has had its chance.
+ *          NB pi's layout may also shrink the FOOTER ITSELF vertically (its
+ *          container carries shrink: 1 / minSize: 1) — the ladder is what
+ *          keeps the child links legible down to that one-line floor.
  * Tint   : on Fable/Mythos only, every row gets the same dark amber background
  *          statusline.sh paints, edge-to-edge, so the special model reads from
  *          across a wall of panes.
@@ -569,8 +577,15 @@ class HausFooter {
 		this.unsubBranch = footerData.onBranchChange(() => void this.refresh(true));
 		// The idle repaint: statusline.sh leaned on Claude Code's
 		// refreshInterval to notice a child's PR merging while the pane sat
-		// still; pi renders only on activity, so the interval is ours.
-		this.timer = setInterval(() => void this.refresh(false), IDLE_TICK_MS);
+		// still; pi renders only on activity, so the interval is ours. It is
+		// also what keeps the turn chip's elapsed time honest while calm hides
+		// a silent tool run: a live turn gets a repaint even when nothing else
+		// changed (the render itself stays cheap; refresh() re-reads git at most
+		// every GIT_REFRESH_MS and the footer paints from cache).
+		this.timer = setInterval(() => {
+			if (this.liveTurn() && !this.disposed) this.tui.requestRender();
+			void this.refresh(false);
+		}, IDLE_TICK_MS);
 		this.timer.unref?.();
 		void this.refresh(true);
 	}
@@ -582,6 +597,20 @@ class HausFooter {
 	};
 
 	invalidate(): void {}
+
+	// A turn is live when the newest message in the session is the user's —
+	// anything the model or a tool has produced since means the turn ended.
+	// Non-message entries (compaction, branch summaries) are skipped, same as
+	// the turn chip's walk.
+	private liveTurn(): boolean {
+		const entries = this.ctx.sessionManager.getEntries();
+		for (let i = entries.length - 1; i >= 0; i--) {
+			const e = entries[i]!;
+			if (e.type !== "message") continue;
+			return e.message.role === "user";
+		}
+		return false;
+	}
 
 	private async refresh(force: boolean): Promise<void> {
 		if (this.disposed || this.refreshing) return;
@@ -655,18 +684,26 @@ class HausFooter {
 		const dispName = visibleWidth(name) <= nameBudget ? name : clipName(name, Math.max(1, nameBudget));
 		let row1 = `${prefix}${dispName}${R}`;
 
-		// --- tail group: child-PR cluster · ⇡nag · ctx% · cost · thinking · model
-		let prcluster = "";
+		// --- tail group: child-PR cluster · ⇡nag · ctx% · turn · cost · thinking · model
+		// sibling: a panel row in THIS lane's own repo is a ⌘↵ peer with a pane of
+		// its own, not a child of mine — the rule statusline.sh renders by (haus
+		// #602), which this port predates. Only inside a lane: a main-checkout pane
+		// keeps every row it parents. Collected as records rather than a painted
+		// string so the cluster chip below can ladder (shrink) instead of vanishing.
+		const isWt = st?.isWt ?? false;
+		const isSibling = (slug: string): boolean =>
+			isWt && st?.slug !== undefined && st.slug !== "" && slug === st.slug;
+		const clusterLinks: Array<{ num: string; col: string; state: string; url: string }> = [];
 		for (const r of panel) {
 			if (!r.name || r.parent !== cwd || !r.pr) continue;
+			if (isSibling(r.slug)) continue;
 			const num = (r.pr.split(" ")[0] ?? "").replace(/^#/, "");
 			const state = r.pr.split(" ").pop() ?? "";
 			let col = DIM;
 			if (state === "open") col = PR_OPEN;
 			else if (state.startsWith("merged")) col = PR_MERGED;
 			else if (state === "closed") col = PR_CLOSED;
-			const link = osc8(`https://github.com/${r.slug}/pull/${num}`, `${col}${num}${R}`);
-			prcluster = prcluster ? `${prcluster} ${link}` : link;
+			clusterLinks.push({ num, col, state, url: `https://github.com/${r.slug}/pull/${num}` });
 		}
 
 		// Smart truncation: chips are fitted most-important-first, each takes
@@ -688,20 +725,64 @@ class HausFooter {
 			}
 			tail.push({ order: 2, drop: 5, levels: [`${CTX}${Math.round(usage.percent)}%${R}`] }); // last chip standing
 		}
+		// --- the turn stamp: when this task started, and how long it has run ---
+		// pi-calm hides every tool shell, so the chat itself carries no time — the
+		// user asked for a timestamp on each task they can see, and the footer is
+		// the one haus-owned surface calm can't hide. The chip carries the current
+		// turn's start (HH:MM) and elapsed time: ticking while the turn runs, and
+		// frozen at the turn's real duration once the assistant answers. The ladder
+		// gives up the elapsed half before the start time.
+		{
+			const entries = this.ctx.sessionManager.getEntries();
+			let userAt: number | null = null;
+			let lastAt: number | null = null;
+			for (let i = entries.length - 1; i >= 0; i--) {
+				const e = entries[i]!;
+				if (e.type !== "message") continue;
+				const t = Date.parse(e.timestamp);
+				if (!Number.isFinite(t)) continue;
+				if (e.message.role === "user") {
+					userAt = t;
+					break;
+				}
+				if (lastAt === null) lastAt = t;
+			}
+			if (userAt !== null) {
+				const end = lastAt ?? Date.now();
+				const hhmm = new Date(userAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+				const run = Math.max(0, end - userAt);
+				const pad = (n: number, w = 2) => String(n).padStart(w, "0");
+				const elapsed =
+					run >= 3_600_000
+						? `${Math.floor(run / 3_600_000)}:${pad(Math.floor((run % 3_600_000) / 60_000))}:${pad(Math.floor((run % 60_000) / 1000))}`
+						: `${Math.floor(run / 60_000)}:${pad(Math.floor((run % 60_000) / 1000))}`;
+				tail.push({
+					order: 3,
+					drop: 3,
+					levels: [`${DIM}⇱${hhmm} · ${elapsed}${R}`, `${DIM}⇱${hhmm}${R}`],
+				});
+			}
+		}
 		let cost = 0;
+		// Every branch guards `usage` — an assistant entry without it (an aborted
+		// or still-streaming message) must cost this loop its zeros, not the whole
+		// footer: render()'s catch would collapse the HUD to one dim line, which is
+		// how a pane can lose children and PR links entirely for the rest of the
+		// session. Measured: one usage-less entry threw here and the footer never
+		// recovered (the turn chip's data stayed fine, the bar didn't).
 		for (const e of this.ctx.sessionManager.getEntries()) {
-			if (e.type === "message" && e.message.role === "assistant") {
+			if (e.type === "message" && e.message.role === "assistant" && e.message.usage?.cost) {
 				cost += e.message.usage.cost.total;
-			} else if (e.type === "message" && e.message.role === "toolResult" && e.message.usage) {
+			} else if (e.type === "message" && e.message.role === "toolResult" && e.message.usage?.cost) {
 				cost += e.message.usage.cost.total;
-			} else if ((e.type === "branch_summary" || e.type === "compaction") && e.usage) {
+			} else if ((e.type === "branch_summary" || e.type === "compaction") && e.usage?.cost) {
 				cost += e.usage.cost.total;
 			}
 		}
 		if (cost > 0) {
 			const money = (s: string) => `${DIM}${s}${R}`;
 			tail.push({
-				order: 3,
+				order: 4,
 				drop: 2,
 				levels: [money(`$${cost.toFixed(2)}`), money(`$${cost.toFixed(1)}`), money(`$${Math.round(cost)}`)],
 			});
@@ -709,10 +790,30 @@ class HausFooter {
 		const thinking = this.ctx.thinkingLevel;
 		if (this.ctx.model?.reasoning && thinking && thinking !== "off") {
 			const slang = THINK_SLIM[thinking] ?? thinking;
-			tail.push({ order: 4, drop: 1, levels: [`${DIM}${thinking}${R}`, `${DIM}${slang}${R}`] });
+			tail.push({ order: 5, drop: 1, levels: [`${DIM}${thinking}${R}`, `${DIM}${slang}${R}`] });
 		}
-		if (MODEL_LEVELS.length > 0) tail.push({ order: 5, drop: 4, levels: MODEL_LEVELS });
-		if (prcluster) tail.push({ order: 0, drop: 3, levels: [prcluster] });
+		if (MODEL_LEVELS.length > 0) tail.push({ order: 6, drop: 4, levels: MODEL_LEVELS });
+		if (clusterLinks.length > 0) {
+			// The cluster chip is a LADDER, never all-or-nothing. Row 2+ is the first
+			// thing pi's layout clips when the viewport runs short (the footer
+			// container sits in the main vstack with shrink: 1 / minSize: 1, so a busy
+			// screen shrinks it toward one line — child rows vanish wholesale). Row
+			// 1's cluster is the redundancy that survives that, so when the row
+			// itself runs out of width the cluster must SHRINK rather than drop:
+			// closed/merged links go first, then it collapses to a bare count of
+			// open children. A single-level chip here is exactly how a parent pane
+			// ended up showing children with no PR link anywhere on the footer.
+			const linked = (keep: (s: string) => boolean): string =>
+				clusterLinks.filter((l) => keep(l.state)).map((l) => osc8(l.url, `${l.col}${l.num}${R}`)).join(" ");
+			const full = linked(() => true);
+			const openOnly = linked((s) => s === "open");
+			const levels: string[] = [];
+			if (full) levels.push(full);
+			if (openOnly && openOnly !== full) levels.push(openOnly);
+			if (openOnly) levels.push(`${DIM}${clusterLinks.filter((l) => l.state === "open").length}${R}`);
+			else levels.push(`${DIM}${clusterLinks.length}${R}`);
+			tail.push({ order: 0, drop: 3, levels });
+		}
 		const tailBudget = width - visibleWidth(row1) - 2;
 		const tailseg = tailBudget >= 2 ? fitTail(tail, tailBudget) : "";
 		if (tailseg) {
@@ -729,7 +830,7 @@ class HausFooter {
 			if (!r.name) continue;
 			let orphan = false;
 			if (r.parent === cwd) {
-				// a worktree I spawned
+				if (isSibling(r.slug)) continue; // a ⌘↵ peer, not a worktree I own
 			} else if (isHome && !r.parent) {
 				orphan = true; // unattributed — surfaced only at $HOME
 			} else {
