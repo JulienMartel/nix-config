@@ -144,11 +144,12 @@ in
   # flipping it either way never strands a session.
   #
   # Which MODEL a pi pane opens on is pi's file, not this one:
-  # ~/.pi/agent/settings.json pins provider `anthropic`, model `claude-opus-5`
-  # and thinking level `high`. That provider is meridian (below), so a pi pane
-  # runs Opus 5 against the Max subscription rather than a metered key. haus
-  # merges only display keys into that file and owns none of those three,
-  # which is why the model choice is not an option in this file.
+  # ~/.pi/agent/settings.json pins provider `openrouter`, model
+  # `z-ai/glm-5.3-flash` and thinking level `high`. That is a metered key, not
+  # meridian — the `anthropic` provider below still points at the Max
+  # subscription and is one /model away, but a pi pane no longer opens on it by
+  # default. haus merges only display keys into that file and owns none of
+  # those three, which is why the model choice is not an option in this file.
   #
   # What pi needs beyond the binary, haus now ships: the four packages in
   # `haus.ai.pi.packages` (sub-agents, todo, ask-a-question, web access — pi
