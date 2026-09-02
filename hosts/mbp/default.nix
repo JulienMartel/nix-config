@@ -692,8 +692,29 @@ in
     OUT-of-store into both `~/.claude/skills/brief` and `~/.agents/skills/brief`
     (Codex and OpenCode read the second), so editing it is live in the next
     pane with no rebuild. Same for `ship`, `park` and `things` (my Things 3
-    to-dos — read its SKILL.md before touching my list). If your client does not
-    load skills, read the SKILL.md by path; it is plain markdown.
+    to-dos — read its SKILL.md before touching my list), `unslop`, `wizard`,
+    `grill` and `conflicts`. If your client does not load skills, read the
+    SKILL.md by path; it is plain markdown.
+
+    Two of those carry a standing rule rather than waiting to be invoked:
+
+    - **`unslop` — any reader-facing copy you write, you unslop before you hand
+      it to me.** Docs, landing pages, READMEs, release notes, App Store text,
+      an issue or PR body, an email. Not a favour I ask each time. The scoping
+      is the whole skill: no em dashes in *copy*, while my AGENTS.md files are
+      full of them and are RIGHT — do not "fix" those. Run
+      `claude/skills/unslop/unslop-scan` for the mechanical half.
+    - **`wizard` — three or more steps only I can take, and you write me a
+      script instead of a chat list.** A key you cannot mint, a dashboard you
+      cannot click, an ordered gate. You write it, I run it: my secrets stay out
+      of your context and nothing takes the screen. One or two steps stay in
+      `brief`'s **Need from you** block.
+
+    `grill` is invoked, not standing: before a change big enough that guessing
+    wrong costs a rebuild, read the code and the real docs first, then ask me
+    the ≥3/5 forks one at a time, each with your pick. Answers land in an
+    AGENTS.md stanza, a comment beside the code, or the commit message —
+    never a new note store, per **Memory** below.
 
     `/handoff` ships with scruff, not this repo (`ai/handoff/SKILL.md` in
     hausfold/scruff). It writes a brief a cold session can act on: `/handoff`
@@ -731,9 +752,13 @@ in
       and nobody bases on them, so rewriting them is free. Never `git merge
       origin/main` into a branch — it puts commits I did not write in my PR's
       commit list. `flake.lock` is never hand-merged: take main's wholesale
-      (`git checkout --theirs flake.lock`), then re-run `nix flake update
-      <input>` if the branch genuinely needed a newer pin (raw on purpose — no
-      wrapper covers a branch-local repin; `bench ship` works on main checkouts).
+      (`git checkout origin/main -- flake.lock` — NOT `--theirs`, which means
+      main in a merge but my own branch in a rebase, and rebase is what I run),
+      then re-run `nix flake update <input>` if the branch genuinely needed a
+      newer pin (raw on purpose — no wrapper covers a branch-local repin; `bench
+      ship` works on main checkouts). Anything past a lockfile: load the
+      `conflicts` skill, which triages generated files and resolves the rest by
+      reading why each side exists.
     - **`/ship` finishes the whole job**: merge the PR, then clean up every
       worktree this session spun up — a sibling-repo worktree is not
       auto-reaped, so merge its PR too and `git worktree remove` it. Then report
@@ -1050,7 +1075,7 @@ in
         };
       };
 
-      # My five personal skills. The instructions above are what make `brief`
+      # My eight personal skills. The instructions above are what make `brief`
       # load every session; these just put the bodies on disk. mkOutOfStoreSymlink
       # so editing a SKILL.md is live in the next pane with no rebuild, and the
       # targets are in THIS repo, which always lives at ~/.config/nix.
@@ -1086,7 +1111,34 @@ in
       home.file.".claude/skills/things".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/things";
 
-      # The same four, linked again under ~/.agents/skills — the dir BOTH Codex
+      # unslop — de-slop reader-facing copy, then put a voice back. Carries a
+      # `unslop-scan` helper (python3, no deps) beside SKILL.md, which is why
+      # it's a whole-dir symlink. The scoping is the load-bearing part: em
+      # dashes are banned in COPY and correct in my AGENTS.md files, and a
+      # scanner that got that backwards would rewrite every doc I own.
+      home.file.".claude/skills/unslop".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/unslop";
+
+      # wizard — the steps only I can take, written as a resumable script I run
+      # myself. Secrets go to the login keychain via secretspec, never to a
+      # .env and never through the agent's context.
+      home.file.".claude/skills/wizard".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/wizard";
+
+      # grill — read the code and the real docs, then interview me one question
+      # at a time before building. Answers land in AGENTS.md / a code comment /
+      # the commit message; deliberately no CONTEXT.md or docs/adr, which is
+      # what the popular upstream version does and what my memory rule forbids.
+      home.file.".claude/skills/grill".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/grill";
+
+      # conflicts — finish a stopped merge or rebase by intent, not by text.
+      # Encodes the one that bites: --ours/--theirs are INVERTED between merge
+      # and rebase, so the flag reflex is backwards in the operation I run.
+      home.file.".claude/skills/conflicts".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/conflicts";
+
+      # The same eight, linked again under ~/.agents/skills — the dir BOTH Codex
       # and OpenCode scan (verified with `codex debug prompt-input` /
       # `opencode debug skill`). Otherwise "load the `brief` skill" is an order
       # only Claude Code can obey. Both dirs is safe: clients dedupe by
@@ -1099,6 +1151,14 @@ in
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
       home.file.".agents/skills/things".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/things";
+      home.file.".agents/skills/unslop".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/unslop";
+      home.file.".agents/skills/wizard".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/wizard";
+      home.file.".agents/skills/grill".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/grill";
+      home.file.".agents/skills/conflicts".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/conflicts";
 
       # ---- the pi statusline footer ----
       # The agent-worktree HUD in a pi pane: haus's Claude Code statusline
