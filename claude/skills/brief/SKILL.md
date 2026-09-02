@@ -87,6 +87,10 @@ When it does fire, the block has exactly four parts and nothing else:
 - **reversal cost** — what it takes to undo if I pick wrong. This is the part I actually
   decide on.
 
+**Three or more steps that only I can do → `/wizard` instead of a longer block.** A
+credential, a dashboard click, an ordered gate: that's a script I run, not a list I lose
+my place in. One or two, keep them here.
+
 Things that are *always* ≥3/5 in my world regardless of how small the diff looks: anything
 that lands in `homebrew-tap`, anything that changes what `bench release` would stamp,
 anything touching secrets or `~/.config/nix` identity, anything that changes a flake input

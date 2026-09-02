@@ -11,8 +11,8 @@ description: >-
 
 # Park: set work aside as a `wip:` commit, never a stash
 
-`wt park [label]` commits the whole dirty tree — tracked edits *and* untracked
-files — as one `wip:` commit on the branch this checkout has out. `wt unpark`
+`scruff park [label]` commits the whole dirty tree — tracked edits *and* untracked
+files — as one `wip:` commit on the branch this checkout has out. `scruff unpark`
 rewinds it (`git reset --mixed HEAD^`), putting every file back exactly as it
 was, uncommitted.
 
@@ -23,17 +23,17 @@ The stash stack **looks** per-worktree and isn't. It lives in the shared
 pop the **same stack**. Two parallel panes stashing means either can pop the
 other's entry, and the loser's edits land in a tree that never asked for them —
 or vanish into a conflicted mess. A `wip:` commit has no shared stack: it sits
-on the branch only this pane has checked out, it survives a pane close, `wt`
-lists it as that worktree's last commit, and `wt unpark` puts it back.
+on the branch only this pane has checked out, it survives a pane close, `scruff`
+lists it as that worktree's last commit, and `scruff unpark` puts it back.
 
 This holds in the main checkout too, not just worktrees — that's the checkout
 most likely to eat someone else's pop.
 
 ## /park
 
-1. `wt park "<label>"` from anywhere inside the checkout. Pass a label whenever
+1. `scruff park "<label>"` from anywhere inside the checkout. Pass a label whenever
    you know what the work was ("half-done FDA helper") — it becomes the commit
-   subject and is what I'll read in `wt` a week later. Bare `wt park` is fine
+   subject and is what I'll read in `scruff` a week later. Bare `scruff park` is fine
    for a throwaway.
 2. Report: how many changes, the short SHA, and the branch.
 
@@ -52,7 +52,7 @@ don't open a PR, don't push — parking is explicitly *not* landing.
 
 ## /unpark
 
-`wt unpark` — only ever undoes the **last** commit, and only if its subject
+`scruff unpark` — only ever undoes the **last** commit, and only if its subject
 starts with `wip:`. If HEAD isn't a wip commit it refuses and names what HEAD
 actually is; don't work around that by resetting by hand.
 
@@ -65,11 +65,11 @@ confirm I mean it, the escape hatch it prints is `git reset --mixed HEAD^`.
 ## Parking as a means, not an end
 
 When you need a clean tree *for your own next step* — switch branches, bisect,
-pull, test a sibling change — park first, do the thing, then `wt unpark` in the
+pull, test a sibling change — park first, do the thing, then `scruff unpark` in the
 same turn. Say in one line that you did it; don't leave my tree parked and
 walk away.
 
 The pane-close hook already parks automatically (`wip: auto-saved on pane
-close`), so a worktree you never got to is never lost — `wt <name>` rebuilds
-the checkout and `wt unpark` restores the tree. `wt park` is just the on-demand
+close`), so a worktree you never got to is never lost — `scruff <name>` rebuilds
+the checkout and `scruff unpark` restores the tree. `scruff park` is just the on-demand
 half of that same mechanism.
