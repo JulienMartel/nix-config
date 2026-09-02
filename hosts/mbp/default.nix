@@ -120,9 +120,6 @@ in
   # checkout paths / keys / column widths stay in programs.gh-dash below.
   haus.terminal.ghDash.enable = true;
 
-  # feel-test #592/#626 — deliberate typo (restoreWindows). Undo: git reset --hard 62e53fa
-  haus.terminal.restoreWindow = true;
-
   haus.git.org = "hausfold";
 
   # ---- coding agents ----
