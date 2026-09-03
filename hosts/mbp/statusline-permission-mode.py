@@ -17,8 +17,14 @@ resolve the model id. This patch emits it as well, so the statusline reads
 `.permission_mode` from stdin and the chip tracks shift+tab live.
 
 Byte-length-preserving, like declutter-claude-footer.py and for the same reason
-(bun's trailer indexes the embedded JS source by offset). The bytes come from
-the version banner inlined at the same site: Claude Code writes the whole
+(bun's module graph indexes the embedded JS source by offset). And inert for the
+same reason too: since 2.1.259 the bundle carries a JSC bytecode cache compiled
+from that source and bun runs the cache, so this edit only reaches the payload
+once claude-bytecode-liveness.py drops the bytecode for the module it lands in.
+That script is also the guard — the edit below goes into the shared manifest and
+it proves, out of the finished binary, that the patched source is what runs.
+
+The bytes come from the version banner inlined at the same site: the whole
 `{ISSUES_EXPLAINER:…,VERSION:"x.y.z",…}.VERSION` object literal there just to
 read one field off it, so replacing that expression with the version string it
 evaluates to frees ~360 bytes — far more than `permission_mode:<ident>,` needs.
@@ -29,9 +35,9 @@ release): `version:{ISSUES_EXPLAINER` … `.VERSION,output_style:{name:` is a ru
 of payload KEYS, all of them part of the documented statusline schema, and
 `({permissionMode:` is the builder's own parameter name. Both are stable across
 releases in a way that `yRS`/`e`/`y` are not. If a claude-code update reshapes
-the payload the match count moves off 1 and this script exits non-zero, failing
-the nix build loudly rather than silently shipping a statusline whose mode chip
-has quietly gone back to lying. To re-derive: search the binary for
+the payload nothing matches and this script exits non-zero, failing the nix
+build loudly rather than silently shipping a statusline whose mode chip has
+quietly gone back to lying. To re-derive: search the binary for
 'exceeds_200k_tokens:' and read outward.
 
 The consumer is haus's modules/core/statusline.sh, which prefers
@@ -39,17 +45,18 @@ The consumer is haus's modules/core/statusline.sh, which prefers
 unpatched claude-code still renders a (turn-boundary) mode chip, and this patch
 is a pure upgrade rather than a dependency.
 
-Usage: statusline-permission-mode.py <path-to-claude-binary>
+Usage: statusline-permission-mode.py <path-to-claude-binary> <edits-manifest>
 """
 
+import json
 import re
 import sys
 
-EXPECTED = 1  # the one statusline payload builder
-
-path = sys.argv[1]
+path, manifest = sys.argv[1], sys.argv[2]
 with open(path, "rb") as f:
     data = bytearray(f.read())
+
+edits = []
 
 ident = rb"[A-Za-z_$][\w$]{0,5}"
 
@@ -87,16 +94,33 @@ for m in matches:
     new = new.replace(b",output_style:", b"," + b" " * pad + b"output_style:", 1)
     assert len(new) == len(m.group())
     data[m.start() : m.end()] = new
+    edits.append(
+        {
+            "patch": "statusline-permission-mode",
+            "site": "statusline payload",
+            "offset": m.start(),
+            "bytes": new.hex(),
+        }
+    )
     patched += 1
 
-if patched != EXPECTED:
+# Not a count guard: patching zero sites means the anchors stopped matching and
+# the mode chip is back to reading a stale transcript. Whether a patched site
+# then reaches the payload is claude-bytecode-liveness.py's question.
+if not patched:
     sys.exit(
-        f"statusline-permission-mode: expected {EXPECTED} statusline payload "
-        f"builder, patched {patched} (found {len(matches)} candidate sites) — "
-        f"the claude-code update changed the statusline payload; re-derive the "
-        f"anchors (see script header) or drop the patch."
+        f"statusline-permission-mode: patched no statusline payload builder "
+        f"(found {len(matches)} candidate sites) — the claude-code update "
+        f"changed the statusline payload; re-derive the anchors (see script "
+        f"header) or drop the patch."
     )
 
 with open(path, "wb") as f:
     f.write(bytes(data))
-print(f"statusline-permission-mode: added permission_mode to the payload in {path}")
+with open(manifest, "a") as f:
+    for edit in edits:
+        f.write(json.dumps(edit) + "\n")
+print(
+    f"statusline-permission-mode: added permission_mode to {patched} payload "
+    f"builder in {path}"
+)

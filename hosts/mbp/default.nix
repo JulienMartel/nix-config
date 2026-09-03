@@ -861,22 +861,30 @@ in
   # would collide. These stay even though pi is the default now — parked
   # Claude lanes still reopen in Claude Code, and its panes should keep the
   # same HUD the pi footer extension (./pi-statusline) draws without any of
-  # this. Three things Claude Code has no setting for:
+  # this. Four build steps — three of them things Claude Code has no setting
+  # for, and one that makes two of those actually run:
   #  1. declutter-claude-footer.py — drop the permission-mode footer row and the
   #     right-hand chip strip. Fails the build if an update reshapes them; the
   #     script header says how to re-derive the regexes.
   #  2. statusline-permission-mode.py — emit `permission_mode` in the statusline
   #     payload, so the rice's chip tracks shift+tab live instead of lagging
   #     behind the transcript.
-  #  3. caffeinate shadowed with a no-op on claude's PATH only, so the agent
+  #  3. claude-bytecode-liveness.py — 1 and 2 edit the JS bun embeds in the
+  #     binary, and since 2.1.259 bun runs a JSC bytecode cache compiled from
+  #     that JS instead, which made both patches inert while the build stayed
+  #     green. This drops the bytecode for the modules they edited (only those:
+  #     everything else still starts from cache) and then proves, out of the
+  #     finished binary, that every recorded edit is bytes JSC will execute.
+  #  4. caffeinate shadowed with a no-op on claude's PATH only, so the agent
   #     can't block sleep. Everything else still gets /usr/bin/caffeinate.
   #
   # The VERSION is not this file's business: haus holds claude-code ahead of
   # nixpkgs in modules/lib/claude-code.nix, an overlay that runs before this
   # one, so `prev.claude-code` here is already the pinned build and these
   # patches ride on top of whatever it is. When a release reshapes the bundle
-  # they fail the build rather than silently no-op, which is the whole reason
-  # they count their matches.
+  # they fail the build rather than silently no-op — 1 and 2 because their
+  # anchors stop matching, and 3 because it can no longer show the edits are
+  # live. A match count only ever proved the first of those.
   nixpkgs.overlays = [
     (final: prev: {
       claude-code =
@@ -888,9 +896,13 @@ in
               prev.python3
               prev.darwin.autoSignDarwinBinariesHook # re-sign the patched Mach-O in fixup
             ];
+            # The manifest carries each edit's offset and bytes from the two
+            # patch scripts to the liveness check, which must run last.
             postInstall = (old.postInstall or "") + ''
-              python3 ${./declutter-claude-footer.py} "$out/bin/.claude-wrapped"
-              python3 ${./statusline-permission-mode.py} "$out/bin/.claude-wrapped"
+              edits="$NIX_BUILD_TOP/claude-tui-edits.jsonl"
+              python3 ${./declutter-claude-footer.py} "$out/bin/.claude-wrapped" "$edits"
+              python3 ${./statusline-permission-mode.py} "$out/bin/.claude-wrapped" "$edits"
+              python3 ${./claude-bytecode-liveness.py} "$out/bin/.claude-wrapped" "$edits"
             '';
           });
         in
