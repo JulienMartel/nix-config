@@ -693,8 +693,8 @@ in
     (Codex and OpenCode read the second), so editing it is live in the next
     pane with no rebuild. Same for `ship`, `park` and `things` (my Things 3
     to-dos — read its SKILL.md before touching my list), `unslop`, `wizard`,
-    `grill`, `conflicts` and `deepen`. If your client does not load skills,
-    read the SKILL.md by path; it is plain markdown.
+    `grill`, `conflicts`, `deepen` and `blast-radius`. If your client does
+    not load skills, read the SKILL.md by path; it is plain markdown.
 
     Two of those carry a standing rule rather than waiting to be invoked:
 
@@ -715,6 +715,11 @@ in
     the ≥3/5 forks one at a time, each with your pick. Answers land in an
     AGENTS.md stanza, a comment beside the code, or the commit message —
     never a new note store, per **Memory** below.
+
+    `blast-radius` is invoked too: for "what could this break" or a diff I
+    don't trust, find the one fact the change is safe because of and prove it
+    by running real code — a safety fact you can't prove is reported as
+    unproven, never written up as settled.
 
     `/handoff` ships with scruff, not this repo (`ai/handoff/SKILL.md` in
     hausfold/scruff). It writes a brief a cold session can act on: `/handoff`
@@ -1075,7 +1080,7 @@ in
         };
       };
 
-      # My nine personal skills. The instructions above are what make `brief`
+      # My ten personal skills. The instructions above are what make `brief`
       # load every session; these just put the bodies on disk. mkOutOfStoreSymlink
       # so editing a SKILL.md is live in the next pane with no rebuild, and the
       # targets are in THIS repo, which always lives at ~/.config/nix.
@@ -1146,7 +1151,15 @@ in
       home.file.".claude/skills/deepen".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/deepen";
 
-      # The same nine, linked again under ~/.agents/skills — the dir BOTH Codex
+      # blast-radius — what a change breaks somewhere else, beyond the diff.
+      # The upstream version lists callers; mine demands the proof: find the
+      # ONE fact the change is safe because of and run real code against it,
+      # or report it unproven. Knows the family's grep-invisible hop (the lock
+      # ripple) and that `bench try` is its proof.
+      home.file.".claude/skills/blast-radius".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/blast-radius";
+
+      # The same ten, linked again under ~/.agents/skills — the dir BOTH Codex
       # and OpenCode scan (verified with `codex debug prompt-input` /
       # `opencode debug skill`). Otherwise "load the `brief` skill" is an order
       # only Claude Code can obey. Both dirs is safe: clients dedupe by
@@ -1169,6 +1182,8 @@ in
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/conflicts";
       home.file.".agents/skills/deepen".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/deepen";
+      home.file.".agents/skills/blast-radius".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/blast-radius";
 
       # ---- the pi statusline footer ----
       # The agent-worktree HUD in a pi pane: haus's Claude Code statusline
