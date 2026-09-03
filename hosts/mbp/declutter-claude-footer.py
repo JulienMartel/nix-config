@@ -42,10 +42,16 @@ dense feature-flagged one and the normal one), so four patches total:
      can't bring the line back. Our own statusline already carries the PR link
      and everything else we care about.
 
-We patch the JS source that bun embeds as plain text inside the compiled binary
-(verified empirically that the embedded source — not a bytecode cache — is what
-executes). All edits are byte-length-preserving because the bun trailer indexes
-the embedded source by offset; changing its length corrupts the binary.
+We patch the JS source that bun embeds as plain text inside the compiled
+binary. All edits are byte-length-preserving because bun's module graph indexes
+the embedded source by offset; changing its length corrupts the binary. Since
+2.1.259 the bundle ALSO carries a JSC bytecode cache compiled from that source,
+and bun runs the cache — so every edit here is inert until
+claude-bytecode-liveness.py drops the bytecode for the modules we touched. That
+script is also what fails the build now: each edit below is written to the shared
+manifest, and it re-reads them out of the finished binary and proves each one
+lands in code that actually executes. A count of matches could never do that —
+this patch applied cleanly and changed nothing on screen for all of 2.1.259.
 
 Anchors pin code STRUCTURE, not minified identifier names (which change every
 release): the object-literal prop keys `height`/`overflow`/`children` and the
@@ -59,25 +65,37 @@ else-branch). The chip strip is pinned by its own two halves at once — the
 early `return null` on an empty chip ARRAY and, further down, that same array
 being handed to the Box as `children:<same var>` — a pairing nothing else in
 the binary has (the bare `.length===0){return null}` appears 26 times). If a
-claude-code update reshapes any of it a match count moves off its expected
-value and this script exits non-zero — failing the nix build loudly instead of
-silently bringing the row back. To re-derive: search the binary for
-'overflow:"hidden",children:[', 'children:" "}):null' and
-'.length===0&&'.
+claude-code update reshapes any of them this script finds none of that kind and
+exits non-zero, failing the nix build loudly instead of silently bringing the
+row back. To re-derive: search the binary for 'overflow:"hidden",children:[',
+'children:" "}):null' and '.length===0&&'.
 
-Usage: declutter-claude-footer.py <path-to-claude-binary>
+Usage: declutter-claude-footer.py <path-to-claude-binary> <edits-manifest>
 """
 
+import json
 import re
 import sys
 
-EXPECTED_ROWS = 2  # the two variants of the footer status row
-EXPECTED_RESERVATIONS = 2  # their two idle placeholder-line early returns
-EXPECTED_STRIPS = 1  # the right-hand chip strip ("/rc \xb7 focus")
-
-path = sys.argv[1]
+path, manifest = sys.argv[1], sys.argv[2]
 with open(path, "rb") as f:
     data = bytearray(f.read())
+
+edits = []
+
+
+def write(at, new, site):
+    """Overwrite in place and tell the liveness check where to look."""
+    data[at : at + len(new)] = new
+    edits.append(
+        {
+            "patch": "declutter-claude-footer",
+            "site": site,
+            "offset": at,
+            "bytes": new.hex(),
+        }
+    )
+
 
 ident = rb"[A-Za-z_$][\w$]{0,5}"
 
@@ -89,7 +107,7 @@ row = re.compile(rb'\{height:1,overflow:"hidden",children:\[')
 rows = 0
 for m in row.finditer(bytes(data)):
     h = data.index(b"height:1", m.start(), m.end())
-    data[h : h + len(b"height:1")] = b"height:0"
+    write(h, b"height:0", "footer row height")
     rows += 1
 
 # 2. The idle placeholder reservation: `return <fn>()?<jsx>(<Text>,
@@ -108,7 +126,8 @@ reservation = re.compile(
 reservations = 0
 for m in reservation.finditer(bytes(data)):
     cond_start, cond_end = m.span(1)
-    data[cond_start:cond_end] = b"!1".rjust(cond_end - cond_start)  # same length
+    same_length = b"!1".rjust(cond_end - cond_start)
+    write(cond_start, same_length, "placeholder reservation")
     reservations += 1
 
 # 3. The right-hand chip strip: `if(<chips>.length===0&&<modes>===null){return
@@ -127,24 +146,28 @@ strip = re.compile(
 strips = 0
 for m in strip.finditer(bytes(data)):
     cond_start, cond_end = m.span(1)
-    data[cond_start:cond_end] = b"!0".rjust(cond_end - cond_start)  # same length
+    same_length = b"!0".rjust(cond_end - cond_start)
+    write(cond_start, same_length, "chip strip")
     strips += 1
 
-if (
-    rows != EXPECTED_ROWS
-    or reservations != EXPECTED_RESERVATIONS
-    or strips != EXPECTED_STRIPS
-):
+# The old guard demanded exactly 2 + 2 + 1, which passed all through 2.1.259
+# while the row it hides was on screen the whole time — matching is not the
+# thing worth asserting. What is left here is the floor: finding NONE of a kind
+# means that kind's anchor stopped matching. Whether the edits reach the screen
+# is claude-bytecode-liveness.py's question now, and it is the one that failed.
+if not (rows and reservations and strips):
     sys.exit(
-        f"declutter-claude-footer: expected {EXPECTED_ROWS} footer rows + "
-        f"{EXPECTED_RESERVATIONS} placeholder reservations + "
-        f"{EXPECTED_STRIPS} chip strip, found {rows} + {reservations} + "
-        f"{strips} — the claude-code update changed the footer code; "
+        f"declutter-claude-footer: found {rows} footer rows + {reservations} "
+        f"placeholder reservations + {strips} chip strips, and needs at least "
+        f"one of each — the claude-code update changed the footer code; "
         f"re-derive the anchors (see script header) or drop the patch."
     )
 
 with open(path, "wb") as f:
     f.write(bytes(data))
+with open(manifest, "a") as f:
+    for edit in edits:
+        f.write(json.dumps(edit) + "\n")
 print(
     f"declutter-claude-footer: collapsed {rows} footer rows + "
     f"{reservations} placeholder reservations + {strips} chip strip in {path}"
