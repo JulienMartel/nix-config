@@ -693,8 +693,8 @@ in
     (Codex and OpenCode read the second), so editing it is live in the next
     pane with no rebuild. Same for `ship`, `park` and `things` (my Things 3
     to-dos — read its SKILL.md before touching my list), `unslop`, `wizard`,
-    `grill` and `conflicts`. If your client does not load skills, read the
-    SKILL.md by path; it is plain markdown.
+    `grill`, `conflicts` and `deepen`. If your client does not load skills,
+    read the SKILL.md by path; it is plain markdown.
 
     Two of those carry a standing rule rather than waiting to be invoked:
 
@@ -1075,7 +1075,7 @@ in
         };
       };
 
-      # My eight personal skills. The instructions above are what make `brief`
+      # My nine personal skills. The instructions above are what make `brief`
       # load every session; these just put the bodies on disk. mkOutOfStoreSymlink
       # so editing a SKILL.md is live in the next pane with no rebuild, and the
       # targets are in THIS repo, which always lives at ~/.config/nix.
@@ -1138,7 +1138,15 @@ in
       home.file.".claude/skills/conflicts".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/conflicts";
 
-      # The same eight, linked again under ~/.agents/skills — the dir BOTH Codex
+      # deepen — survey a codebase for modules worth deepening and hand me a
+      # dark, nebelung-styled HTML report; read-only, never edits code. The
+      # upstream (aihero.dev improve-codebase-architecture) writes CONTEXT.md /
+      # docs/adr and grills inline — mine hands the interview to /grill, lands
+      # decisions per the memory rule, and the report is scratchpad-ephemeral.
+      home.file.".claude/skills/deepen".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/deepen";
+
+      # The same nine, linked again under ~/.agents/skills — the dir BOTH Codex
       # and OpenCode scan (verified with `codex debug prompt-input` /
       # `opencode debug skill`). Otherwise "load the `brief` skill" is an order
       # only Claude Code can obey. Both dirs is safe: clients dedupe by
@@ -1159,6 +1167,8 @@ in
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/grill";
       home.file.".agents/skills/conflicts".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/conflicts";
+      home.file.".agents/skills/deepen".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/deepen";
 
       # ---- the pi statusline footer ----
       # The agent-worktree HUD in a pi pane: haus's Claude Code statusline
