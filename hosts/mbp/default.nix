@@ -348,6 +348,16 @@ in
   # alias, so the old spelling is simply gone.
   haus.notifications.compositor = true;
 
+  # ---- mail watcher (haus#665) ----
+  # IMAP IDLE push: new mail draws a trill card in seconds, nothing polls.
+  # The password is held like the other room secrets (secretCommand stays
+  # empty -> haus-secret MAIL_IMAP_PASSWORD, declared in secretspec.toml);
+  # it must be a Gmail APP password, not the login one.
+  haus.mail = {
+    enable = true;
+    address = "julienbmartel@gmail.com";
+  };
+
   # Which secretspec project the ROOM-declared manifest carries. This flake's
   # own secretspec.toml is project "nix", and its GITHUB_WEBHOOK_SECRET is
   # already filled in, so sharing the namespace beats a second keychain item
