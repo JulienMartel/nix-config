@@ -22,11 +22,11 @@ dense feature-flagged one and the normal one), so four patches total:
      overflow hidden a zero-height box occupies zero terminal rows, so mode +
      tasks + link chips + hints all vanish visually.
 
-  2. The empty-state placeholder, `<var>=<fn>()?<jsx>(<Text>,{children:" "})
-     :null` (the placeholder-line reservation; an assignment as of CC 2.1.220,
-     formerly a `return`), gets its condition overwritten in place with a
-     same-length always-false expression, so the idle blank line renders as
-     null.
+  2. The empty-state placeholder, `return <fn>()?<jsx>(<Text>,{children:" "})
+     :null` (the placeholder-line reservation; a `return` again as of CC
+     2.1.259, an assignment in 2.1.220–2.1.227), gets its condition overwritten
+     in place with a same-length always-false expression, so the idle blank
+     line renders as null.
 
   3. The right-hand CHIP STRIP is a *sibling* row, not part of either box
      above, so collapsing them never touched it: a column stack pinned with
@@ -36,11 +36,11 @@ dense feature-flagged one and the normal one), so four patches total:
      " · ". It stayed invisible until CC 2.1.220 shipped `/rc` and the focus
      ("briefTranscript") label, which are on permanently here — so the row
      came back as a second line under our statusline in every pane. Its
-     component already returns null when it has no chips; we flip that
-     emptiness test to always-true (`.length===0` -> `.length> -1`, same
-     length), so the strip renders null unconditionally and any chip a future
-     release adds there can't bring the line back. Our own statusline already
-     carries the PR link and everything else we care about.
+     component already returns null when it has nothing to show; we overwrite
+     that emptiness test with a same-length always-true `!0`, so the strip
+     renders null unconditionally and any chip a future release adds there
+     can't bring the line back. Our own statusline already carries the PR link
+     and everything else we care about.
 
 We patch the JS source that bun embeds as plain text inside the compiled binary
 (verified empirically that the embedded source — not a bytecode cache — is what
@@ -51,18 +51,19 @@ Anchors pin code STRUCTURE, not minified identifier names (which change every
 release): the object-literal prop keys `height`/`overflow`/`children` and the
 `{children:" "}` placeholder are Ink API names and stay stable; the `children:[`
 (array) vs `children:<jsx>(` (single child) distinction is what separates our
-two content rows from the unrelated spinner box, and the leading `=`
-(assignment) separates the two footer placeholders from the custom-statusline
-container's own fallback, whose identical `...jsx(<Text>,{children:" "}):null`
-tail is instead preceded by `:` (a ternary else-branch). The chip strip is
-pinned by its own two halves at once — the early `return null` on an empty
-chip ARRAY and, further down, that same array being spread into the Box as
-`children:<same var>.flatMap(` — a pairing nothing else in the binary has
-(the bare `.length===0){return null}` appears 25 times). If a claude-code
-update reshapes any of it a match count moves off its expected value and this
-script exits non-zero — failing the nix build loudly instead of silently
-bringing the row back. To re-derive: search the binary for
-'overflow:"hidden",children:[', 'children:" "}):null' and '.flatMap('.
+two content rows from the unrelated spinner box, and the leading `return ` (or
+`=`, the 2.1.220–2.1.227 shape) separates the two footer placeholders from the
+custom-statusline container's own fallback, whose identical
+`...(<Text>,{children:" "}):null` tail is instead preceded by `:` (a ternary
+else-branch). The chip strip is pinned by its own two halves at once — the
+early `return null` on an empty chip ARRAY and, further down, that same array
+being handed to the Box as `children:<same var>` — a pairing nothing else in
+the binary has (the bare `.length===0){return null}` appears 26 times). If a
+claude-code update reshapes any of it a match count moves off its expected
+value and this script exits non-zero — failing the nix build loudly instead of
+silently bringing the row back. To re-derive: search the binary for
+'overflow:"hidden",children:[', 'children:" "}):null' and
+'.length===0&&'.
 
 Usage: declutter-claude-footer.py <path-to-claude-binary>
 """
@@ -91,16 +92,18 @@ for m in row.finditer(bytes(data)):
     data[h : h + len(b"height:1")] = b"height:0"
     rows += 1
 
-# 2. The idle placeholder reservation: `<var>=<fn>()?<jsx>.jsx(<Text>,
-#    {children:" "}):null` (an assignment; CC ≤2.1.195 wrote it as a `return`).
-#    Overwrite the condition with a same-length always-false expression so the
-#    blank line renders as null. The leading `=` (assignment) distinguishes
-#    these two footer placeholders from the custom-statusline container's own
-#    `:<fn>()?<jsx>.jsx(<Text>,{children:" "}):null` fallback, whose identical
-#    jsx tail is instead preceded by `:` (a ternary else-branch).
+# 2. The idle placeholder reservation: `return <fn>()?<jsx>(<Text>,
+#    {children:" "}):null` (a `return` again as of CC 2.1.259; 2.1.220–2.1.227
+#    wrote it as an assignment, hence the `=` alternative). Overwrite the
+#    condition with a same-length always-false expression so the blank line
+#    renders as null. The `return ` / `=` prefix distinguishes these two footer
+#    placeholders from the custom-statusline container's own
+#    `:<fn>()?<jsx>(<Text>,{children:" "}):null` fallback, whose identical jsx
+#    tail is instead preceded by `:` (a ternary else-branch). The jsx call is
+#    bare (`<fn>(`) since 2.1.259 and namespaced (`<ns>.jsx(`) before it.
 reservation = re.compile(
-    rb"=((?:%s)\(\))\?(?:%s)\.jsx\((?:%s),\{children:\" \"\}\):null"
-    % (ident, ident, ident)
+    rb"(?:=|return )((?:%s)\(\))\?(?:%s\.jsx|%s)\((?:%s),\{children:\" \"\}\):null"
+    % (ident, ident, ident, ident)
 )
 reservations = 0
 for m in reservation.finditer(bytes(data)):
@@ -108,20 +111,23 @@ for m in reservation.finditer(bytes(data)):
     data[cond_start:cond_end] = b"!1".rjust(cond_end - cond_start)  # same length
     reservations += 1
 
-# 3. The right-hand chip strip: `if(<chips>.length===0){return null}` … later
-#    `children:<chips>.flatMap(`. Same array variable on both ends is what
-#    identifies THIS component; the early return alone is a common shape.
-#    Flip the emptiness test to an always-true comparison, same byte length,
-#    so the strip is always null.
+# 3. The right-hand chip strip: `if(<chips>.length===0&&<modes>===null){return
+#    null}` … later `children:<chips>`. Same array variable on both ends is
+#    what identifies THIS component; the early return alone is a common shape.
+#    (2.1.259 added the `&&<modes>===null` half — the mode labels became a
+#    sibling of the chip array — and stopped spreading the array with
+#    `.flatMap(`, hence both being optional/loose here.) Overwrite the whole
+#    emptiness test with a same-length always-true `!0` so the strip is always
+#    null, whatever a future release adds to either half.
 strip = re.compile(
-    rb"if\((%s)\.length===0\)\{return null\}.{0,400}?children:\1\.flatMap\("
-    % ident,
+    rb"if\(((%s)\.length===0(?:&&(?:%s)===null)?)\)\{return null\}"
+    rb".{0,400}?children:\2[.}]" % (ident, ident),
     re.DOTALL,
 )
 strips = 0
 for m in strip.finditer(bytes(data)):
-    t = data.index(b"===0", m.start(), m.start() + 40)
-    data[t : t + 4] = b"> -1"  # same length
+    cond_start, cond_end = m.span(1)
+    data[cond_start:cond_end] = b"!0".rjust(cond_end - cond_start)  # same length
     strips += 1
 
 if (
