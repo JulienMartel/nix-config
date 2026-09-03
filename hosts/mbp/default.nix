@@ -870,6 +870,13 @@ in
   #     behind the transcript.
   #  3. caffeinate shadowed with a no-op on claude's PATH only, so the agent
   #     can't block sleep. Everything else still gets /usr/bin/caffeinate.
+  #
+  # The VERSION is not this file's business: haus holds claude-code ahead of
+  # nixpkgs in modules/lib/claude-code.nix, an overlay that runs before this
+  # one, so `prev.claude-code` here is already the pinned build and these
+  # patches ride on top of whatever it is. When a release reshapes the bundle
+  # they fail the build rather than silently no-op, which is the whole reason
+  # they count their matches.
   nixpkgs.overlays = [
     (final: prev: {
       claude-code =
@@ -899,8 +906,11 @@ in
           '';
           # symlinkJoin invents its own (empty) meta, which would drop the
           # platform list the rice's ai.clients assertion reads and the
-          # license the unfree check reads. Carry the real one through.
-          inherit (prev.claude-code) meta;
+          # license the unfree check reads. Carry the real one through — and
+          # `version` with it, which the rice's OTHER claude assertion (its
+          # 2.1.255 floor, for Fable 5.1) reads and stands down without. A
+          # wrapper that swallows it isn't wrong, it just goes unchecked.
+          inherit (prev.claude-code) meta version;
         };
     })
   ];
