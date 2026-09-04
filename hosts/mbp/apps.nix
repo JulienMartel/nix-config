@@ -1,12 +1,9 @@
-# What this Mac has, where it lives, and who installs it.
+# What this Mac has installed, and where each app lives.
 { pkgs, ... }:
 
 {
-  # One list of everything installed. `label` is omitted wherever it would just
-  # repeat `name` — haus falls back to `name` for the cheatsheet caption.
   haus.roster = {
     # ---- leader-key apps ----
-    # ghostty (t) and zen (b) come from haus; zen only moves in the order.
     zen.order = 50;
 
     obsidian = {
@@ -21,7 +18,6 @@
       key = "r";
       name = "Things3";
       appId = "com.culturedcode.ThingsMac";
-      # Paid: mas can't purchase it. The id records what to re-buy, not an install.
       appStoreId = 904280696;
     };
     slack = {
@@ -45,7 +41,6 @@
       appId = "com.cron.electron";
       cask = "notion-calendar";
     };
-    # Launcher-only: opens in the current workspace, no pill, no auto-assign.
     passwords = {
       order = 100;
       key = "p";
@@ -53,7 +48,6 @@
     };
 
     # ---- installed, not launched by keyboard ----
-    # No key. Still declared, or `homebrew.cleanup = "zap"` below reaps it.
     cap = {
       name = "Cap";
       cask = "cap";
@@ -102,7 +96,6 @@
       name = "Tailscale";
       cask = "tailscale-app";
     };
-    # Free, so mas could actually fetch this one.
     xcode = {
       name = "Xcode";
       appStoreId = 497799835;
@@ -116,11 +109,9 @@
     gcloud-cli.cask = "gcloud-cli";
     gogcli.brew = "gogcli";
     ical-buddy.brew = "ical-buddy";
-    # For `mas list` / `mas upgrade` by hand — App Store installs stay manual
-    # here (haus.appStore.install off), since mas can't buy a paid app.
+    # App Store installs stay manual (haus.appStore.install off): mas cannot buy
+    # a paid app, so an appStoreId above records what to re-buy, not an install.
     mas.brew = "mas";
-    # The webhook bridge's tunnel (notifications.nix). On PATH for the one-time
-    # `cloudflared tunnel login`.
     cloudflared.package = pkgs.cloudflared;
 
     # ---- system scope: on PATH for root, launchd jobs and non-login shells ----
@@ -128,12 +119,9 @@
       package = pkgs.biome;
       scope = "system";
     };
-    # The workshop CLI as a real command, so scripts and non-interactive shells
-    # get it too.
     bench.package = pkgs.writeShellScriptBin "bench" ''exec "$HOME/code/workshop/bench" "$@"'';
   };
 
-  # One app per workspace; each key matches that app's roster `key`.
   haus.workspaces = {
     N = {
       key = "n";
@@ -163,9 +151,9 @@
   };
 
   haus.homebrew = {
-    # Fully declarative: an undeclared cask/brew is uninstalled and zapped.
+    # An undeclared cask/brew is uninstalled and zapped, which is why every
+    # install-only roster entry above has to stay declared.
     cleanup = "zap";
-    # Chase upstream latest, accepting less reproducible rebuilds.
     upgrade = true;
     autoUpdate = true;
   };

@@ -1,6 +1,4 @@
-# mbp — Julien's machine. The personal layer on the haus `hacker` desktop:
-# identity, hardware facts, and the handful of tastes that differ from haus's
-# own defaults. Option reference: `haus skill`, pinned to this build.
+# mbp — identity and this machine's own facts. Options: `haus skill`.
 {
   imports = [
     ./agents.nix
@@ -22,32 +20,22 @@
     theme.accent = "pink";
     animations = "fast";
 
-    # Screenshots land in ~/Downloads because CreateDesktop below hides ~/Desktop.
     screenshots.location = "~/Downloads";
 
-    # The Studio Display by UUID, not `main`: docking must not hand the built-in
-    # panel a 27" monitor's scale.
     displays."136A50A4-8937-4C6F-B95B-9F1031C62BB3".uiScale = "slightly-larger-text";
 
-    # Closed-display mode always, not just while agents run. `requirePower`
-    # stays default, so unplugging is still how I say stop.
     power.lidAwake = {
       enable = true;
       while = "always";
     };
 
-    # This flake's own secretspec project, so the room manifest shares the
-    # keychain items already filled in here rather than opening a second set.
+    # Shares this flake's keychain items; the default opens a second set.
     secrets.project = "nix";
 
     launcher = {
-      # Take Fn from macOS at the HID layer: HIToolbox handles Globe inside
-      # every process, below the event stream pounce's tap can see, so sharing
-      # it opens the stock emoji picker too. Costs Fn's other jobs.
       fnKey = "remap";
 
-      # `exclude` REPLACES pounce's default, so Finder is restated. The rest
-      # keep working with no window open — VM, tunnel, mesh, uploads, hotkeys.
+      # Replaces pounce's default rather than extending it, so Finder is restated.
       autoQuit = {
         enable = true;
         exclude = [
@@ -68,7 +56,6 @@
     terminal = {
       hijackFileAssociations = true;
       ghDash.enable = true;
-      # `notes` is the iCloud vault; `ops` is the workshop repo opened as one.
       obsidianVaults = [
         "Library/Mobile Documents/iCloud~md~obsidian/Documents/notes"
         "code/workshop/ops"
@@ -78,9 +65,6 @@
     zen = {
       tabBridge.enable = true;
 
-      # Compiled into Zen's userContent.css — every declaration applies to every
-      # document, so a site earns its slug by being one I actually open. Zen has
-      # to restart to pick up a rebuild; Gecko reads that file once at startup.
       userStyles = [
         "arch-wiki"
         "bsky"
@@ -141,9 +125,7 @@
     };
   };
 
-  # No desktop icons; files stay in ~/Desktop. Also makes the desktop unclickable.
   system.defaults.finder.CreateDesktop = false;
 
-  # No tap-to-click: palm rests fire stray clicks mid-type.
   system.defaults.trackpad.Clicking = false;
 }

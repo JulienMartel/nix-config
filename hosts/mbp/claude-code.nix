@@ -3,22 +3,7 @@
 
 {
   # An overlay, not a home.packages entry: haus.ai.clients already installs
-  # pkgs.claude-code, and two builds shipping bin/claude would collide. haus
-  # pins the VERSION ahead of nixpkgs in an overlay that runs before this one,
-  # so these patches ride on whatever build that is — and fail the build rather
-  # than silently no-op when a release reshapes the bundle.
-  #
-  #  1. declutter-claude-footer.py     drop the permission-mode footer row and
-  #                                    the right-hand chip strip
-  #  2. statusline-permission-mode.py  emit `permission_mode` in the statusline
-  #                                    payload, so the chip tracks shift+tab live
-  #  3. claude-bytecode-liveness.py    1 and 2 edit JS bun embeds, but bun runs
-  #                                    a JSC bytecode cache compiled from that
-  #                                    JS — this drops the cache for exactly
-  #                                    those modules and then proves, out of the
-  #                                    finished binary, that every edit is live
-  #  4. caffeinate shadowed with a no-op on claude's PATH only, so the agent
-  #     can't block sleep
+  # pkgs.claude-code, and two builds shipping bin/claude would collide.
   nixpkgs.overlays = [
     (final: prev: {
       claude-code =
@@ -28,10 +13,12 @@
           patchedCC = prev.claude-code.overrideAttrs (old: {
             nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
               prev.python3
-              prev.darwin.autoSignDarwinBinariesHook # re-sign the patched Mach-O in fixup
+              prev.darwin.autoSignDarwinBinariesHook
             ];
-            # The manifest carries each edit's offset and bytes from the two
-            # patch scripts to the liveness check, which must run last.
+            # The first two edit JS bun embeds; bun runs a bytecode cache
+            # compiled from that JS, so the liveness check drops the cache for
+            # those modules and proves the edits are live. It must run last —
+            # the manifest carries each edit's offset from the other two.
             postInstall = (old.postInstall or "") + ''
               edits="$NIX_BUILD_TOP/claude-tui-edits.jsonl"
               python3 ${./declutter-claude-footer.py} "$out/bin/.claude-wrapped" "$edits"
@@ -44,15 +31,16 @@
           name = "claude-code-no-caffeinate";
           paths = [ patchedCC ];
           nativeBuildInputs = [ prev.makeBinaryWrapper ];
+          # caffeinate shadowed on claude's PATH only, so the agent can't block
+          # sleep. Everything else still gets /usr/bin/caffeinate.
           postBuild = ''
             rm "$out/bin/claude"
             makeBinaryWrapper "${patchedCC}/bin/claude" "$out/bin/claude" \
               --inherit-argv0 \
               --prefix PATH : "${prev.writeShellScriptBin "caffeinate" "exit 0"}/bin"
           '';
-          # symlinkJoin invents its own empty meta, which would drop the
-          # platform list and license haus's ai.clients assertions read — and
-          # `version`, which its claude-code floor reads and stands down without.
+          # symlinkJoin invents an empty meta, which would drop the platforms,
+          # license and version that haus's ai.clients assertions read.
           inherit (prev.claude-code) meta version;
         };
     })
@@ -66,10 +54,10 @@
       ...
     }:
     {
-      # Merged, not owned: Claude rewrites this file itself, so everything it or
-      # `/config` put there has to survive. The allowlist is UNIONed for the same
-      # reason — a grant earned at a prompt is never dropped. Toggling any of
-      # these through `/config` lasts only until the next rebuild.
+      # Merged, never written whole: Claude rewrites this file itself. The
+      # allowlist is UNIONed for the same reason — a grant earned at a prompt is
+      # never dropped. Toggling any of this via `/config` lasts until the next
+      # rebuild.
       home.activation.claudeCodePersonal =
         let
           settings = "${config.home.homeDirectory}/.claude/settings.json";
@@ -86,21 +74,14 @@
           ];
           patch = {
             hooks = {
-              # ⌘A's worktrees land under ~/.cache/claude-worktrees, get parked
-              # on pane close, and stay resumable. Note the `hook` subcommand.
               WorktreeCreate = cmd "/run/current-system/sw/bin/scruff hook create";
               WorktreeRemove = cmd "/run/current-system/sw/bin/scruff hook remove";
-              # Feeds the bar's `agents` paw. Host-side: it names a plugin path.
               UserPromptSubmit = cmd "${agentsHook} working";
               Notification = cmd "${agentsHook} waiting";
               Stop = cmd "${agentsHook} idle";
               SessionEnd = cmd "${agentsHook} remove";
             };
-            # New sessions start with tool output collapsed; ⌃O still expands.
             verbose = false;
-            # No reads from or writes to ~/.claude/projects/*/memory — the repo
-            # is the source of truth. Account-level memory in the Claude apps is
-            # a separate, untouched setting.
             autoMemoryEnabled = false;
           };
           allow = [

@@ -2,8 +2,8 @@
 { config, username, ... }:
 
 let
-  # Bound out here because inside home-manager.users.<user> the `config` in
-  # scope is home-manager's, which has no haus.* on it.
+  # Inside home-manager.users.<user> the `config` in scope is home-manager's,
+  # which has no haus.* on it.
   ghOrg = config.haus.git.org;
 in
 
@@ -16,8 +16,6 @@ in
       ...
     }:
     let
-      # pounce's optional command plugins ship off; this list is the switch.
-      # Their CLI deps already come from haus.
       pouncePlugins = [
         "audio"
         "bluetooth"
@@ -30,14 +28,11 @@ in
         "tailscale"
       ];
 
-      # Symlinked script-by-script below rather than added to home.packages,
-      # which would collide with haus's own pounce-commands.
+      # Linked script-by-script below rather than added to home.packages, which
+      # would collide with haus's own pounce-commands.
       pouncePluginPkg = pkgs.pounce-commands.override { plugins = pouncePlugins; };
     in
     {
-      # Into ~/.config/pounce/commands, pounce's highest-precedence runtime dir.
-      # xdg.configFile, not home.file: a dynamic attrset can't merge with the
-      # static home.file attr-paths elsewhere in this host.
       xdg.configFile = lib.listToAttrs (
         map (
           p:
@@ -47,9 +42,8 @@ in
         ) pouncePlugins
       );
 
-      # home-manager refuses to link over an unmanaged path, so a leftover
-      # dangling symlink from the old hand-made set fails the rebuild. Runs
-      # before checkLinkTargets, and only ever removes BROKEN links.
+      # home-manager refuses to link over an unmanaged path, so one dangling
+      # symlink left by the old hand-made set fails the whole rebuild.
       home.activation.pounceCommandsReapDangling = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
         run sh -c '
           dir="$0"
@@ -67,9 +61,8 @@ in
         core.attributesfile = "${config.home.homeDirectory}/.gitattributes_global";
       };
 
-      # My half of gh-dash: checkout paths, keys and a laptop's column widths.
-      # haus's lists are mkDefault, so overriding one means restating it whole —
-      # gh-dash reads a section list as a unit.
+      # haus's lists are mkDefault and gh-dash reads a section list as a unit,
+      # so overriding one means restating it whole.
       programs.gh-dash.settings = {
         defaults = {
           view = "prs";
@@ -79,8 +72,6 @@ in
           refetchIntervalMinutes = 5;
           prApproveComment = "LGTM";
 
-          # Off by default: on a laptop the preview eats half the width. `p`
-          # toggles it when the CI detail is what you're after.
           preview = {
             open = false;
             width = 0.45;
@@ -88,8 +79,6 @@ in
             position = "auto";
           };
 
-          # Hide what's constant in a solo org (author, base) or that I never
-          # act on, and let `title` take the slack.
           layout.prs = {
             updatedAt.width = 6;
             createdAt.hidden = true;
@@ -111,12 +100,10 @@ in
           };
         };
 
-        # Commands BLOCK the TUI until they exit, so only things worth taking
-        # over the pane — never `bench try`. Custom keys silently SHADOW
-        # built-ins, so check keys.go / prKeys.go before adding one.
+        # A command BLOCKS the TUI until it exits, and a custom key silently
+        # SHADOWS a built-in — check keys.go / prKeys.go before adding one.
         keybindings.prs = [
           {
-            # scruff names the worktree after the branch minus `worktree-`.
             key = "H";
             name = "scruff session";
             command = ''scruff "$(printf '%s' {{.HeadRefName}} | sed 's/^worktree-//')"'';
@@ -128,9 +115,8 @@ in
           }
         ];
 
-        # Where my checkouts sit — the half haus can't know. Exact keys beat the
-        # wildcard. ghOrg, not a literal, so these globs and haus's section
-        # filters can't name different owners.
+        # ghOrg, not a literal, so these globs and haus's section filters can't
+        # name different owners.
         repoPaths = {
           "${ghOrg}/*" = "${config.home.homeDirectory}/code/workshop/*";
           "${ghOrg}/workshop" = "${config.home.homeDirectory}/code/workshop";
@@ -141,7 +127,6 @@ in
         pager.diff = "delta";
         confirmQuit = false;
         showAuthorIcons = false;
-        # Open on the dashboard, not a filter prompt.
         smartFilteringAtLaunch = false;
 
         theme.ui = {
@@ -153,12 +138,9 @@ in
         };
       };
 
-      # An alias rather than a PATH entry: the script is a thin wrapper living
-      # in this repo, so it should follow the checkout, not get copied to the store.
       programs.zsh.shellAliases.things = "$HOME/.config/nix/claude/skills/things/things";
 
-      # Dev loop for hacking on pounce: rebuild against the LOCAL checkout
-      # (uncommitted edits) instead of the pinned input.
+      # Rebuilds against the LOCAL pounce checkout, uncommitted edits included.
       programs.zsh.shellAliases.rebuild-pounce = ''
         (cd "$HOME/.config/nix" \
           && nix build .#darwinConfigurations.mbp.system \
