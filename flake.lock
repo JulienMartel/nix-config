@@ -56,11 +56,11 @@
         "trill": "trill"
       },
       "locked": {
-        "lastModified": 1788483947,
-        "narHash": "sha256-OJAoYmIwPnZxqfYwj0K6hyol/Nb+ln/LnRC/CXpW5AU=",
+        "lastModified": 1788490319,
+        "narHash": "sha256-1r4kKl0Xi9DBxl4InL4/+SqdhTYamGi1zMUhsGVCrcg=",
         "owner": "hausfold",
         "repo": "haus",
-        "rev": "4722f7f78c377c8a6ba7a3b500eb226ed67296b3",
+        "rev": "1167776cc1dadabc1c795851efbca4b3160bc25a",
         "type": "github"
       },
       "original": {
@@ -218,14 +218,15 @@
         "nixpkgs": [
           "haus",
           "nixpkgs"
-        ]
+        ],
+        "prebuilt": "prebuilt_2"
       },
       "locked": {
-        "lastModified": 1788478808,
-        "narHash": "sha256-7REgShCpiABezZzfs0IcMWNyBNiItDEZvb9ekqxvp0Q=",
+        "lastModified": 1788490075,
+        "narHash": "sha256-irtGhZd5/vdW1L8s20TOqV/uGrxDRvCl51Y4S8bhWoc=",
         "owner": "hausfold",
         "repo": "pounce",
-        "rev": "3d0200db7a54f44b7c425d953e806ee078ead447",
+        "rev": "4918818995f8353df2b6644d6ea0686851319905",
         "type": "github"
       },
       "original": {
@@ -250,6 +251,21 @@
       ]
     },
     "prebuilt_2": {
+      "flake": false,
+      "locked": {
+        "path": "./nix/dev-app",
+        "type": "path"
+      },
+      "original": {
+        "path": "./nix/dev-app",
+        "type": "path"
+      },
+      "parent": [
+        "haus",
+        "pounce"
+      ]
+    },
+    "prebuilt_3": {
       "flake": false,
       "locked": {
         "path": "./nix/dev-app",
@@ -339,7 +355,7 @@
           "haus",
           "nixpkgs"
         ],
-        "prebuilt": "prebuilt_2"
+        "prebuilt": "prebuilt_3"
       },
       "locked": {
         "lastModified": 1788422351,
