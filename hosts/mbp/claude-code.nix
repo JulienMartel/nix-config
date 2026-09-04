@@ -1,37 +1,18 @@
-# Claude Code: the patched build, and the half of its settings.json nix owns.
 { username, ... }:
 
 {
-  # An overlay, not a home.packages entry: haus.ai.clients already installs
-  # pkgs.claude-code, and two builds shipping bin/claude would collide. haus
-  # pins the VERSION ahead of nixpkgs in an overlay that runs before this one,
-  # so these patches ride on whatever build that is — and fail the build rather
-  # than silently no-op when a release reshapes the bundle.
-  #
-  #  1. declutter-claude-footer.py     drop the permission-mode footer row and
-  #                                    the right-hand chip strip
-  #  2. statusline-permission-mode.py  emit `permission_mode` in the statusline
-  #                                    payload, so the chip tracks shift+tab live
-  #  3. claude-bytecode-liveness.py    1 and 2 edit JS bun embeds, but bun runs
-  #                                    a JSC bytecode cache compiled from that
-  #                                    JS — this drops the cache for exactly
-  #                                    those modules and then proves, out of the
-  #                                    finished binary, that every edit is live
-  #  4. caffeinate shadowed with a no-op on claude's PATH only, so the agent
-  #     can't block sleep
   nixpkgs.overlays = [
     (final: prev: {
       claude-code =
         let
-          # `prev`, never `final` — overriding a package in terms of itself is
-          # infinite recursion, not a patch.
+          # `prev`, never `final`: `final` here is infinite recursion.
           patchedCC = prev.claude-code.overrideAttrs (old: {
             nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
               prev.python3
-              prev.darwin.autoSignDarwinBinariesHook # re-sign the patched Mach-O in fixup
+              prev.darwin.autoSignDarwinBinariesHook
             ];
-            # The manifest carries each edit's offset and bytes from the two
-            # patch scripts to the liveness check, which must run last.
+            # The liveness pass runs last: it reads the offsets the other two
+            # recorded, and drops the bytecode cache that would shadow them.
             postInstall = (old.postInstall or "") + ''
               edits="$NIX_BUILD_TOP/claude-tui-edits.jsonl"
               python3 ${./declutter-claude-footer.py} "$out/bin/.claude-wrapped" "$edits"
@@ -50,40 +31,11 @@
               --inherit-argv0 \
               --prefix PATH : "${prev.writeShellScriptBin "caffeinate" "exit 0"}/bin"
           '';
-          # symlinkJoin invents its own empty meta, which would drop the
-          # platform list and license haus's ai.clients assertions read — and
-          # `version`, which its claude-code floor reads and stands down without.
           inherit (prev.claude-code) meta version;
         };
     })
   ];
 
-  # ---- what the auto-mode classifier is told this machine is ----
-  # `permissions.defaultMode` is `auto` (haus sets it), so a classifier judges
-  # every tool call before it runs — against a picture of the machine it is
-  # running on. Claude Code's own picture trusts the working repo and its
-  # remotes and treats the rest as a stranger's, which is the wrong shape for
-  # a desk that keeps a dozen solo-owned repos, several lanes at once and a
-  # throwaway VM per lane: the ordinary flow here reads as escalation. Two
-  # weeks of transcripts held 54 recorded denials for it — commits in sibling
-  # repos, ssh into a lane's own guest, `tart delete`, `gh pr merge` on a repo
-  # with one reviewer, `git reset --hard origin/main` inside a lane. Approvals
-  # leave no trace, so that is a floor.
-  #
-  # The prose below replaces that picture. `environment` is what this machine
-  # and its repos ARE; `allow` is what is ordinary here, as exceptions to the
-  # classifier's own refusals. Claude Code's built-in entries stay in front of
-  # both (`haus.ai.autoMode.keepDefaults`, on by default), so nothing here
-  # subtracts a refusal — `softDeny` and `hardDeny` are left unset for exactly
-  # that reason. What must STAY judged is carved out inside the rules rather
-  # than left to the default: printing a secret value, `security
-  # dump-keychain`, copying a credential to a file, a force-push to `main`,
-  # `--admin`, merging over a red check, and any change that widens the
-  # agent's own permissions.
-  #
-  # haus merges this into ~/.claude/settings.json on every rebuild beside the
-  # hooks, so `claude auto-mode reset` and a hand edit both last until the
-  # next one. `claude auto-mode config` prints the effective result.
   haus.ai.autoMode.environment = [
     "### Org-wide"
     "**Organization**: hausfold, a one-person org. github.com/hausfold/* (haus, pounce, nebelung, scruff, trill, perch, snug, factory, holt, ops, meridian, workshop, hausfold.co, homebrew-tap) and github.com/julienmartel/* are all owned solo by the user, who is the only committer and the only reviewer. Every checkout under ~/code/workshop, ~/code and ~/.config/nix is theirs."
@@ -130,10 +82,8 @@
       ...
     }:
     {
-      # Merged, not owned: Claude rewrites this file itself, so everything it or
-      # `/config` put there has to survive. The allowlist is UNIONed for the same
-      # reason — a grant earned at a prompt is never dropped. Toggling any of
-      # these through `/config` lasts only until the next rebuild.
+      # Merged, never written whole, and the allowlist UNIONed: Claude rewrites
+      # this file itself, so a plain write drops what it and `/config` put there.
       home.activation.claudeCodePersonal =
         let
           settings = "${config.home.homeDirectory}/.claude/settings.json";
@@ -150,21 +100,14 @@
           ];
           patch = {
             hooks = {
-              # ⌘A's worktrees land under ~/.cache/claude-worktrees, get parked
-              # on pane close, and stay resumable. Note the `hook` subcommand.
               WorktreeCreate = cmd "/run/current-system/sw/bin/scruff hook create";
               WorktreeRemove = cmd "/run/current-system/sw/bin/scruff hook remove";
-              # Feeds the bar's `agents` paw. Host-side: it names a plugin path.
               UserPromptSubmit = cmd "${agentsHook} working";
               Notification = cmd "${agentsHook} waiting";
               Stop = cmd "${agentsHook} idle";
               SessionEnd = cmd "${agentsHook} remove";
             };
-            # New sessions start with tool output collapsed; ⌃O still expands.
             verbose = false;
-            # No reads from or writes to ~/.claude/projects/*/memory — the repo
-            # is the source of truth. Account-level memory in the Claude apps is
-            # a separate, untouched setting.
             autoMemoryEnabled = false;
           };
           allow = [
