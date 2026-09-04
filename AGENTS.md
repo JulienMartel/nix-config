@@ -8,9 +8,22 @@ This repo is **thin**: it consumes the public
 The actual system/shell config lives in the public modules, not here.
 
 - `flake.nix` — 18 lines: calls `haus.mkHaus { username; hostname; host; }`.
-- `hosts/mbp/default.nix` — the personal layer: identity, private apps, secrets,
-  and `haus.ai.instructions` (the global agent instructions every client on this
-  machine reads).
+- `hosts/mbp/` — the personal layer, one file per subject. `default.nix` holds
+  identity and the machine's own facts and imports the rest:
+
+  | File | Owns |
+  |---|---|
+  | `default.nix` | identity, display, power, trackpad, launcher, zen, snippets |
+  | `apps.nix` | the roster, workspaces, Homebrew policy |
+  | `bar.nix` | both bars |
+  | `agents.nix` | `haus.ai.*`, my skills, the pi statusline |
+  | `instructions.md` | `haus.ai.instructions` — the global agent instructions every client on this machine reads |
+  | `claude-code.nix` | the patched Claude Code overlay and its `settings.json` merge |
+  | `notifications.nix` | trill rules, mail, the GitHub webhook bridge |
+  | `shell.nix` | pounce plugins, private git config, gh-dash, zsh |
+
+  Anything haus already defaults to is deliberately absent — `haus skill` is the
+  option reference, pinned to this machine's build.
 
 **This file is the one set of instructions, for every agent** — Claude Code,
 Codex, OpenCode, Cursor, Copilot alike, directly or through a one-line pointer.
@@ -90,7 +103,7 @@ Things installed on `mbp` by hand, so nothing here declares them:
 Don't propose folding it into `hosts/mbp/default.nix` unless asked.
 
 meridian used to be on that list and no longer is: it's a haus room
-(`haus.ai.meridian.enable`, set in `hosts/mbp/default.nix`), and its activation
+(`haus.ai.meridian.enable`, set in `hosts/mbp/agents.nix`), and its activation
 boots out the old hand-installed `co.hausfold.meridian` agent. `pi` is a haus
 client (`haus.ai.clients`), not a hand-install either.
 
@@ -98,10 +111,10 @@ client (`haus.ai.clients`), not a hand-install either.
 
 | You're changing… | Do this |
 |---|---|
-| A personal app (cask/brew), for this machine only | `hosts/mbp/default.nix` → `homebrew.casks`/`brews` |
-| Your identity (git name/email/signing, pounce cert) | `hosts/mbp/default.nix` → `haus.git.*` / `haus.launcher.signingIdentity` |
-| A personal package / secret / private alias | `hosts/mbp/default.nix` → `home-manager.users.${username}` |
-| The global agent instructions every client reads | `hosts/mbp/default.nix` → `haus.ai.instructions` |
+| A personal app (cask/brew), for this machine only | `hosts/mbp/apps.nix` → `haus.roster` |
+| Your identity (git name/email/signing) | `hosts/mbp/default.nix` → `haus.git.*` |
+| A personal package / secret / private alias | `hosts/mbp/shell.nix` → `home-manager.users.${username}` |
+| The global agent instructions every client reads | `hosts/mbp/instructions.md` |
 | **The layer** (system defaults, WM, bar, shell, theming) | edit the module in `~/code/workshop/haus`, test with `bench try`, commit, then `bench ship` |
 | **Pounce** (the app or its commands) | edit `~/code/workshop/pounce`, test with `bench try` (or `rebuild-pounce`), commit, then `bench ship` |
 
