@@ -2,7 +2,11 @@
 
 One Mac's personal layer (host `mbp`, user `julienmartel`) on the public
 [haus](https://github.com/hausfold/haus) desktop: `flake.nix`
-(`haus.mkHaus { username; hostname; host; }`) and `hosts/mbp/default.nix`.
+(`haus.mkHaus { username; hostname; host; }`) and `hosts/mbp/`, one file per
+subject — `default.nix` (identity and this machine's own facts, and it imports
+the rest), `apps.nix`, `bar.nix`, `agents.nix`, `claude-code.nix`,
+`notifications.nix`, `shell.nix`, `instructions.md`. Anything haus already
+defaults to is deliberately absent.
 Per-client wiring: [`.agents/README.md`](./.agents/README.md).
 
 ## Where does a change go?
@@ -12,11 +16,11 @@ Per-client wiring: [`.agents/README.md`](./.agents/README.md).
 
 | You're changing… | Where |
 |---|---|
-| A personal app (cask or package), this machine only | `hosts/mbp/default.nix` → `haus.roster` |
+| A personal app (cask or package), this machine only | `hosts/mbp/apps.nix` → `haus.roster` |
 | Your identity (git name / email / signing key / org) | `hosts/mbp/default.nix` → `haus.git.*` |
-| A personal package or private alias | `hosts/mbp/default.nix` → `home-manager.users.${username}` |
-| The global agent instructions every client reads | `hosts/mbp/default.nix` → `haus.ai.instructions` |
-| A personal skill: `/brief` `/ship` `/park` `/things` `/later` `/unslop` `/wizard` `/grill` `/conflicts` `/deepen` `/blast-radius` `/show-me` | `claude/skills/<name>/SKILL.md`, out-of-store symlinks to `~/.claude/skills/<name>` and `~/.agents/skills/<name>` (`hosts/mbp/default.nix`), so an edit is live without a rebuild |
+| A personal package or private alias | `hosts/mbp/shell.nix` → `home-manager.users.${username}` |
+| The global agent instructions every client reads | `hosts/mbp/instructions.md` |
+| A personal skill: `/brief` `/ship` `/park` `/things` `/later` `/unslop` `/wizard` `/grill` `/conflicts` `/deepen` `/blast-radius` `/show-me` | `claude/skills/<name>/SKILL.md`, out-of-store symlinks to `~/.claude/skills/<name>` and `~/.agents/skills/<name>` (one name in `hosts/mbp/agents.nix`'s `skills` list), so an edit is live without a rebuild |
 | The desktop: macOS defaults, tiling (`windows`), the bar (`bar`), the shell (`terminal`), Touch ID + firewall (`security`) | `~/code/workshop/haus` |
 | The pounce palette app or its commands | `~/code/workshop/pounce` |
 | Colors — the one palette `haus` themes every tool from | `~/code/workshop/nebelung` |
@@ -24,7 +28,7 @@ Per-client wiring: [`.agents/README.md`](./.agents/README.md).
 Upstream: edit, `bench try` (`bench try switch` to judge colors), commit,
 `bench ship`; `haus update` alone sees a pounce or nebelung change only once
 haus's own lock carries it.
-`rebuild-pounce` (alias, `hosts/mbp/default.nix`) rebuilds against the local
+`rebuild-pounce` (alias, `hosts/mbp/shell.nix`) rebuilds against the local
 pounce checkout via `--override-input`, uncommitted edits included.
 
 ## Rebuild (after any change)
