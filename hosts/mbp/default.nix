@@ -81,9 +81,6 @@ in
   haus.git.name = "Julien Martel";
   haus.git.email = "julienbmartel@gmail.com";
   haus.git.signingKey = "6F7BD6F43A7C1420";
-  # By SHA, not name, so the generated launch-agent script doesn't carry my
-  # legal name. Refresh with `security find-identity -v -p codesigning`.
-  haus.launcher.signingIdentity = "4D2693E75A214534ACE299861AE7FC3086573136";
 
   # The Fn/Globe key opens pounce's emoji grid (haus wires that by default). Take
   # the key away from macOS at the HID layer instead of sharing it with an event
