@@ -169,7 +169,12 @@ fire() {  # fire "add" "title=Foo" "when=today" ...
   sleep 0.6               # the URL handler is async; give Things a beat to land it
 }
 
-# Resolve an id, or a unique open to-do whose title matches, to a uuid.
+# `update` is the to-do verb; a project takes `update-project`, and Things
+# silently ignores the wrong one. resolve() matches both kinds, so every
+# mutating command asks which verb the row wants instead of assuming a to-do.
+update_verb() { [ "$(q "select type from TMTask where uuid=$(sql_quote "$1");")" = 1 ] && printf 'update-project' || printf 'update'; }
+
+# Resolve an id, or a unique open to-do or project whose title matches, to a uuid.
 resolve() {
   local s="$1"
   case "$s" in
@@ -244,12 +249,12 @@ cmd_update() {
     esac
   done
   [ ${#args[@]} -gt 0 ] || die "nothing to update"
-  fire update "auth-token=$(token)" "id=$id" "${args[@]}"
+  fire "$(update_verb "$id")" "auth-token=$(token)" "id=$id" "${args[@]}"
   printf 'updated: %s\n' "$(q "select title from TMTask where uuid='$id';")"
 }
 
-cmd_complete() { [ $# -ge 1 ] || die "usage: things complete <id|title>"; local id t; id=$(resolve "$*"); t=$(q "select title from TMTask where uuid='$id';"); fire update "auth-token=$(token)" "id=$id" "completed=true"; printf '✓ %s\n' "$t"; }
-cmd_cancel()   { [ $# -ge 1 ] || die "usage: things cancel <id|title>";   local id t; id=$(resolve "$*"); t=$(q "select title from TMTask where uuid='$id';"); fire update "auth-token=$(token)" "id=$id" "canceled=true";  printf '✗ %s\n' "$t"; }
+cmd_complete() { [ $# -ge 1 ] || die "usage: things complete <id|title>"; local id t; id=$(resolve "$*"); t=$(q "select title from TMTask where uuid='$id';"); fire "$(update_verb "$id")" "auth-token=$(token)" "id=$id" "completed=true"; printf '✓ %s\n' "$t"; }
+cmd_cancel()   { [ $# -ge 1 ] || die "usage: things cancel <id|title>";   local id t; id=$(resolve "$*"); t=$(q "select title from TMTask where uuid='$id';"); fire "$(update_verb "$id")" "auth-token=$(token)" "id=$id" "canceled=true";  printf '✗ %s\n' "$t"; }
 
 cmd_json() {  # bulk create/update — pass a JSON array, or a file, or - for stdin
   local data
