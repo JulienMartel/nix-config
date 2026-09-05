@@ -699,11 +699,12 @@ in
     OUT-of-store into both `~/.claude/skills/brief` and `~/.agents/skills/brief`
     (Codex and OpenCode read the second), so editing it is live in the next
     pane with no rebuild. Same for `ship`, `park` and `things` (my Things 3
-    to-dos — read its SKILL.md before touching my list), `unslop`, `wizard`,
-    `grill`, `conflicts`, `deepen` and `blast-radius`. If your client does
-    not load skills, read the SKILL.md by path; it is plain markdown.
+    to-dos — read its SKILL.md before touching my list), `later`, `unslop`,
+    `wizard`, `grill`, `conflicts`, `deepen` and `blast-radius`. If your
+    client does not load skills, read the SKILL.md by path; it is plain
+    markdown.
 
-    Two of those carry a standing rule rather than waiting to be invoked:
+    Three of those carry a standing rule rather than waiting to be invoked:
 
     - **`unslop` — any reader-facing copy you write, you unslop before you hand
       it to me.** Docs, landing pages, READMEs, release notes, App Store text,
@@ -716,6 +717,15 @@ in
       cannot click, an ordered gate. You write it, I run it: my secrets stay out
       of your context and nothing takes the screen. One or two steps stay in
       `brief`'s **Need from you** block.
+    - **`later` — what leaves this session unfinished leaves in Things, not in
+      your last message.** When I say later / not now / remind me / add that to
+      my list, when a session ends with a loose end, when the plan is bigger
+      than one session, when a grill leaves a fork I never answered. Shaped so
+      a cold session can start it (`/later next` is the pickup): a to-do under
+      the owning project's `later` heading, or a project of demoable slices in
+      the `code` area when it is a whole plan. Up to three unasked, never on
+      Today, never a spec document. `things` is the plumbing; `later` says what
+      to file and how.
 
     `grill` is invoked, not standing: before a change big enough that guessing
     wrong costs a rebuild, read the code and the real docs first, then ask me
@@ -1109,7 +1119,7 @@ in
         };
       };
 
-      # My ten personal skills. The instructions above are what make `brief`
+      # My eleven personal skills. The instructions above are what make `brief`
       # load every session; these just put the bodies on disk. mkOutOfStoreSymlink
       # so editing a SKILL.md is live in the next pane with no rebuild, and the
       # targets are in THIS repo, which always lives at ~/.config/nix.
@@ -1144,6 +1154,17 @@ in
       # out-of-store symlink like the rest — edit either, live next pane.
       home.file.".claude/skills/things".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/things";
+
+      # later — what leaves a session unfinished goes into Things, shaped so a
+      # cold session can pick it up (`/later next` is the pickup). My version of
+      # aihero.dev's to-tickets / to-spec / wayfinder, collapsed to one question
+      # (how settled is it?) and one tracker (Things, not GitHub): a loose end
+      # is a to-do, a plan is a project of demoable slices, a map is that
+      # project with the open forks as its first to-dos. The spec never becomes
+      # a document — decisions land where `grill` puts them and the to-do points
+      # there, per the memory rule. Standing, like unslop and wizard.
+      home.file.".claude/skills/later".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/later";
 
       # unslop — de-slop reader-facing copy, then put a voice back. Carries a
       # `unslop-scan` helper (python3, no deps) beside SKILL.md, which is why
@@ -1188,7 +1209,7 @@ in
       home.file.".claude/skills/blast-radius".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/blast-radius";
 
-      # The same ten, linked again under ~/.agents/skills — the dir BOTH Codex
+      # The same eleven, linked again under ~/.agents/skills — the dir BOTH Codex
       # and OpenCode scan (verified with `codex debug prompt-input` /
       # `opencode debug skill`). Otherwise "load the `brief` skill" is an order
       # only Claude Code can obey. Both dirs is safe: clients dedupe by
@@ -1201,6 +1222,8 @@ in
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/park";
       home.file.".agents/skills/things".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/things";
+      home.file.".agents/skills/later".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/later";
       home.file.".agents/skills/unslop".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/unslop";
       home.file.".agents/skills/wizard".source =

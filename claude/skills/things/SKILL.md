@@ -80,8 +80,10 @@ things json '<array>' | <file> | -    # bulk / nested projects, per the URL-sche
 `someday`, `2026-09-01`, `2026-09-01@14:00`, or natural language like `next tuesday`.
 `--deadline` is `yyyy-mm-dd`.
 
-`<id|title>` resolves a substring against open items and **refuses when it's
-ambiguous**, printing the candidates. When that happens, show me the candidates and
+`<id|title>` resolves a substring against open to-dos **and projects** and **refuses
+when it's ambiguous**, printing the candidates. `update`, `complete` and `cancel`
+work on a project too — the script sends `update-project` for one, since Things
+ignores a plain `update` aimed at a project. When that happens, show me the candidates and
 ask — don't pick one.
 
 `DRY_RUN=1` prints the URL instead of firing it. Use it whenever you're unsure what a
@@ -96,7 +98,9 @@ The auth token that `update`/`json` need is read out of the database automatical
    have a to-do for that, dated 2026-08-09"). Reading never touches the screen.
 2. **Writing is not free.** Adding, completing, and rescheduling change a list I
    actually work from. Add what I ask for; don't invent to-dos, don't tidy, don't
-   bulk-reschedule. Filing follow-ups you discovered needs me to have asked.
+   bulk-reschedule. Filing follow-ups you discovered is the `later` skill's job —
+   it says how many, where, and what the notes must carry; outside it, filing
+   needs me to have asked.
 3. **Completing is a 3/5 action** — I may have wanted it open. One item I named is
    fine, unprompted; more than one, or anything I only implied, gets confirmed first.
 4. **Never delete.** The URL scheme has no delete, and that's a feature. `cancel`
