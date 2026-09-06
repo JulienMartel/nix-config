@@ -700,9 +700,9 @@ in
     (Codex and OpenCode read the second), so editing it is live in the next
     pane with no rebuild. Same for `ship`, `park` and `things` (my Things 3
     to-dos — read its SKILL.md before touching my list), `later`, `unslop`,
-    `wizard`, `grill`, `conflicts`, `deepen` and `blast-radius`. If your
-    client does not load skills, read the SKILL.md by path; it is plain
-    markdown.
+    `wizard`, `grill`, `conflicts`, `deepen`, `blast-radius` and `show-me`.
+    If your client does not load skills, read the SKILL.md by path; it is
+    plain markdown.
 
     Three of those carry a standing rule rather than waiting to be invoked:
 
@@ -737,6 +737,11 @@ in
     don't trust, find the one fact the change is safe because of and prove it
     by running real code — a safety fact you can't prove is reported as
     unproven, never written up as settled.
+
+    `show-me` is `brief`'s explain half: when an answer has a shape — a flow, a
+    tree, a change, a fork — sketch it in text with real paths on every node
+    instead of writing paragraphs, and reach for an HTML page only when text
+    can't carry the point, handed to me and never `open`ed on my screen.
 
     `/handoff` ships with scruff, not this repo (`ai/handoff/SKILL.md` in
     hausfold/scruff). It writes a brief a cold session can act on: `/handoff`
@@ -1119,7 +1124,7 @@ in
         };
       };
 
-      # My eleven personal skills. The instructions above are what make `brief`
+      # My twelve personal skills. The instructions above are what make `brief`
       # load every session; these just put the bodies on disk. mkOutOfStoreSymlink
       # so editing a SKILL.md is live in the next pane with no rebuild, and the
       # targets are in THIS repo, which always lives at ~/.config/nix.
@@ -1209,7 +1214,19 @@ in
       home.file.".claude/skills/blast-radius".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/blast-radius";
 
-      # The same eleven, linked again under ~/.agents/skills — the dir BOTH Codex
+      # show-me — explain with the smallest picture that carries it: pseudocode,
+      # a call tree, a file tree, a text sequence, a diff of the target shape.
+      # The explain half of `brief` (its relaxed mode points here). humanlayer's
+      # show-me plus three house rules: text first, because a pane renders a
+      # Mermaid fence as source, not a picture; every node carries its path,
+      # brief's anchor rule; and the HTML page (deepen's visual standard) is
+      # sent to me, never `open`ed — the upstream opens a browser, which takes
+      # the screen. Own copy rather than the plugin so Codex and OpenCode get
+      # it through ~/.agents/skills like the rest.
+      home.file.".claude/skills/show-me".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/show-me";
+
+      # The same twelve, linked again under ~/.agents/skills — the dir BOTH Codex
       # and OpenCode scan (verified with `codex debug prompt-input` /
       # `opencode debug skill`). Otherwise "load the `brief` skill" is an order
       # only Claude Code can obey. Both dirs is safe: clients dedupe by
@@ -1236,6 +1253,8 @@ in
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/deepen";
       home.file.".agents/skills/blast-radius".source =
         config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/blast-radius";
+      home.file.".agents/skills/show-me".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/claude/skills/show-me";
 
       # ---- the pi statusline footer ----
       # The agent-worktree HUD in a pi pane: haus's Claude Code statusline
