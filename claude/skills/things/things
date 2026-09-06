@@ -268,7 +268,7 @@ cmd_json() {  # bulk create/update — pass a JSON array, or a file, or - for st
   printf 'sent %s item(s)\n' "$(printf '%s' "$data" | jq 'length')"
 }
 
-cmd_sql() { [ $# -ge 1 ] || die "usage: things sql '<select …>'"; case "$*" in [Ss][Ee][Ll][Ee][Cc][Tt]*|[Ww][Ii][Tt][Hh]*) ;; *) die "read-only: only SELECT/WITH" ;; esac; sqlite3 -readonly -header -column "$DB" "$*"; }
+cmd_sql() { [ $# -ge 1 ] || die "usage: things sql '<select …>'"; case "$*" in [Ss][Ee][Ll][Ee][Cc][Tt]*|[Ww][Ii][Tt][Hh]*) ;; *) die "read-only: only SELECT/WITH" ;; esac; if [ "${AS_JSON:-0}" = 1 ]; then sqlite3 -readonly -json "$DB" "$*"; else sqlite3 -readonly -header -column "$DB" "$*"; fi; }
 
 cmd_help() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; cat <<'USAGE'
 
