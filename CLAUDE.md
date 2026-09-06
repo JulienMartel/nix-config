@@ -2,25 +2,21 @@
 
 @AGENTS.md
 
-<!--
-Everything above this line is imported from AGENTS.md — the one set of project
-instructions, shared by every harness. Put project rules THERE, not here, or
-Codex/OpenCode/Copilot silently run without them.
+**Project rules go in `AGENTS.md`, never here** — Codex, OpenCode and the rest
+never read this file, and would silently run without them. Claude-only wiring:
 
-Only Claude-specific wiring belongs below.
--->
+`.claude/skills/rebuild/SKILL.md` is a symlink into `.agents/skills/` — edit the
+target. `.claude/settings.json` is a real file, holding one `SessionStart` hook
+that runs `.agents/setup.sh`. The map is
+[`.agents/README.md`](./.agents/README.md).
 
-## Claude-specific wiring (nothing project-level here)
-
-| Thing | Where | Notes |
-|---|---|---|
-| Project instructions | `AGENTS.md`, imported above | Claude Code reads only `CLAUDE.md`, so this file exists purely to import it. The *global* instructions (`~/.claude/CLAUDE.md`) are generated from `haus.ai.instructions` in `hosts/mbp/default.nix` — a different file, edited there. |
-| `/rebuild` | `.claude/skills/rebuild/SKILL.md` | Symlink into `.agents/skills/rebuild/` — the shared body every client uses. Edit the target, never the link. |
-| Session bootstrap | `.claude/settings.json` → `SessionStart` → `.agents/setup.sh` | Same script Codex and OpenCode call. Installs Nix in cloud containers, no-ops locally. |
-| Auto-mode classifier config | `claude/auto-mode.json` → `~/.claude/settings.json` `.autoMode`, re-asserted by `hosts/mbp/default.nix` on rebuild | The `environment` and `allow` rules the `auto` permission mode's classifier judges against. Claude-only: no other client has the classifier. The other half of the prompt story is haus's `agent-desktop-guard` hook, which owns the screen. |
-| Permission allowlist | `.claude/settings.local.json` | Genuinely Claude-only and machine-local: it lists pre-approved tool calls, not project rules. Untracked equivalents in other clients stay theirs. |
-| Worktree hooks | `~/.claude/settings.json` (yours, not the repo's) → `scruff hook create` / `scruff hook remove` | Claude owns and rewrites that file, so haus merges these two keys in at activation. Self-healing; not hand-edited here. |
-| My global skills — everything under `claude/skills/` (`/brief`, `/ship`, `/park`, `/things`, `/later`, `/unslop`, `/wizard`, `/grill`, `/conflicts`, `/deepen`, `/blast-radius`, `/show-me`) | `claude/skills/<name>/SKILL.md`, wired in `hosts/mbp/default.nix` | This repo's, installed to `~/.claude/skills/<name>` **and** `~/.agents/skills/<name>` (the dir Codex and OpenCode scan) as **out-of-store** symlinks, so editing `SKILL.md` is live in the next pane with no rebuild, whichever client that pane runs. Personal answer-shape and workflow, not haus features — that's why they're here and not in `haus`. |
-| The `haus` skill | `~/.claude/skills/haus/` (+ `~/.codex/skills/`, `~/.config/opencode/skills/`) | Not in this repo — installed by haus (`haus.ai.skill`), once per client, generated from the revision this machine pins. Its option reference is the authoritative list of `haus.*`. |
-
-The full cross-harness map is [`.agents/README.md`](./.agents/README.md).
+`~/.claude/CLAUDE.md` is generated from `haus.ai.instructions` in
+`hosts/mbp/default.nix`, which also merges into `~/.claude/settings.json` on
+every rebuild: `claude/auto-mode.json` as `.autoMode` (the `environment` and
+`allow` rules the `auto` permission mode's classifier judges against —
+`claude auto-mode config` prints the result), `autoMemoryEnabled = false`, and
+the permission allowlist, unioned so a grant earned at a prompt is never
+dropped. A `/config` toggle of any of them lasts until the next rebuild. The
+`WorktreeCreate` / `WorktreeRemove` → `scruff hook create` / `scruff hook
+remove` hooks are declared twice — haus's `modules/terminal` and the host file
+— and re-asserted every rebuild, so editing one alone does not win.
