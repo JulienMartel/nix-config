@@ -102,6 +102,7 @@ client (`haus.ai.clients`), not a hand-install either.
 | Your identity (git name/email/signing, pounce cert) | `hosts/mbp/default.nix` → `haus.git.*` / `haus.launcher.signingIdentity` |
 | A personal package / secret / private alias | `hosts/mbp/default.nix` → `home-manager.users.${username}` |
 | The global agent instructions every client reads | `hosts/mbp/default.nix` → `haus.ai.instructions` |
+| What Claude Code's auto-mode classifier believes about this Mac (its environment, and what counts as ordinary here) | `claude/auto-mode.json`, merged into `~/.claude/settings.json` by `hosts/mbp/default.nix` on every rebuild; `claude auto-mode config` shows the result |
 | **The layer** (system defaults, WM, bar, shell, theming) | edit the module in `~/code/workshop/haus`, test with `bench try`, commit, then `bench ship` |
 | **Pounce** (the app or its commands) | edit `~/code/workshop/pounce`, test with `bench try` (or `rebuild-pounce`), commit, then `bench ship` |
 

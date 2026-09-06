@@ -1124,6 +1124,33 @@ in
         };
       };
 
+      # The auto-mode classifier's picture of this Mac. Claude Code's `auto`
+      # permission mode (haus sets it) runs a safety classifier over every tool
+      # call and judges it against an `autoMode` block in ~/.claude/settings.json:
+      # an `environment` (what this machine and its repos are) and `allow` rules
+      # (what is ordinary here). Without one it assumes a stranger's laptop —
+      # and the block that used to be there had been generated inside a client
+      # lane for jwhatty/joshua-whatman, so every session on this Mac was told
+      # the only trusted repo was a client's website and prompted for the
+      # workshop flow: cross-repo commits, ssh into a lane's tart VM, `tart
+      # delete`, `gh pr merge`. claude/auto-mode.json is the source; this
+      # re-asserts it on every rebuild the way haus's own claudeCodeSettings
+      # re-asserts the hooks (Claude owns and rewrites the file, so a merge,
+      # never a write). Out-of-store path so an edit needs only a rebuild, no
+      # `haus update`. `claude auto-mode config` prints the effective result,
+      # `claude auto-mode critique` reviews it, `claude auto-mode reset` drops it.
+      home.activation.claudeAutoMode = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run sh -c '
+          settings="$0"; src="$1"
+          [ -s "$src" ] || exit 0
+          mkdir -p "''${settings%/*}"
+          tmp="$settings.automode"
+          if [ -s "$settings" ]; then base="$settings"; else base="$tmp.base"; printf "{}" > "$base"; fi
+          ${pkgs.jq}/bin/jq --slurpfile a "$src" ".autoMode = \$a[0]" "$base" > "$tmp" && mv "$tmp" "$settings"
+          rm -f "$tmp.base"
+        ' "$HOME/.claude/settings.json" "${config.home.homeDirectory}/.config/nix/claude/auto-mode.json"
+      '';
+
       # My twelve personal skills. The instructions above are what make `brief`
       # load every session; these just put the bodies on disk. mkOutOfStoreSymlink
       # so editing a SKILL.md is live in the next pane with no rebuild, and the
