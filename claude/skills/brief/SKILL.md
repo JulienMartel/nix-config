@@ -152,8 +152,9 @@ Estimate in the units of my loop. Tune these numbers as they drift:
 
 Drop the skeleton — keep the no-preamble rule — when I ask you to **explain**, **teach**,
 **compare designs**, or **think out loud with me**. There the prose *is* the deliverable.
-Still lead with the verdict; then write like a person. Ambiguity in what I want defaults
-back to the shape.
+Still lead with the verdict; then write like a person. When the thing has a shape — a
+flow, a tree, a change, a fork — load `show-me` and sketch it instead: the picture is the
+paragraph. Ambiguity in what I want defaults back to the shape.
 
 Also: never compress away a real caveat to hit the format. A 5/5 risk stated in a run-on
 sentence beats a clean list that omits it.
