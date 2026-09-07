@@ -12,11 +12,11 @@ that runs `.agents/setup.sh`. The map is
 
 `~/.claude/CLAUDE.md` is generated from `haus.ai.instructions` in
 `hosts/mbp/default.nix`, which also merges into `~/.claude/settings.json` on
-every rebuild: `claude/auto-mode.json` as `.autoMode` (the `environment` and
-`allow` rules the `auto` permission mode's classifier judges against —
-`claude auto-mode config` prints the result), `autoMemoryEnabled = false`, and
-the permission allowlist, unioned so a grant earned at a prompt is never
-dropped. A `/config` toggle of any of them lasts until the next rebuild. The
+every rebuild: `autoMemoryEnabled = false` and the permission allowlist,
+unioned so a grant earned at a prompt is never dropped. The `autoMode` block
+the `auto` mode's classifier judges against comes from the same file through
+`haus.ai.autoMode`, and haus writes it (`claude auto-mode config` prints the
+result). A `/config` toggle of any of them lasts until the next rebuild. The
 `WorktreeCreate` / `WorktreeRemove` → `scruff hook create` / `scruff hook
 remove` hooks are declared twice — haus's `modules/terminal` and the host file
 — and re-asserted every rebuild, so editing one alone does not win.
