@@ -10,7 +10,10 @@ rice — it pulls the whole system + shell from there and adds only what's perso
 
 ```
 flake.nix               # ~18 lines: haus.mkHaus { username; hostname; host; }
-hosts/mbp/default.nix   # the personal layer: identity, private apps, secrets
+hosts/mbp/              # the personal layer, one file per subject
+                        #   default.nix identity + this machine's own facts
+                        #   apps.nix / bar.nix / agents.nix / claude-code.nix
+                        #   notifications.nix / shell.nix / instructions.md
 ```
 
 Everything else — macOS defaults, AeroSpace, SketchyBar, the shell/terminal, the
