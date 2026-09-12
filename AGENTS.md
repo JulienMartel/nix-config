@@ -22,6 +22,7 @@ Per-client wiring: [`.agents/README.md`](./.agents/README.md).
 | The global agent instructions every client reads | `hosts/mbp/instructions.md` |
 | A personal skill: `/brief` `/ship` `/park` `/things` `/later` `/unslop` `/wizard` `/grill` `/conflicts` `/deepen` `/blast-radius` `/show-me` | `claude/skills/<name>/SKILL.md`, out-of-store symlinks to `~/.claude/skills/<name>` and `~/.agents/skills/<name>` (one name in `hosts/mbp/agents.nix`'s `skills` list), so an edit is live without a rebuild |
 | The desktop: macOS defaults, tiling (`windows`), the bar (`bar`), the shell (`terminal`), Touch ID + firewall (`security`) | `~/code/workshop/haus` |
+| Zed's own settings — LSP wiring, fonts, which theme is selected | `~/.config/zed/settings.json`, hand-owned: Zed rewrites it from its own UI, so nix never symlinks it. haus places `themes/nebelung.json` beside it and stops there. `lsp.nixd` there points at `/run/current-system/sw/bin/nixd` and feeds nixd this flake's option set, which is what makes hovering a `haus.*` option show its docs |
 | The pounce palette app or its commands | `~/code/workshop/pounce` |
 | Colors — the one palette `haus` themes every tool from | `~/code/workshop/nebelung` |
 

@@ -114,6 +114,15 @@
       package = pkgs.biome;
       scope = "system";
     };
+    # Zed's Nix extension launches nixd from an absolute path
+    # (`~/.config/zed/settings.json` → `lsp.nixd.binary.path`), so this has to
+    # land somewhere stable: system scope puts it at
+    # /run/current-system/sw/bin/nixd rather than a store path that moves every
+    # rebuild.
+    nixd = {
+      package = pkgs.nixd;
+      scope = "system";
+    };
     bench.package = pkgs.writeShellScriptBin "bench" ''exec "$HOME/code/workshop/bench" "$@"'';
   };
 
