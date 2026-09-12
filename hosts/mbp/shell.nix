@@ -127,6 +127,19 @@ in
 
       programs.zsh.shellAliases.things = "$HOME/.config/nix/claude/skills/things/things";
 
+      # pi holds no Anthropic credential of its own — it reads ANTHROPIC_API_KEY
+      # straight from the environment — so secretspec lends it the keychain value
+      # for the life of the process and nothing is ever written to
+      # ~/.pi/agent/auth.json. The `pi` scope is the point: without it the child
+      # would inherit the GitHub and mail secrets too.
+      #
+      # ~/.pi/agent/models.json must stay free of a `providers.anthropic` block.
+      # haus owns none of pi's files, and an override there beats this — one
+      # pinned pi at the meridian proxy long after that room was removed.
+      programs.zsh.shellAliases.pi = ''
+        secretspec run -f "$HOME/.config/nix/secretspec.toml" -S pi --reason "pi session" -- pi
+      '';
+
       programs.zsh.shellAliases.rebuild-pounce = ''
         (cd "$HOME/.config/nix" \
           && nix build .#darwinConfigurations.mbp.system \
