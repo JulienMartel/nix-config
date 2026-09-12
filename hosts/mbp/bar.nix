@@ -23,6 +23,7 @@
         agents = "left";
         aiUsage = "left";
         github = "left";
+        factory = "left";
 
         media = "center";
 
