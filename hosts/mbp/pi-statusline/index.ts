@@ -63,9 +63,9 @@
  *  - the permission-mode chip (pi has no shift+tab modes; the slot carries
  *    pi's thinking level instead, blank at "off" per the blank-is-baseline
  *    rule),
- *  - the rate-limit harvest into usage.tsv (pi talks to meridian's loopback
- *    proxy and never sees the OAuth usage payload; CC panes keep feeding the
- *    bar pill),
+ *  - the rate-limit harvest into usage.tsv (pi reaches Anthropic through
+ *    whatever provider models.json names and never sees the OAuth usage
+ *    payload; CC panes keep feeding the bar pill),
  *  - the pane-transcripts.tsv join (its consumers — pounce Links, ⌘F find —
  *    read Claude Code transcripts).
  *
