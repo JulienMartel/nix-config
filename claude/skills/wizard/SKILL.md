@@ -1,11 +1,11 @@
 ---
 name: wizard
 description: >-
-  Turn the human half of a setup into a resumable script I run myself — the keys you can't
-  mint, the dashboards you can't click, the ordered steps that must happen in order. Use
-  when I say /wizard, "walk me through it", "what do you need from me", "set this up",
-  "I'll do my part", or whenever finishing a task needs three or more actions only I can
-  take. You write the script. You never run it.
+  The steps only I can take — a key to mint, a dashboard to click, a store submission, a
+  recording, a second Mac, a DNS cutover — written as one resumable script I run myself,
+  never as a numbered list in chat. Use when I say /wizard, "walk me through", "what do
+  you need from me", "set this up", "I'll do my part", and unasked the moment an answer
+  would list three or more actions that are mine. You write it. You never run it.
 ---
 
 # Wizard — the steps only I can do, as a script instead of a chat message

@@ -8,7 +8,6 @@ let
     "deepen"
     "grill"
     "later"
-    "park"
     "ship"
     "show-me"
     "things"

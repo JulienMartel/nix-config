@@ -50,6 +50,7 @@ Kinds of fork worth my time, roughly in order:
 2. **Which repo** — the routing tables usually settle this. Only ask when they genuinely
    don't.
 3. **Blast radius** — does anything already relying on the old behaviour break?
+   `blast-radius` proves it by running code; don't answer this one from a grep.
 4. **Naming, once it's public.** A `haus.*` option name, a CLI verb, a published URL. These
    are 4/5 because renaming them later is a breaking change.
 5. **The trade you can see and I can't** — you've read the code, I haven't.

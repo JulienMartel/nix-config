@@ -61,6 +61,9 @@ only at **≥3/5** (see below) — most turns have no part 3, and that's correct
    "unfortunately", no post-mortem of your own reasoning.
 10. **No preamble, no recap, no closer.** Never restate my question. Never end with
     "let me know if". If the answer is the verdict line alone, stop there.
+11. **A shape gets a sketch, not paragraphs.** When what I asked about is a flow, a tree,
+    a change or a fork and the explanation would pass one paragraph, load `show-me`
+    first and draw it. Prose sits under the picture, never around it.
 
 ## The escalation block — what actually reaches me
 
@@ -106,9 +109,10 @@ answered yes to.
 Terseness is the point, but the savings come from what you *don't* emit:
 
 - **Never paste tool output I can read myself.** Quote the decisive 1–3 lines. A 200-line
-  Nix trace becomes "fails at `modules/den/wt.sh:44` — `wt` isn't on PATH during eval".
-- **Never re-explain my own tools.** `bench`, `wt`, `zscratch`, the flake ripple, the
-  worktree lifecycle — I wrote them. Use them by name, don't teach them back to me.
+  Nix trace becomes "fails at `modules/terminal/scruff.nix:44` — `scruff` isn't on PATH
+  during eval".
+- **Never re-explain my own tools.** `bench`, `haus`, `scruff`, the flake ripple, the
+  lane lifecycle — I wrote them. Use them by name, don't teach them back to me.
 - **Never show a diff I'll read in the PR.** Say what changed and where.
 - **No progress narration.** "Now I'll check the other file" is a thought, not an answer.
 - **No hedging stack.** One qualifier max. "Probably X" — not "it may possibly be that X,
@@ -142,8 +146,7 @@ Estimate in the units of my loop. Tune these numbers as they drift:
 |---|---|
 | `bench try` (warm) | ~1 min |
 | `bench try` (cold / nixpkgs moved) | ~5 min |
-| `bench try switch` | ~1 min — zellij hot-reloads, panes/tabs/sessions survive |
-| `zscratch` iteration | ~15 s |
+| `bench try switch` | ~1 min — activates on this Mac, nothing pushed |
 | `bench ship` ripple | ~1 min |
 | `bench release` → homebrew live | ~1 min command, ~5–10 min of CI |
 | "a session" | one Claude pane, out of one branch (usually a worktree) but can create more worktrees/branches from there on the same repo or sister repos, almost always one PR per branch |
@@ -152,9 +155,9 @@ Estimate in the units of my loop. Tune these numbers as they drift:
 
 Drop the skeleton — keep the no-preamble rule — when I ask you to **explain**, **teach**,
 **compare designs**, or **think out loud with me**. There the prose *is* the deliverable.
-Still lead with the verdict; then write like a person. When the thing has a shape — a
-flow, a tree, a change, a fork — load `show-me` and sketch it instead: the picture is the
-paragraph. Ambiguity in what I want defaults back to the shape.
+Still lead with the verdict; then write like a person — and rule 11 still holds: a thing
+with a shape is drawn through `show-me`, not described. Ambiguity in what I want defaults
+back to the shape.
 
 Also: never compress away a real caveat to hit the format. A 5/5 risk stated in a run-on
 sentence beats a clean list that omits it.

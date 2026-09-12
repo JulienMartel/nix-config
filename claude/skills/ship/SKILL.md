@@ -4,16 +4,15 @@ description: >-
   Finish the current piece of work and land it: commit stragglers, open a PR, merge it,
   clean up every worktree the session spun up, then report and stop. Use when I say /ship,
   "ship it", "I'm done with this", "merge and clean up", or want to wrap up a feature branch
-  / worktree. Never opens or closes a zellij pane. This is the GENERIC fallback —
-  if the current repo defines its own ship skill (deploy steps, ripple, etc.), that one is
-  scoped to the repo and wins; use it instead of this.
+  / worktree. Never opens or closes a pane. This is the GENERIC fallback — a repo's own
+  ship skill (deploy steps, ripple, etc.) is scoped to that repo and wins over this one.
 ---
 
 # Ship (generic): PR → merge → clean up → report
 
 End-state: the work is merged into `origin/<main>` **through a PR**, every worktree this
 session created (except the one I'm in) is reaped, and you've reported + stopped. `/ship`
-never opens or closes a zellij pane — I manage panes myself. Don't stop halfway *before*
+never opens or closes a pane — I manage panes myself. Don't stop halfway *before*
 that end-state, though.
 
 ## First: is there a repo-specific ship?

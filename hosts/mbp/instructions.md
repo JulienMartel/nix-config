@@ -6,9 +6,9 @@ Repo-specific detail lives in each project's own AGENTS.md, not here.
 ## How to answer me
 
 Load the `brief` skill at the start of every session and hold its shape all
-session, until I say "drop brief". My others are `ship`, `park`, `things`,
-`later`, `unslop`, `wizard`, `grill`, `conflicts`, `deepen`, `blast-radius`
-and `show-me`; a client that does not index skills reads
+session, until I say "drop brief". My others are `ship`, `things`, `later`,
+`unslop`, `wizard`, `grill`, `conflicts`, `deepen`, `blast-radius` and
+`show-me`; a client that does not index skills reads
 `~/.agents/skills/<name>/SKILL.md` by path.
 
 Three fire without being invoked. **`unslop`**: any reader-facing copy you

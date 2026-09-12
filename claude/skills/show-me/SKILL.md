@@ -1,13 +1,12 @@
 ---
 name: show-me
 description: >-
-  Explain what's in front of us as the smallest picture that carries it — pseudocode, a
-  call tree, a component or file tree, a text sequence, a diff of the target shape — and
-  only when text can't hold the point, one nebelung-styled HTML page handed to me, never
-  opened on my screen. The explain half of `brief`: the skeleton relaxes, the sketch
-  replaces the paragraphs. Use when I say /show-me, "show me", "sketch it", "draw it",
-  "what does this look like", "how does X flow", "what's the shape of this", "diagram
-  this", or whenever an explanation is about to run past one paragraph.
+  Explain a thing that has a shape as the smallest picture that carries it — pseudocode,
+  a call tree, a file tree, a text sequence, a diff of the target — instead of
+  paragraphs; HTML only when text can't hold it, handed over, never opened. The explain
+  half of `brief`. Use when I say /show-me, "sketch it", "draw it", "diagram this",
+  "how does X flow", "what's the shape of this", and unasked whenever an explanation
+  of a flow, a tree, a change or a fork would run past one paragraph.
 ---
 
 # Show me — the picture is the paragraph

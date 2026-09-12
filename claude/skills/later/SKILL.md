@@ -1,15 +1,13 @@
 ---
 name: later
 description: >-
-  Put what leaves this session unfinished into my Things 3 list, shaped so a cold
-  session can pick it up: a loose end as a to-do, a decided plan as a project of
-  demoable slices, an undecided one as a project whose first to-dos are the open
-  questions. Use when I say /later, "later", "not now", "another time", "park that
-  idea", "add that to my list", "remind me to", "make tickets for this", "write this
-  up as a plan", "map this out" — and unasked when a session ends with follow-ups,
-  when the plan is bigger than one session, when a grill leaves forks I never
-  answered, or when a /ship report has a "next". `/later next [project]` picks the
-  next one up. The plumbing is the `things` skill; this is what to file and how.
+  File what leaves this session unfinished into my Things 3 list, shaped so a cold
+  session can pick it up. Use when I say /later, "later", "not now", "another time",
+  "park that idea", "add that to my list", "remind me to", "make tickets for this",
+  "write this up as a plan", "map this out" — and unasked when a session ends with
+  follow-ups, a plan outgrows one session, a grill leaves forks unanswered, or a
+  /ship report has a "next". `/later next [project]` picks one up. The plumbing is
+  the `things` skill; this is what to file and how.
 ---
 
 # Later — what leaves the session goes into Things, not into your last message
