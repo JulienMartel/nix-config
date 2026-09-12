@@ -31,8 +31,6 @@ in
       "npm:@juicesharp/rpiv-ask-user-question"
     ];
 
-    meridian.enable = true;
-
     namer = "api";
 
     instructions = builtins.readFile ./instructions.md;
