@@ -23,6 +23,15 @@
 
     displays."136A50A4-8937-4C6F-B95B-9F1031C62BB3".uiScale = "slightly-larger-text";
 
+    # The laptop panel sits to the LEFT of the Studio Display, vertically
+    # centred: a relation rather than an origin, so it holds when either panel
+    # changes scale, and it is skipped (not a failed rebuild) when undocked.
+    displays.internal.arrangement = {
+      side = "left-of";
+      of = "main";
+      align = "center";
+    };
+
     power.lidAwake = {
       enable = true;
       while = "always";
