@@ -140,7 +140,7 @@ didn't write into my PR's commit list. Rebase.
 
 ## 7. Report
 
-In the `/brief` shape:
+In the `brief` shape:
 
 - **The verdict** — what conflicted and why, in one sentence.
 - **Per real hunk**: the two intents, quoted from their commits or PRs, and which won.

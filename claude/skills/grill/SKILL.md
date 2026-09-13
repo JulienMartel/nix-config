@@ -36,7 +36,7 @@ nothing here I can't call — building it" is a valid and good outcome of `/gril
 
 ## 2. Find the real forks
 
-Score every open question on the `/brief` ladder. Ask only **≥3/5**.
+Score every open question on the `brief` ladder. Ask only **≥3/5**.
 
 | | |
 |---|---|
@@ -105,7 +105,7 @@ copy and can rot"*, not *"It was decided that…"*.
 
 ## 5. Land it
 
-Close with the `/brief` shape: the verdict, the plan as ≤5 anchored steps, and where each
+Close with the `brief` shape: the verdict, the plan as ≤5 anchored steps, and where each
 decision got written. Then **start building** — a grill that ends in a document and no
 code is a meeting.
 

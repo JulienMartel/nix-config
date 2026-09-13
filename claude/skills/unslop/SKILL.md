@@ -101,7 +101,7 @@ The over-correction that loses more than it fixes:
 ## 5. Self-audit, then report
 
 Ask once: *"reading this cold, what would make me guess a machine wrote it?"* Fix what
-that surfaces. Then report in the `/brief` shape: the verdict, what you changed by
+that surfaces. Then report in the `brief` shape: the verdict, what you changed by
 category (not a diff), and anything you deliberately left because it was already right.
 
 ## House constants — get these wrong and the copy is wrong

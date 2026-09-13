@@ -22,7 +22,7 @@ never enter your context, the screen is never taken from me, and I can stop half
 
 | | |
 |---|---|
-| **1–2 human steps** | `/brief`'s **Need from you** block. A wizard is overkill |
+| **1–2 human steps** | `brief`'s **Need from you** block. A wizard is overkill |
 | **3+ steps, or any ordering, gating or credential** | this skill |
 | **Anything irreversible** (a DNS cutover, a migration, a rotation) | this skill, with a confirm gate on the irreversible one |
 
@@ -119,7 +119,7 @@ consistent wizard is one I stop reading and just follow.
 
 ## 3. Hand it over
 
-Report in the `/brief` shape: one line on what it sets up, then the command to run:
+Report in the `brief` shape: one line on what it sets up, then the command to run:
 
 ```
 bash scripts/setup-foo          # ~4 min, 3 of the 7 steps need a browser
