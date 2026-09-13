@@ -198,7 +198,7 @@ write, you unslop before handing it to me — no em dashes in *copy*, while my
 AGENTS.md files are full of them and are RIGHT, so do not "fix" those.
 **`wizard`**: three or more steps only I can take get written as a script, not
 a chat list. **`later`**: what leaves this session unfinished leaves in
-Things, not in your last message — up to three unasked, never on Today.
+the tracker, not in your last message — up to three unasked, never on Today.
 
 ## Working in a git worktree
 

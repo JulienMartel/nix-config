@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# from-things — one-shot import of every OPEN Things 3 item into the tracker
+# vault. Reads the app's SQLite -readonly (never writes it); writes one
+# markdown note per to-do, one folder per project or area, one folder note
+# per folder. Re-runnable: a note whose `things:` uuid already exists is
+# skipped, so a second pass only adds what is new in Things.
+#
+#   from-things            # into $TRACKER_DIR (default: the notes vault's tracker/)
+#   DRY_RUN=1 from-things  # print what would be written, touch nothing
+
+set -euo pipefail
+here="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=tracker
+source "$here/tracker" --lib          # ROOT, sanitize, yaml_str, folder_note, die
+
+die() { printf 'from-things: %s\n' "$*" >&2; exit 1; }
+
+find_db() {
+  local d
+  for d in "$HOME/Library/Group Containers/JLMPQHK86H.com.culturedcode.ThingsMac"/ThingsData-*/"Things Database.thingsdatabase/main.sqlite"; do
+    [ -f "$d" ] && { printf '%s' "$d"; return 0; }
+  done
+  die "no Things database found"
+}
+DB="${THINGS_DB:-$(find_db)}"
+q() { sqlite3 -readonly -json "$DB" "$1"; }
+
+# Things packs dates as bitfields: year<<16 | month<<12 | day<<7.
+D() { echo "printf('%04d-%02d-%02d', $1>>16, ($1>>12)&15, ($1>>7)&31)"; }
+
+OPEN="t.status=0 and t.trashed=0"
+mkdir -p "$ROOT"
+have() { grep -rl --include='*.md' -m1 "^things: $1\$" "$ROOT" 2>/dev/null | head -1; }
+
+write() {  # write <path> <content>  (honours DRY_RUN)
+  if [ "${DRY_RUN:-0}" = 1 ]; then printf -- '--- %s\n' "${1#"$ROOT/"}"; return; fi
+  mkdir -p "$(dirname "$1")"; printf '%s' "$2" > "$1"
+}
+
+# ---------------------------------------------------------------- projects ---
+n_proj=0
+while IFS=$'\x1f' read -r uuid title area deadline created notes64; do
+  folder="$(sanitize "$title")"
+  [ -n "$(have "$uuid")" ] && continue
+  body="$(printf '%s' "$notes64" | base64 -d)"
+  fm="---
+type: project"
+  [ -n "$area" ]     && fm+=$'\n'"area: $(yaml_str "$area")"
+  [ -n "$deadline" ] && fm+=$'\n'"deadline: $deadline"
+  fm+=$'\n'"created: $created"$'\n'"things: $uuid"$'\n'"---"
+  write "$ROOT/$folder/$folder.md" "$fm"$'\n'"${body:+$body
+
+}$(folder_note)"
+  n_proj=$((n_proj+1))
+done < <(q "select t.uuid, t.title, ifnull(a.title,'') as area,
+  (case when t.deadline is null then '' else $(D t.deadline) end) as deadline,
+  date(t.creationDate,'unixepoch','localtime') as created, ifnull(t.notes,'') as notes
+  from TMTask t left join TMArea a on a.uuid=t.area where t.type=1 and $OPEN order by t.\"index\";" \
+  | jq -r '.[] | [.uuid, .title, .area, .deadline, .created, (.notes|@base64)] | map(tostring) | join("\u001f")')
+
+# ------------------------------------------------------------------- to-dos ---
+n_todo=0; n_skip=0; area_seen=""
+while IFS=$'\x1f' read -r uuid title start bucket when deadline created tags project area heading notes64; do
+  if [ -n "$(have "$uuid")" ]; then n_skip=$((n_skip+1)); continue; fi
+  if   [ -n "$project" ]; then folder="$(sanitize "$project")"
+  elif [ -n "$area" ];    then folder="$(sanitize "$area")"; area_seen+="$folder"$'\n'
+  else folder="inbox"; fi
+  name="$(sanitize "$title")"; [ ${#name} -gt 120 ] && name="${name:0:120}"
+  path="$ROOT/$folder/$name.md"; i=2
+  while [ -e "$path" ]; do path="$ROOT/$folder/$name ($i).md"; i=$((i+1)); done
+
+  # A date means scheduled, whatever list it sits in; Someday is only the undated kind.
+  status=open; [ "$start" = 2 ] && [ -z "$when" ] && status=someday
+  fm="---
+type: todo
+status: $status"
+  [ "$name" != "$title" ]                   && fm+=$'\n'"title: $(yaml_str "$title")"
+  [ -n "$when" ]                            && fm+=$'\n'"when: $when"
+  [ "$bucket" = 1 ]                         && fm+=$'\n'"evening: true"
+  [ -n "$deadline" ]                        && fm+=$'\n'"deadline: $deadline"
+  [ -n "$heading" ]                         && fm+=$'\n'"heading: $(yaml_str "$heading")"
+  if [ -n "$tags" ]; then
+    fm+=$'\n'"tags:"
+    IFS=',' read -ra ts <<< "$tags"
+    for tg in "${ts[@]}"; do fm+=$'\n'"  - $(sanitize_tag "$tg")"; done
+  fi
+  fm+=$'\n'"created: $created"$'\n'"things: $uuid"$'\n'"---"
+
+  body="$(printf '%s' "$notes64" | base64 -d)"
+  check="$(sqlite3 -readonly -noheader "$DB" "select (case status when 0 then '- [ ] ' else '- [x] ' end) || title from TMChecklistItem where task='$uuid' order by \"index\";")"
+  content="$fm"$'\n'
+  [ -n "$body" ]  && content+="$body"$'\n'
+  [ -n "$check" ] && content+=$'\n'"$check"$'\n'
+  write "$path" "$content"
+  n_todo=$((n_todo+1))
+done < <(q "select t.uuid, t.title, t.start, ifnull(t.startBucket,0) as bucket,
+  (case when t.startDate is null then '' else $(D t.startDate) end) as \"when\",
+  (case when t.deadline  is null then '' else $(D t.deadline)  end) as deadline,
+  date(t.creationDate,'unixepoch','localtime') as created,
+  ifnull((select group_concat(g.title,',') from TMTaskTag tt join TMTag g on g.uuid=tt.tags where tt.tasks=t.uuid),'') as tags,
+  ifnull(p.title,'') as project, ifnull(a.title, ifnull(pa.title,'')) as area, ifnull(h.title,'') as heading,
+  ifnull(t.notes,'') as notes
+  from TMTask t
+    left join TMTask h  on h.uuid  = t.heading
+    left join TMTask p  on p.uuid  = coalesce(t.project, h.project)
+    left join TMArea a  on a.uuid  = t.area
+    left join TMArea pa on pa.uuid = p.area
+  where t.type=0 and $OPEN and (p.uuid is null or (p.status=0 and p.trashed=0)) order by t.\"index\";" \
+  | jq -r '.[] | [.uuid, .title, .start, .bucket, .when, .deadline, .created, .tags, .project, .area, .heading, (.notes|@base64)] | map(tostring) | join("\u001f")')
+
+# A folder note for every area that holds loose to-dos, so `tracker projects` and
+# Obsidian both have somewhere to stand.
+while IFS= read -r folder; do
+  [ -n "$folder" ] || continue
+  [ -e "$ROOT/$folder/$folder.md" ] && continue
+  write "$ROOT/$folder/$folder.md" "---
+type: area
+---
+$(folder_note)"
+done < <(printf '%s' "$area_seen" | sort -u)
+mkdir -p "$ROOT/inbox" "$ROOT/log"
+
+printf 'from-things: %d project(s), %d to-do(s) written, %d already there → %s\n' "$n_proj" "$n_todo" "$n_skip" "$ROOT"

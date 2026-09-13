@@ -9,7 +9,7 @@ let
     "later"
     "ship"
     "show-me"
-    "things"
+    "tracker"
     "unslop"
     "wizard"
   ];

@@ -1,0 +1,452 @@
+#!/usr/bin/env bash
+# tracker — my to-do / issue list: one markdown note per item in the Obsidian
+# `notes` vault (iCloud, so the phone has it), one folder per project or area,
+# `log/` for what is done. Obsidian's Bases draw the views (tracker/tracker.base);
+# this script is the same list from a shell or an agent.
+#
+#   READS  walk the files. Nothing is launched, nothing takes focus.
+#   WRITES edit the files in place, atomically. Never `open`, never `obsidian`:
+#          the CLI launches the app when it is not running, and the app is the
+#          user's screen. A report ends in a file:// link the user can click.
+#
+# Live-edited out of ~/.config/nix/claude/skills/tracker/tracker — no rebuild.
+
+set -euo pipefail
+
+VAULT="${TRACKER_VAULT:-$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/notes}"
+ROOT="${TRACKER_DIR:-$VAULT/tracker}"
+TODAY="$(date +%F)"
+
+die() { printf 'tracker: %s\n' "$*" >&2; exit 1; }
+
+# ------------------------------------------------------------------ shared ---
+# (sourced by from-things with --lib)
+
+# An Obsidian-safe file or folder name: no \ / : * ? " < > | # ^ [ ], one space
+# between words, nothing leading or trailing, no leading dot.
+sanitize() { printf '%s' "$1" | tr -d '\r\n' | sed -E 's@[\\/:*?"<>|^#]+|\[|\]@ @g; s/[[:space:]]+/ /g; s/^ +//; s/ +$//; s/^\.+//'; }
+# Obsidian tags take letters, digits, _ - / — `hausfold.co` becomes `hausfold-co`.
+sanitize_tag() { printf '%s' "$1" | sed -E 's/^#//; s/[^[:alnum:]_\/-]+/-/g'; }
+# Quote a YAML scalar only when a bare one would be misread.
+YAML_BARE='^[A-Za-z][A-Za-z0-9_ ./()+-]*$'
+YAML_WORDS='^(true|false|yes|no|null|on|off)$'
+yaml_str() {
+  local s="$1"
+  if [[ "$s" =~ $YAML_BARE ]] && ! [[ "$s" =~ $YAML_WORDS ]]; then printf '%s' "$s"
+  else printf '"%s"' "$(printf '%s' "$s" | sed 's/\\/\\\\/g; s/"/\\"/g')"; fi
+}
+# The base every folder note embeds: its own folder's to-dos, grouped by heading.
+folder_note() { cat <<'B'
+```base
+filters:
+  and:
+    - 'type == "todo"'
+    - 'file.folder == this.file.folder'
+views:
+  - type: table
+    name: open
+    groupBy:
+      property: heading
+      direction: ASC
+    order:
+      - file.name
+      - when
+      - deadline
+      - tags
+    sort:
+      - property: when
+        direction: ASC
+```
+B
+}
+
+if [ "${1:-}" = "--lib" ]; then return 0 2>/dev/null || exit 0; fi
+
+# ------------------------------------------------------------------- index ---
+# One TSV row per note:
+#   1 id  2 folder  3 type  4 status  5 when  6 deadline  7 heading  8 tags  9 done  10 title  11 evening  12 project
+AWK_INDEX='
+function unq(s) { sub(/^[ \t]+/,"",s); sub(/[ \t]+$/,"",s); if (s ~ /^".*"$/ || s ~ /^\047.*\047$/) s=substr(s,2,length(s)-2); return s }
+function flush() {
+  if (path=="") return
+  rel=substr(path, length(root)+2); sub(/\.md$/, "", rel)
+  n=split(rel, parts, "/"); folder=(n>1?parts[1]:""); name=parts[n]
+  title=(v["title"]!=""?v["title"]:name)
+  printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", rel, folder, v["type"], v["status"], v["when"], v["deadline"], v["heading"], v["tags"], v["done"], title, v["evening"], v["project"]
+}
+FNR==1 { flush(); path=FILENAME; infm=0; inlist=""; for (k in v) delete v[k]; if ($0=="---") { infm=1; next } }
+infm && $0=="---" { infm=0; next }
+infm {
+  if (match($0, /^[A-Za-z_][A-Za-z0-9_-]*:/)) {
+    key=substr($0,1,RLENGTH-1); val=substr($0,RLENGTH+1); sub(/^[ \t]+/,"",val); sub(/[ \t]+$/,"",val)
+    if (val=="") { inlist=key; v[key]=""; next }
+    inlist=""
+    if (val ~ /^\[.*\]$/) { val=substr(val,2,length(val)-2); gsub(/[ \t]*,[ \t]*/, ",", val); gsub(/["\047]/, "", val) } else val=unq(val)
+    v[key]=val; next
+  }
+  if (inlist!="" && match($0, /^[ \t]*-[ \t]+/)) { item=unq(substr($0,RLENGTH+1)); v[inlist]=(v[inlist]==""?item:v[inlist] "," item); next }
+  inlist=""
+}
+END { flush() }'
+
+index() {
+  [ -d "$ROOT" ] || die "no tracker at $ROOT — run: tracker init"
+  find "$ROOT" -name '*.md' -print0 | sort -z | xargs -0 awk -v root="$ROOT" "$AWK_INDEX"
+}
+
+# rows <awk-condition> [sort keys]  — filter the index; today is bound for the condition.
+rows() { index | awk -F'\t' -v today="$TODAY" "$1" | { if [ -n "${2:-}" ]; then sort -t$'\t' $2; else cat; fi; }; }
+
+# render [section-field]  — print TSV rows from stdin the way `things` did, or as JSON.
+render() {
+  local sect="${1:-0}" data; data="$(cat)"
+  [ "${LIMIT:-0}" -gt 0 ] && data="$(printf '%s\n' "$data" | head -n "$LIMIT")"
+  if [ "${AS_JSON:-0}" = 1 ]; then
+    printf '%s\n' "$data" | jq -Rn '[inputs | select(length>0) | split("\t") | {id:.[0], folder:.[1], type:.[2], status:.[3], when:.[4], deadline:.[5], heading:.[6], tags:(.[7]|split(",")|map(select(.!=""))), done:.[8], title:.[9], evening:(.[10]=="true"), project:.[11]}]'
+  else
+    printf '%s\n' "$data" | awk -F'\t' -v sect="$sect" 'BEGIN{n=0; prev="\001"}
+      length($0)>0 { n++
+        if (sect>0 && $sect != prev) { printf "%s── %s ──\n", (n>1?"\n":""), ($sect==""?"(none)":$sect); prev=$sect }
+        w=($5==""?"—":$5); if ($2=="log") w=$9
+        printf "%-10s %-14s %-16s %s%s\n", w, ($6==""?"":"due "$6), ($8==""?"":"#"$8), $1, ($11=="true"?"  (evening)":"") }
+      END{ if (n==0) print "(nothing)"; else printf "\n%d item(s)\n", n }'
+  fi
+}
+emit() { rows "$1" "${2:-}" | render "${3:-0}"; }
+
+TODO='$3=="todo"'
+cmd_today()    { emit "$TODO && \$4==\"open\" && \$5!=\"\" && \$5<=today" '-k5,5 -k6,6 -k1,1'; }
+cmd_inbox()    { emit "$TODO && \$2==\"inbox\" && \$5==\"\"" '-k1,1'; }
+cmd_anytime()  { emit "$TODO && \$4==\"open\" && \$5==\"\" && \$2!=\"inbox\" && \$2!=\"log\"" '-k2,2 -k7,7 -k1,1' 2; }
+cmd_someday()  { emit "$TODO && \$4==\"someday\"" '-k2,2 -k1,1' 2; }
+cmd_upcoming() { local n="${1:-14}"; emit "$TODO && \$4==\"open\" && \$5>today && \$5<=\"$(date -v+"${n}"d +%F)\"" '-k5,5 -k1,1'; }
+cmd_deadlines(){ local n="${1:-30}"; emit "$TODO && \$2!=\"log\" && \$6!=\"\" && \$6<=\"$(date -v+"${n}"d +%F)\"" '-k6,6 -k1,1'; }
+cmd_log()      { LIMIT="${1:-20}" emit "$TODO && \$2==\"log\"" '-k9,9r -k1,1'; }
+cmd_list()     { [ $# -ge 1 ] || die "usage: tracker list <project|area>"; local f; f="$(resolve_folder "$*")"; emit "$TODO && \$2==\"$f\"" '-k7,7 -k5,5 -k1,1' 7; }
+cmd_search() {  # title match, or the text anywhere in the note (open and log)
+  [ $# -ge 1 ] || die "usage: tracker search <text>"
+  local hits; hits="$(grep -ril --include='*.md' -- "$*" "$ROOT" 2>/dev/null | sed -e "s#^$ROOT/##" -e 's/\.md$//' || true)"
+  awk -F'\t' -v q="$(printf '%s' "$*" | tr '[:upper:]' '[:lower:]')" 'NR==FNR { h[$0]=1; next } $3=="todo" && (($1 in h) || index(tolower($10), q))' \
+    <(printf '%s\n' "$hits") <(index) | sort -t$'\t' -k2,2 -k1,1 | render 2
+}
+cmd_projects() {
+  index | awk -F'\t' '$3=="project"||$3=="area" { kind[$2]=$3 } $3=="todo" && $2!="log" { n[$2]++ }
+    END { for (f in kind) printf "%-9s %-44s %d open\n", "["kind[f]"]", f, n[f]+0; printf "%-9s %-44s %d open\n", "[inbox]", "inbox", n["inbox"]+0 }' | sort -k1,1 -k2,2
+}
+cmd_index()    { if [ "${AS_JSON:-0}" = 1 ]; then emit '1'; else index; fi; }
+
+cmd_show() {
+  [ $# -ge 1 ] || die "usage: tracker show <id|title>"
+  local rel; rel="$(resolve "$*")"
+  printf 'id:   %s\n' "$rel"; cmd_link "$rel"; printf '\n'; cat "$ROOT/$rel.md"
+}
+cmd_link() {  # the file:// line is the one a terminal makes clickable; obsidian:// is for the app
+  [ $# -ge 1 ] || die "usage: tracker link <id|title>"; local rel; rel="$(resolve "$*")"
+  jq -rn --arg p "$ROOT/$rel.md" --arg v "$(basename "$VAULT")" --arg r "tracker/$rel.md" \
+    '"file://" + ($p|split("/")|map(@uri)|join("/")), "obsidian://open?vault=" + ($v|@uri) + "&file=" + ($r|@uri)'
+}
+
+# ------------------------------------------------------------------ resolve ---
+
+# An id (folder/name, .md optional) or a unique case-insensitive substring of
+# one open item's id or title. Ambiguity prints the candidates and fails.
+resolve() {
+  local s="$1"; s="${s%.md}"; s="${s#tracker/}"
+  [ -f "$ROOT/$s.md" ] && { printf '%s' "$s"; return 0; }
+  local hits n
+  hits="$(index | awk -F'\t' -v s="$(printf '%s' "$s" | tr '[:upper:]' '[:lower:]')" '($3=="todo"||$3=="project") && $2!="log" && (index(tolower($1), s) || index(tolower($10), s)) { print $1 }')"
+  n="$(printf '%s' "$hits" | grep -c . || true)"
+  [ "$n" = 0 ] && die "nothing open matches \"$1\""
+  [ "$n" -gt 1 ] && { printf 'tracker: "%s" is ambiguous:\n%s\n' "$1" "$hits" >&2; exit 1; }
+  printf '%s' "$hits"
+}
+# A folder (project or area) by exact name or unique case-insensitive substring.
+resolve_folder() {
+  local s="$1" hits n
+  [ -d "$ROOT/$s" ] && { printf '%s' "$s"; return 0; }
+  hits="$(find "$ROOT" -mindepth 1 -maxdepth 1 -type d ! -name log -iname "*$s*" -exec basename {} \;)"
+  n="$(printf '%s' "$hits" | grep -c . || true)"
+  [ "$n" = 0 ] && die "no project or area matches \"$s\" — tracker projects · tracker add-project"
+  [ "$n" -gt 1 ] && { printf 'tracker: "%s" is ambiguous:\n%s\n' "$s" "$hits" >&2; exit 1; }
+  printf '%s' "$hits"
+}
+
+# ------------------------------------------------------------------- writes ---
+
+# fm_set <file> <key> <value> [1=list]  — set, replace or (empty value) remove a
+# frontmatter key. Atomic: writes beside, then mv, so iCloud sees one change.
+fm_set() {
+  local f="$1" key="$2" val="$3" islist="${4:-0}" tmp="$1.tmp.$$"
+  awk -v key="$key" -v val="$val" -v islist="$islist" '
+    function emit() { if (val=="") return; if (islist) { print key ":"; n=split(val, a, ","); for (i=1;i<=n;i++) print "  - " a[i] } else print key ": " val }
+    NR==1 && $0=="---" { infm=1; print; next }
+    infm && $0=="---" { if (!seen) emit(); infm=0; print; next }
+    infm { if (skip) { if ($0 ~ /^[ \t]*-[ \t]/) next; skip=0 }
+           if (index($0, key ":")==1) { seen=1; emit(); skip=1; next } print; next }
+    { print }' "$f" > "$tmp" && mv -f "$tmp" "$f"
+}
+append_body() { printf '\n%s\n' "$2" >> "$1"; }
+tag_list() { printf '%s\n' "$1" | tr ',' '\n' | sed '/^[[:space:]]*$/d' | while IFS= read -r t; do sanitize_tag "$t"; printf '\n'; done | awk '!s[$0]++' | paste -sd, -; }
+when_of() {  # today | tomorrow | someday | anytime | yyyy-mm-dd
+  case "$1" in
+    today) printf '%s' "$TODAY" ;; tomorrow) date -v+1d +%F ;; someday|anytime) printf '%s' "$1" ;;
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) printf '%s' "$1" ;;
+    *) die "--when takes today | tomorrow | someday | anytime | yyyy-mm-dd (not \"$1\")" ;;
+  esac
+}
+unique_path() {  # unique_path <dir> <name> → a path that does not exist yet
+  local p="$1/$2.md" i=2; while [ -e "$p" ]; do p="$1/$2 ($i).md"; i=$((i+1)); done; printf '%s' "$p"
+}
+report_add() { printf 'added: %s\n' "$1"; cmd_link "$1" | head -1; }
+
+cmd_add() {
+  local title="" folder=inbox when="" status=open deadline="" tags="" heading="" notes="" check="" evening=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --project|--list) folder="$(resolve_folder "$2")"; shift 2 ;;
+      --when)      when="$(when_of "$2")"; shift 2 ;;
+      --deadline)  deadline="$2"; shift 2 ;;
+      --tags)      tags="$2"; shift 2 ;;
+      --heading)   heading="$2"; shift 2 ;;
+      --notes)     notes="$2"; shift 2 ;;
+      --checklist) check="$2"; shift 2 ;;
+      --evening)   evening=1; shift ;;
+      -*)          die "unknown flag $1" ;;
+      *)           title="${title:+$title }$1"; shift ;;
+    esac
+  done
+  [ -n "$title" ] || die "usage: tracker add <title> [--project P] [--when today|tomorrow|someday|yyyy-mm-dd] [--deadline yyyy-mm-dd] [--tags a,b] [--heading H] [--notes X] [--checklist 'a|b']"
+  case "$when" in someday) status=someday; when="" ;; anytime) when="" ;; esac
+  local name path fm; name="$(sanitize "$title")"; [ -n "$name" ] || die "title sanitizes to nothing"
+  [ ${#name} -gt 120 ] && name="${name:0:120}"
+  path="$(unique_path "$ROOT/$folder" "$name")"
+  fm="---"$'\n'"type: todo"$'\n'"status: $status"
+  [ "$name" != "$title" ] && fm+=$'\n'"title: $(yaml_str "$title")"
+  [ -n "$when" ]         && fm+=$'\n'"when: $when"
+  [ "$evening" = 1 ]     && fm+=$'\n'"evening: true"
+  [ -n "$deadline" ]     && fm+=$'\n'"deadline: $deadline"
+  [ -n "$heading" ]      && fm+=$'\n'"heading: $(yaml_str "$heading")"
+  if [ -n "$tags" ]; then fm+=$'\n'"tags:"; local t; for t in $(tag_list "$tags" | tr ',' ' '); do fm+=$'\n'"  - $t"; done; fi
+  fm+=$'\n'"created: $TODAY"$'\n'"---"
+  [ "${DRY_RUN:-0}" = 1 ] && { printf '%s\n%s\n' "${path#"$ROOT/"}" "$fm"; return 0; }
+  mkdir -p "$(dirname "$path")"
+  { printf '%s\n' "$fm"
+    [ -n "$notes" ] && printf '%s\n' "$notes"
+    [ -n "$check" ] && { printf '\n'; printf '%s' "$check" | tr '|' '\n' | sed 's/^/- [ ] /'; printf '\n'; }
+  } > "$path"
+  local rel="${path#"$ROOT/"}"; report_add "${rel%.md}"
+}
+
+cmd_add_project() {
+  local title="" area="" notes="" todos="" deadline="" kind=project
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --area)     area="$2"; shift 2 ;;
+      --notes)    notes="$2"; shift 2 ;;
+      --todos)    todos="$2"; shift 2 ;;
+      --deadline) deadline="$2"; shift 2 ;;
+      --as-area)  kind=area; shift ;;
+      -*)         die "unknown flag $1" ;;
+      *)          title="${title:+$title }$1"; shift ;;
+    esac
+  done
+  [ -n "$title" ] || die "usage: tracker add-project <title> [--area A] [--notes X] [--todos 'a|b|c'] [--deadline yyyy-mm-dd] [--as-area]"
+  local folder; folder="$(sanitize "$title")"
+  [ -e "$ROOT/$folder" ] && die "\"$folder\" already exists"
+  mkdir -p "$ROOT/$folder"
+  local fm="---"$'\n'"type: $kind"
+  [ -n "$area" ]     && fm+=$'\n'"area: $(yaml_str "$area")"
+  [ -n "$deadline" ] && fm+=$'\n'"deadline: $deadline"
+  fm+=$'\n'"created: $TODAY"$'\n'"---"
+  { printf '%s\n' "$fm"; [ -n "$notes" ] && printf '%s\n\n' "$notes"; folder_note; } > "$ROOT/$folder/$folder.md"
+  report_add "$folder/$folder"
+  if [ -n "$todos" ]; then
+    local t; while IFS= read -r t; do [ -n "$t" ] && cmd_add "$t" --project "$folder"; done < <(printf '%s\n' "$todos" | tr '|' '\n')
+  fi
+}
+
+cmd_update() {
+  [ $# -ge 1 ] || die "usage: tracker update <id|title> [--title X] [--when …] [--deadline d] [--tags a,b] [--add-tags a] [--heading H] [--project P] [--append-notes X] [--evening|--no-evening]"
+  local rel; rel="$(resolve "$1")"; shift; local f="$ROOT/$rel.md" newtitle="" newfolder="" w have
+  [ $# -gt 0 ] || die "nothing to update"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --title)        newtitle="$2"; shift 2 ;;
+      --when)         w="$(when_of "$2")"
+                      case "$w" in
+                        someday) fm_set "$f" status someday; fm_set "$f" when "" ;;
+                        anytime) fm_set "$f" status open;    fm_set "$f" when "" ;;
+                        *)       fm_set "$f" status open;    fm_set "$f" when "$w" ;;
+                      esac; shift 2 ;;
+      --deadline)     fm_set "$f" deadline "$2"; shift 2 ;;
+      --tags)         fm_set "$f" tags "$(tag_list "$2")" 1; shift 2 ;;
+      --add-tags)     have="$(index | awk -F'\t' -v r="$rel" '$1==r {print $8}')"; fm_set "$f" tags "$(tag_list "${have:+$have,}$2")" 1; shift 2 ;;
+      --heading)      fm_set "$f" heading "$(yaml_str "$2")"; shift 2 ;;
+      --project|--list) newfolder="$(resolve_folder "$2")"; shift 2 ;;
+      --append-notes) append_body "$f" "$2"; shift 2 ;;
+      --evening)      fm_set "$f" evening true; shift ;;
+      --no-evening)   fm_set "$f" evening ""; shift ;;
+      -*)             die "unknown flag $1" ;;
+      *)              die "unexpected argument $1" ;;
+    esac
+  done
+  if [ -n "$newtitle" ]; then
+    local name dest; name="$(sanitize "$newtitle")"; dest="$(unique_path "$(dirname "$f")" "$name")"
+    if [ "$name" != "$newtitle" ]; then fm_set "$f" title "$(yaml_str "$newtitle")"; else fm_set "$f" title ""; fi
+    mv -f "$f" "$dest"; f="$dest"; rel="${f#"$ROOT/"}"; rel="${rel%.md}"
+  fi
+  if [ -n "$newfolder" ]; then
+    local dest; dest="$(unique_path "$ROOT/$newfolder" "$(basename "${f%.md}")")"
+    mv -f "$f" "$dest"; f="$dest"; rel="${f#"$ROOT/"}"; rel="${rel%.md}"
+  fi
+  printf 'updated: %s\n' "$rel"
+}
+
+close_as() {  # close_as done|canceled <ref>  — stamp it and move it to log/
+  local how="$1" rel; rel="$(resolve "$2")"; local f="$ROOT/$rel.md" folder="${rel%%/*}" title
+  [ "$folder" = log ] && die "$rel is already in the log"
+  title="$(index | awk -F'\t' -v r="$rel" '$1==r {print $10}')"
+  fm_set "$f" status "$how"; fm_set "$f" done "$TODAY"
+  [ "$folder" != inbox ] && [ "$folder" != "$rel" ] && fm_set "$f" project "$(yaml_str "$folder")"
+  local dest; dest="$(unique_path "$ROOT/log" "$(basename "${f%.md}")")"; mkdir -p "$ROOT/log"; mv -f "$f" "$dest"
+  local mark='✓'; [ "$how" = done ] || mark='✗'
+  printf '%s %s  → log/%s\n' "$mark" "$title" "$(basename "${dest%.md}")"
+}
+cmd_complete() { [ $# -ge 1 ] || die "usage: tracker complete <id|title>"; close_as done "$*"; }
+cmd_cancel()   { [ $# -ge 1 ] || die "usage: tracker cancel <id|title>";   close_as canceled "$*"; }
+cmd_reopen() {
+  [ $# -ge 1 ] || die "usage: tracker reopen <log/name>"
+  local s="$*"; s="${s%.md}"; case "$s" in log/*) ;; *) s="log/$s" ;; esac
+  local f="$ROOT/$s.md"; [ -f "$f" ] || die "no $s in the log"
+  local folder; folder="$(index | awk -F'\t' -v r="$s" '$1==r {print $12}')"; folder="${folder:-inbox}"
+  fm_set "$f" status open; fm_set "$f" done ""; fm_set "$f" project ""
+  mkdir -p "$ROOT/$folder"; local dest; dest="$(unique_path "$ROOT/$folder" "$(basename "${f%.md}")")"; mv -f "$f" "$dest"
+  local rel="${dest#"$ROOT/"}"; printf 'reopened: %s\n' "${rel%.md}"
+}
+
+# --------------------------------------------------------------------- init ---
+
+BASE_FILE='filters:
+  and:
+    - '"'"'file.inFolder("tracker")'"'"'
+    - '"'"'type == "todo"'"'"'
+properties:
+  file.name:
+    displayName: to-do
+  file.folder:
+    displayName: list
+views:
+  - type: table
+    name: Today
+    filters:
+      and:
+        - '"'"'status == "open"'"'"'
+        - '"'"'!when.isEmpty()'"'"'
+        - '"'"'when <= today()'"'"'
+    order: [file.name, when, deadline, tags, file.folder]
+    sort:
+      - property: when
+        direction: ASC
+      - property: deadline
+        direction: ASC
+  - type: table
+    name: Inbox
+    filters:
+      and:
+        - '"'"'file.inFolder("tracker/inbox")'"'"'
+        - '"'"'when.isEmpty()'"'"'
+    order: [file.name, deadline, tags, created]
+    sort:
+      - property: created
+        direction: DESC
+  - type: table
+    name: Upcoming
+    filters:
+      and:
+        - '"'"'status == "open"'"'"'
+        - '"'"'when > today()'"'"'
+    order: [file.name, when, deadline, tags, file.folder]
+    sort:
+      - property: when
+        direction: ASC
+  - type: table
+    name: Anytime
+    filters:
+      and:
+        - '"'"'status == "open"'"'"'
+        - '"'"'when.isEmpty()'"'"'
+        - '"'"'!file.inFolder("tracker/inbox")'"'"'
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order: [file.name, heading, deadline, tags]
+    sort:
+      - property: heading
+        direction: ASC
+  - type: table
+    name: Someday
+    filters: '"'"'status == "someday"'"'"'
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order: [file.name, tags, created]
+  - type: table
+    name: Deadlines
+    filters:
+      and:
+        - '"'"'!deadline.isEmpty()'"'"'
+        - '"'"'!file.inFolder("tracker/log")'"'"'
+    order: [file.name, deadline, when, tags, file.folder]
+    sort:
+      - property: deadline
+        direction: ASC
+  - type: table
+    name: Logbook
+    filters: '"'"'file.inFolder("tracker/log")'"'"'
+    order: [file.name, done, status, project, tags]
+    sort:
+      - property: done
+        direction: DESC
+    limit: 100
+'
+cmd_init() {
+  mkdir -p "$ROOT/inbox" "$ROOT/log"
+  if [ ! -e "$ROOT/tracker.base" ] || [ "${1:-}" = "--force" ]; then printf '%s' "$BASE_FILE" > "$ROOT/tracker.base"; printf 'wrote tracker/tracker.base\n'; fi
+  # Property types, so Bases compares `when` as a date and not as text.
+  local types="$VAULT/.obsidian/types.json"
+  if [ -f "$types" ]; then
+    jq '.types += {"when":"date","deadline":"date","created":"date","done":"date","evening":"checkbox","status":"text","heading":"text","type":"text","project":"text","area":"text","things":"text"}' "$types" > "$types.tmp.$$" && mv -f "$types.tmp.$$" "$types"
+    printf 'typed when/deadline/created/done as dates in .obsidian/types.json\n'
+  fi
+  printf 'tracker at %s\n' "$ROOT"
+}
+
+cmd_help() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; cat <<'USAGE'
+
+READ   tracker today | inbox | anytime | someday | upcoming [days] | deadlines [days] | log [n]
+       tracker list <project|area> | search <text> | show <id|title> | link <id|title>
+       tracker projects | index          (--json on any read; `index --json` is the escape hatch)
+WRITE  tracker add <title> [--project P] [--when today|tomorrow|someday|yyyy-mm-dd] [--deadline d]
+                           [--tags a,b] [--heading H] [--notes X] [--checklist 'a|b'] [--evening]
+       tracker add-project <title> [--area A] [--notes X] [--todos 'a|b|c'] [--as-area]
+       tracker update <id|title> [--title X] [--when …] [--deadline d] [--tags a,b] [--add-tags a]
+                                 [--heading H] [--project P] [--append-notes X]
+       tracker complete <id|title> · cancel <id|title> · reopen <log/name>
+       tracker init [--force]           (folders, tracker.base, property types)
+IDS    an id is folder/name (the path under tracker/, no .md); any unique substring works
+ENV    TRACKER_DIR  the folder (default: the notes vault's tracker/)   DRY_RUN=1  add prints, doesn't write
+USAGE
+}
+
+# --------------------------------------------------------------------- main ---
+
+AS_JSON=0
+args=(); for a in "$@"; do case "$a" in --json) AS_JSON=1 ;; *) args+=("$a") ;; esac; done
+set -- "${args[@]:-help}"
+sub="${1:-help}"; shift || true
+case "$sub" in
+  today|inbox|anytime|someday|upcoming|deadlines|log|search|list|projects|index|show|link|add|update|complete|cancel|reopen|init) "cmd_${sub}" "$@" ;;
+  add-project) cmd_add_project "$@" ;;
+  help|-h|--help) cmd_help ;;
+  *) die "unknown command '$sub' — try: tracker help" ;;
+esac

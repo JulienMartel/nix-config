@@ -125,7 +125,7 @@ in
         };
       };
 
-      programs.zsh.shellAliases.things = "$HOME/.config/nix/claude/skills/things/things";
+      programs.zsh.shellAliases.tracker = "$HOME/.config/nix/claude/skills/tracker/tracker";
 
       # pi holds no Anthropic credential of its own — it reads ANTHROPIC_API_KEY
       # straight from the environment — so secretspec lends it the keychain value

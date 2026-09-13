@@ -130,4 +130,4 @@ Then stop and wait — don't run it, don't poll for it, don't "verify" it by ins
 keychain. When I say it's done, pick the work back up.
 
 If a step turns out to be mine and it isn't happening today, offer once:
-`things add "<the step>"` — one line, and drop it if I don't bite.
+`tracker add "<the step>"` — one line, and drop it if I don't bite.
