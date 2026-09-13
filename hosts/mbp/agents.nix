@@ -3,12 +3,10 @@
 let
   skills = [
     "blast-radius"
-    "brief"
     "conflicts"
     "deepen"
     "grill"
     "later"
-    "park"
     "ship"
     "show-me"
     "things"

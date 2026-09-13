@@ -36,7 +36,7 @@ nothing here I can't call — building it" is a valid and good outcome of `/gril
 
 ## 2. Find the real forks
 
-Score every open question on the `/brief` ladder. Ask only **≥3/5**.
+Score every open question on the `brief` ladder. Ask only **≥3/5**.
 
 | | |
 |---|---|
@@ -50,6 +50,7 @@ Kinds of fork worth my time, roughly in order:
 2. **Which repo** — the routing tables usually settle this. Only ask when they genuinely
    don't.
 3. **Blast radius** — does anything already relying on the old behaviour break?
+   `blast-radius` proves it by running code; don't answer this one from a grep.
 4. **Naming, once it's public.** A `haus.*` option name, a CLI verb, a published URL. These
    are 4/5 because renaming them later is a breaking change.
 5. **The trade you can see and I can't** — you've read the code, I haven't.
@@ -104,7 +105,7 @@ copy and can rot"*, not *"It was decided that…"*.
 
 ## 5. Land it
 
-Close with the `/brief` shape: the verdict, the plan as ≤5 anchored steps, and where each
+Close with the `brief` shape: the verdict, the plan as ≤5 anchored steps, and where each
 decision got written. Then **start building** — a grill that ends in a document and no
 code is a meeting.
 

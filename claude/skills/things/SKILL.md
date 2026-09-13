@@ -1,12 +1,11 @@
 ---
 name: things
 description: >-
-  Read and write my Things 3 to-dos from the shell — what's on Today, what's in the
-  Inbox, what's due, and adding/completing/rescheduling items. Use when I say /things,
-  "what's on my list", "what's due", "what's in my inbox", "add a todo", "add this to
-  Things", "remind me to…", "mark X done", "put that on today", "move it to someday",
-  or when a piece of work we just finished obviously corresponds to a to-do of mine.
-  Also use it to file follow-ups you discover while working, if I ask you to.
+  Read and write my Things 3 to-dos from the shell: Today, Inbox, due dates, adding,
+  completing, rescheduling. Use when I say /things, "what's on my list", "what's due",
+  "what's in my inbox", "add a todo", "add this to Things", "remind me to…", "mark X
+  done", "put that on today", "move it to someday", or when work we just finished
+  matches a to-do of mine. `later` decides what to file unasked; this is the plumbing.
 ---
 
 # Things 3 — read from SQLite, write through the URL scheme
