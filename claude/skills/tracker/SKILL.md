@@ -123,7 +123,8 @@ change. Obsidian picks it up live when it is open; the phone when iCloud syncs.
 `tracker init --force` restores the shipped one. Property types (`when`, `deadline`,
 `created`, `done` as dates) live in the vault's `.obsidian/types.json` — `init` merges
 them in. Each folder note embeds a base filtered on `file.folder == this.file.folder`,
-so a project page lists its own to-dos grouped by heading, `DESC` so `now` sits above `later` and `decide` above `build` (Bases orders groups by value only).
+so a project page lists its own to-dos grouped by heading — `DESC`, so `now` sits
+above `later` and `decide` above `build` (Bases orders groups by value only).
 
 **Closing a to-do in the app only gets halfway.** Setting `status` to `done` in the
 Properties panel or a Bases cell — which is all the phone can do — leaves the note in
