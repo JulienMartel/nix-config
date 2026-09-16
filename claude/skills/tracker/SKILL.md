@@ -89,11 +89,12 @@ tracker update <id|title> --project nas          # moves the file
 tracker complete <id|title>                      # status: done, done: <today>, → log/
 tracker cancel   <id|title>                      # same, status: canceled
 tracker reopen   log/<name>                      # back to its project
+tracker sweep [--dry-run]                        # finish to-dos I closed in Obsidian
 ```
 
 `--when` takes `today`, `tomorrow`, `someday`, `anytime` or `yyyy-mm-dd`. No project
 → `inbox/`. A project must exist (`tracker projects`); `add-project` makes one.
-`DRY_RUN=1 tracker add …` prints the note instead of writing it.
+`DRY_RUN=1` makes `add` and `sweep` print instead of writing; `sweep` also takes `--dry-run`.
 
 Every write is a file edit: atomic (write beside, `mv`), so iCloud and Obsidian see one
 change. Obsidian picks it up live when it is open; the phone when iCloud syncs.
@@ -123,6 +124,16 @@ change. Obsidian picks it up live when it is open; the phone when iCloud syncs.
 `created`, `done` as dates) live in the vault's `.obsidian/types.json` — `init` merges
 them in. Each folder note embeds a base filtered on `file.folder == this.file.folder`,
 so a project page lists its own to-dos grouped by heading.
+
+**Closing a to-do in the app only gets halfway.** Setting `status` to `done` in the
+Properties panel or a Bases cell — which is all the phone can do — leaves the note in
+its project folder with no `done:` date: it drops out of Today, never reaches the
+Logbook (that view filters on the folder), and if it has a `deadline` it keeps showing
+in Deadlines. `tracker sweep` finishes those, stamping `done:` from the note's own
+mtime (the closest thing to when I ticked it) and moving it to `log/`. It is safe to
+run any time and does nothing when there is nothing half-closed, so run it unasked
+before reading Today or Deadlines back to me if the answer would be wrong without it —
+and say how many it moved.
 
 ## Things 3
 

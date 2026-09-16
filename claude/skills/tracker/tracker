@@ -324,6 +324,53 @@ cmd_reopen() {
   local rel="${dest#"$ROOT/"}"; printf 'reopened: %s\n' "${rel%.md}"
 }
 
+# -------------------------------------------------------------------- sweep ---
+# Obsidian can only half-close a to-do: flipping `status` to done or canceled in
+# the app (or on the phone, where this script isn't) leaves the note in its
+# project folder with no `done:` date, so it falls out of Today and never lands
+# in the Logbook — which filters on the folder, not the status. Worse, a note
+# with a `deadline` keeps showing in Deadlines. `sweep` finishes those the way
+# `complete` would have: stamp, then move to log/.
+
+# The day a half-closed note was last written, as the best guess at when it was
+# ticked; clamped to today, and today if the file won't say.
+closed_on() {
+  local d; d="$(stat -f %Sm -t %F "$1" 2>/dev/null || true)"
+  case "$d" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; *) d="$TODAY" ;; esac
+  [ "$d" \> "$TODAY" ] && d="$TODAY"
+  printf '%s' "$d"
+}
+
+cmd_sweep() {
+  local dry="${DRY_RUN:-0}"
+  while [ $# -gt 0 ]; do
+    case "$1" in -n|--dry-run) dry=1 ;; *) die "usage: tracker sweep [--dry-run]" ;; esac; shift
+  done
+  local rel status stamp title folder f dest mark n=0
+  # Four fields, none of them ever empty — `read` with a tab IFS would collapse
+  # a run of empty columns and shift everything after it. `-` is "no done: yet".
+  while IFS=$'\t' read -r rel status stamp title; do
+    [ -n "$rel" ] || continue
+    f="$ROOT/$rel.md"; folder="${rel%%/*}"
+    [ "$stamp" = - ] && stamp="$(closed_on "$f")"
+    dest="$(unique_path "$ROOT/log" "$(basename "${f%.md}")")"
+    mark='✓'; [ "$status" = done ] || mark='✗'
+    if [ "$dry" = 1 ]; then
+      printf '%s %s  %s → log/%s  (done: %s)\n' "$mark" "$title" "$rel" "$(basename "${dest%.md}")" "$stamp"
+    else
+      fm_set "$f" done "$stamp"
+      [ "$folder" != inbox ] && [ "$folder" != "$rel" ] && fm_set "$f" project "$(yaml_str "$folder")"
+      mkdir -p "$ROOT/log"; mv -f "$f" "$dest"
+      printf '%s %s  → log/%s  (done: %s)\n' "$mark" "$title" "$(basename "${dest%.md}")" "$stamp"
+    fi
+    n=$((n+1))
+  done < <(rows "$TODO && (\$4==\"done\" || \$4==\"canceled\") && \$2!=\"log\" \
+                 { print \$1 \"\t\" \$4 \"\t\" (\$9==\"\" ? \"-\" : \$9) \"\t\" \$10 }" '-k1,1')
+  if [ "$n" = 0 ]; then printf '(nothing to sweep)\n'
+  elif [ "$dry" = 1 ]; then printf '\n%d to sweep — dry run, nothing written\n' "$n"
+  else printf '\n%d swept → log/\n' "$n"; fi
+}
+
 # --------------------------------------------------------------------- init ---
 
 BASE_FILE='filters:
@@ -432,9 +479,10 @@ WRITE  tracker add <title> [--project P] [--when today|tomorrow|someday|yyyy-mm-
        tracker update <id|title> [--title X] [--when …] [--deadline d] [--tags a,b] [--add-tags a]
                                  [--heading H] [--project P] [--append-notes X]
        tracker complete <id|title> · cancel <id|title> · reopen <log/name>
+       tracker sweep [--dry-run]        (finish what Obsidian half-closed: stamp done:, move to log/)
        tracker init [--force]           (folders, tracker.base, property types)
 IDS    an id is folder/name (the path under tracker/, no .md); any unique substring works
-ENV    TRACKER_DIR  the folder (default: the notes vault's tracker/)   DRY_RUN=1  add prints, doesn't write
+ENV    TRACKER_DIR  the folder (default: the notes vault's tracker/)   DRY_RUN=1  add and sweep print, write nothing
 USAGE
 }
 
@@ -445,7 +493,7 @@ args=(); for a in "$@"; do case "$a" in --json) AS_JSON=1 ;; *) args+=("$a") ;; 
 set -- "${args[@]:-help}"
 sub="${1:-help}"; shift || true
 case "$sub" in
-  today|inbox|anytime|someday|upcoming|deadlines|log|search|list|projects|index|show|link|add|update|complete|cancel|reopen|init) "cmd_${sub}" "$@" ;;
+  today|inbox|anytime|someday|upcoming|deadlines|log|search|list|projects|index|show|link|add|update|complete|cancel|reopen|sweep|init) "cmd_${sub}" "$@" ;;
   add-project) cmd_add_project "$@" ;;
   help|-h|--help) cmd_help ;;
   *) die "unknown command '$sub' — try: tracker help" ;;
