@@ -100,7 +100,10 @@ rows() { index | awk -F'\t' -v today="$TODAY" "$1" | { if [ -n "${2:-}" ]; then 
 # render [section-field]  — print TSV rows from stdin the way `things` did, or as JSON.
 render() {
   local sect="${1:-0}" data; data="$(cat)"
-  [ "${LIMIT:-0}" -gt 0 ] && data="$(printf '%s\n' "$data" | head -n "$LIMIT")"
+  # awk, not head: head closes the pipe on row LIMIT, and under `set -o pipefail`
+  # the SIGPIPE that kills the writer takes the whole command down — invisible
+  # until a Logbook of hundreds makes the truncation real.
+  [ "${LIMIT:-0}" -gt 0 ] && data="$(printf '%s\n' "$data" | awk -v n="$LIMIT" 'NR<=n')"
   if [ "${AS_JSON:-0}" = 1 ]; then
     printf '%s\n' "$data" | jq -Rn '[inputs | select(length>0) | split("\t") | {id:.[0], folder:.[1], type:.[2], status:.[3], when:.[4], deadline:.[5], heading:.[6], tags:(.[7]|split(",")|map(select(.!=""))), done:.[8], title:.[9], evening:(.[10]=="true"), project:.[11]}]'
   else

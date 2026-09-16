@@ -137,6 +137,26 @@ and say how many it moved.
 
 ## Things 3
 
-`from-things` (beside the script) imported every open Things item once — its `things:`
-uuid is on each note, so a re-run only adds what is new. Things' Logbook stayed in
-Things; `log/` starts from the switch.
+`from-things` (beside the script) imported Things whole: every open item into its
+project or area folder, and `--logged` every stopped one into `log/`, shaped the way
+`tracker complete` leaves a note. A `things:` uuid is on each, so a re-run only adds
+what is new.
+
+```bash
+from-things                 # open items → their project / area folder
+from-things --logged        # open items, plus the Logbook → log/
+from-things --logged-only   # the Logbook alone
+DRY_RUN=1 from-things …     # print what would be written, touch nothing
+```
+
+Two things the Logbook pass decides, and both are deliberate. A to-do keeps the
+`project:` stamp of the list it sat in even when that list is gone from Things — the
+history is the point, and nothing here makes a folder for it. And the four sample
+projects Things ships with the app (`Meet Things for Mac`, `Meet Things for iPhone`,
+`Convert to project`, `new project!!!`) are dropped: that copy is Cultured Code's, not
+mine.
+
+A re-run skips a to-do already in the vault, so one I ticked in Things *after* it was
+imported stays open here. Finding those is a uuid comparison against the app's SQLite,
+not something the script does — close them with `tracker complete` and correct the
+`done:` stamp to the day Things stopped them.
