@@ -36,6 +36,7 @@ yaml_str() {
   else printf '"%s"' "$(printf '%s' "$s" | sed 's/\\/\\\\/g; s/"/\\"/g')"; fi
 }
 # The base every folder note embeds: its own folder's to-dos, grouped by heading.
+# DESC, so `now` sits above `later` and `decide` above `build` — Bases only sorts groups by value.
 folder_note() { cat <<'B'
 ```base
 filters:
@@ -47,7 +48,7 @@ views:
     name: open
     groupBy:
       property: heading
-      direction: ASC
+      direction: DESC
     order:
       - file.name
       - when
