@@ -2,7 +2,7 @@
 
 My to-do list: one markdown note per to-do in the Obsidian `notes` vault
 (iCloud, so the phone has it), one folder per project, Obsidian Bases for the
-views, one Go binary for the shell — a CLI for agents and scripts, a fullscreen
+views, one Go binary for the shell: a CLI for agents and scripts, a fullscreen
 TUI for me. Two pounce commands and a tiny Obsidian plugin sit on top of the
 CLI. Nothing here is a Things 3 clone: the base is four properties, and
 everything else (areas, boards, the logbook, lanes) falls out of Obsidian doing
@@ -35,7 +35,7 @@ The notes. `- [ ]` lines are the checklist. Images the way Obsidian pastes them.
 ```
 
 - **`when`** is the one field that matters and it is never empty: `now` (on
-  Today), `later` (the default), `someday` (parked), or a date — *later until
+  Today), `later` (the default), `someday` (parked), or a date, which means *later until
   that day, then now*. The CLI turns an arrived date into `now` on every read,
   and the Bases Today view catches one the phone reached first.
 - **Closed is a date, not a status.** `done:` or `dropped:` set means closed;
@@ -62,7 +62,7 @@ ambiguity prints the candidates and exits 1.
 
 Every `.md` under `tracker/` except folder notes (`type: project`, or the
 note named after its folder). `log/` notes are to-dos too, closed. A note
-with no `when` — made by hand in Obsidian — is `later`.
+with no `when` (made by hand in Obsidian) is `later`.
 
 ## Views (`tracker.base`)
 
@@ -120,8 +120,8 @@ Aliases kept for the skills: `complete`→`done`, `cancel`→`drop`, `anytime`�
 
 The `later` skill's step 4 as a verb. Resolves the repo: the to-do's `repo:`,
 else the nearest ancestor folder note's, else `--repo`, else refuses naming the
-project to set it on. Writes the prompt — title, the body, then `tracker: <id>`
-and `On /ship: tracker done "<id>"` — and runs it the way haus's Spawn Agent
+project to set it on. Writes the prompt (title, the body, then `tracker: <id>`
+and `On /ship: tracker done "<id>"`) and runs it the way haus's Spawn Agent
 does: `HAUS_LANE_BACKGROUND=1 scruff spawn <repo> --derived-name <slug>
 --agent <scruff agent default> --prompt-file -` (`--follow` clears the
 background flag). Then `when: now`, `lane: <repo>/<name>` on the note, and a
@@ -173,7 +173,7 @@ by the terminal's background), resizes live, never reaches the last column.
 `hosts/mbp/pounce/commands/` (out-of-store symlinks into
 `~/.config/pounce/commands`, live-edited):
 
-- **Add To-do** (`todo-add.sh`, leader + `a`, palette "todo"): one box —
+- **Add To-do** (`todo-add.sh`, leader + `a`, palette "todo"): one box.
   `⇥` dials now / later / someday, `↵` adds unfiled, `⌘↵` picks a project first
   (a grid of folders), `⌃↵` adds and opens it in Obsidian, `⌥↵` drafts. Trill
   banner with an Open action.
