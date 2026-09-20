@@ -115,12 +115,12 @@
       scope = "system";
     };
     bench.package = pkgs.writeShellScriptBin "bench" ''exec "$HOME/code/workshop/bench" "$@"'';
-    # A command, not a shell alias: an alias whose body starts with $HOME/… is a
-    # path zsh-syntax-highlighting cannot resolve, so the word sat red at the
-    # prompt even though it ran, and an alias is invisible to scripts and to an
-    # agent's non-interactive shell. Only the wrapper is in the store — the
-    # script it execs stays live-edited under ~/.config/nix.
-    tracker.package = pkgs.writeShellScriptBin "tracker" ''exec "$HOME/.config/nix/claude/skills/tracker/tracker" "$@"'';
+    # The to-do CLI and TUI: a Go binary built from pkgs/tracker (its README is
+    # the spec), so a change there is live after `haus rebuild`, and
+    # `nix build ~/.config/nix#tracker` (flake.nix) builds the same derivation
+    # on its own. The two palette commands on top of it are
+    # hosts/mbp/pounce/commands, linked live from shell.nix.
+    tracker.package = pkgs.callPackage ../../pkgs/tracker { };
   };
 
   haus.workspaces = {

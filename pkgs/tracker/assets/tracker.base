@@ -1,0 +1,152 @@
+# tracker.base — written by `tracker init`; `tracker init --force` restores it.
+filters:
+  and:
+    - file.inFolder("tracker")
+    - type != "project"
+formulas:
+  bucket: 'if(when == "now", "now", if(when == "someday", "someday", if(when.isEmpty() || when == "later", "later", "scheduled")))'
+  state: 'if(!done.isEmpty(), "done", if(!dropped.isEmpty(), "dropped", "open"))'
+  rank: 'if(when == "now", "1 · now", if(when == "someday", "4 · someday", if(when.isEmpty() || when == "later", "3 · later", "2 · scheduled")))'
+  spawn: 'if(!lane.isEmpty(), lane, link("obsidian://tracker?spawn=" + file.path.replace(/ /g, "%20"), "⚡ spawn"))'
+properties:
+  file.name:
+    displayName: to-do
+  file.folder:
+    displayName: project
+  formula.bucket:
+    displayName: bucket
+  formula.spawn:
+    displayName: lane
+views:
+  - type: table
+    name: Today
+    filters:
+      and:
+        - formula.state == "open"
+        - or:
+            - when == "now"
+            - and:
+                - when < "a"
+                - when <= today().format("YYYY-MM-DD")
+    order:
+      - file.name
+      - due
+      - tags
+      - file.folder
+      - formula.spawn
+    sort:
+      - property: due
+        direction: ASC
+      - property: file.name
+        direction: ASC
+  - type: table
+    name: Later
+    filters:
+      and:
+        - formula.state == "open"
+        - formula.bucket == "later"
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order:
+      - file.name
+      - due
+      - tags
+      - created
+    sort:
+      - property: created
+        direction: DESC
+  - type: table
+    name: Upcoming
+    filters:
+      and:
+        - formula.state == "open"
+        - formula.bucket == "scheduled"
+    order:
+      - file.name
+      - when
+      - due
+      - tags
+      - file.folder
+    sort:
+      - property: when
+        direction: ASC
+  - type: table
+    name: Someday
+    filters:
+      and:
+        - formula.state == "open"
+        - when == "someday"
+    groupBy:
+      property: file.folder
+      direction: ASC
+    order:
+      - file.name
+      - tags
+      - created
+  - type: table
+    name: Due
+    filters:
+      and:
+        - formula.state == "open"
+        - '!due.isEmpty()'
+    order:
+      - file.name
+      - due
+      - when
+      - tags
+      - file.folder
+    sort:
+      - property: due
+        direction: ASC
+  - type: table
+    name: Inbox
+    filters:
+      and:
+        - formula.state == "open"
+        - file.folder == "tracker"
+    order:
+      - file.name
+      - when
+      - due
+      - tags
+      - created
+    sort:
+      - property: created
+        direction: DESC
+  - type: table
+    name: Done
+    filters: formula.state != "open"
+    order:
+      - file.name
+      - done
+      - dropped
+      - file.folder
+      - project
+      - tags
+    sort:
+      - property: done
+        direction: DESC
+      - property: dropped
+        direction: DESC
+    limit: 200
+  - type: table
+    name: Project
+    filters:
+      and:
+        - formula.state == "open"
+        - file.inFolder(this.file.folder)
+    groupBy:
+      property: formula.rank
+      direction: ASC
+    order:
+      - file.name
+      - when
+      - due
+      - tags
+      - formula.spawn
+    sort:
+      - property: due
+        direction: ASC
+      - property: file.name
+        direction: ASC

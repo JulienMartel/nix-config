@@ -20,7 +20,8 @@ Per-client wiring: [`.agents/README.md`](./.agents/README.md).
 | Your identity (git name / email / signing key / org) | `hosts/mbp/default.nix` → `haus.git.*` |
 | A personal package or private alias | `hosts/mbp/shell.nix` → `home-manager.users.${username}` |
 | The global agent instructions every client reads | `hosts/mbp/instructions.md` |
-| A personal skill: `/ship` `/things` `/later` `/unslop` `/wizard` `/grill` `/conflicts` `/deepen` `/blast-radius` `/show-me` | `claude/skills/<name>/SKILL.md`, out-of-store symlinks to `~/.claude/skills/<name>` and `~/.agents/skills/<name>` (one name in `hosts/mbp/agents.nix`'s `skills` list), so an edit is live without a rebuild |
+| A personal skill: `/ship` `/tracker` `/later` `/unslop` `/wizard` `/grill` `/conflicts` `/deepen` `/blast-radius` `/show-me` | `claude/skills/<name>/SKILL.md`, out-of-store symlinks to `~/.claude/skills/<name>` and `~/.agents/skills/<name>` (one name in `hosts/mbp/agents.nix`'s `skills` list), so an edit is live without a rebuild |
+| The to-do list: the `tracker` CLI + TUI, its `tracker.base`, the Obsidian plugin, the migration | `pkgs/tracker/` (Go; `README.md` there is the manual; `nix build .#tracker` builds it, `haus rebuild` puts it on PATH). The palette commands over it: `hosts/mbp/pounce/commands/`, live-edited like the skills |
 | The desktop: macOS defaults, tiling (`windows`), the bar (`bar`), the shell (`terminal`), Touch ID + firewall (`security`) | `~/code/workshop/haus` |
 | The pounce palette app or its commands | `~/code/workshop/pounce` |
 | Colors — the one palette `haus` themes every tool from | `~/code/workshop/nebelung` |
