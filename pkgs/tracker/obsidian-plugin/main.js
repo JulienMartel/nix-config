@@ -7,7 +7,11 @@
  * Bases cannot — quick add, done / drop / reopen, when (now · later · someday),
  * spawn a lane (desktop: `tracker spawn <id>`), and the obsidian://tracker
  * protocol (?spawn=<path> · ?done=<path> · ?add=<title>[&when=][&in=][&due=]
- * [&tags=][&notes=]) that the ⚡ column, pounce and the phone's share sheet use.
+ * [&repeat=][&tags=][&notes=]) that the ⚡ column, pounce and the phone's
+ * share sheet use.
+ *
+ * `done` on a `repeat:` to-do writes the next occurrence here too, so a chore
+ * closed on the phone comes back without waiting for a Mac.
  *
  * A note this writes is byte for byte what `tracker add` writes for the same
  * to-do — same key order, same YAML quoting, same file name, same body — so
@@ -89,6 +93,107 @@ function parseWhen(v) {
   if (!d) return 'later';
   return d <= today() ? 'now' : d;
 }
+
+// The repeat grammar (internal/vault/when.go), narrow on purpose:
+// daily | weekly | monthly | yearly | every N days.
+const REPEAT_WORDS = { daily: 'day', weekly: 'week', monthly: 'month', yearly: 'year' };
+const REPEAT_UNIT = { day: 'daily', week: 'weekly', month: 'monthly', year: 'yearly' };
+const tidyLower = (v) => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+function repeatParts(spec) {
+  const s = tidyLower(spec);
+  if (REPEAT_WORDS[s]) return { n: 1, unit: REPEAT_WORDS[s] };
+  const m = /^every (\d+) (day|week|month|year)s?$/.exec(s);
+  if (!m || Number(m[1]) < 1) return null;
+  return { n: Number(m[1]), unit: m[2] };
+}
+
+// The CLI's ParseRepeat, canonical; '' for none and for anything the grammar
+// does not cover — a bad parameter never costs a capture.
+function parseRepeat(v) {
+  const s = tidyLower(v);
+  if (!s || s === 'none' || s === 'never') return '';
+  const r = repeatParts(s);
+  if (!r) return '';
+  return r.n === 1 ? REPEAT_UNIT[r.unit] : `every ${r.n} ${r.unit}s`;
+}
+
+const dayNum = (d) => Date.parse(`${d}T00:00:00Z`);
+const utcStamp = (d) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+
+// One step of a repeat. The day of the month is kept, clamped to the month it
+// lands in: the 31st monthly is the 30th in April.
+function advance(date, { n, unit }) {
+  if (unit === 'day' || unit === 'week') return utcStamp(new Date(dayNum(date) + n * (unit === 'week' ? 7 : 1) * 86400000));
+  const [y, m, d] = date.split('-').map(Number);
+  const first = new Date(Date.UTC(y, m - 1 + (unit === 'month' ? n : 12 * n), 1));
+  const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+  return utcStamp(new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), Math.min(d, last))));
+}
+
+// The CLI's NextWhen: the note's OWN `when:` — never the day it was done —
+// advanced until it is past today, so a chore done late lands on its next real
+// slot and the grid never drifts. A word counts from today. `shift` is the
+// days to carry a `due:` by, so a deadline keeps its lead time.
+function nextWhen(when, spec) {
+  const r = repeatParts(spec);
+  if (!r) return null;
+  const now = dayNum(today());
+  let from = isDate(when) ? when : today();
+  let next = advance(from, r);
+  for (let i = 0; i < 4000 && dayNum(next) <= now; i++) next = advance(next, r);
+  if (dayNum(next) <= now) {
+    from = today();
+    next = advance(from, r);
+  }
+  return { when: next, shift: Math.round((dayNum(next) - dayNum(from)) / 86400000) };
+}
+
+// ---- a note as ordered keys, so one can be carried forward ----------------
+
+// The CLI's frontmatter parser in miniature (internal/vault/frontmatter.go):
+// every top-level key with the lines it was read from, so a key nobody here
+// knows about survives the copy. null when the note has no block.
+function splitNote(raw) {
+  const lines = String(raw).split('\n');
+  if (lines[0] !== '---') return null;
+  const end = lines.indexOf('---', 1);
+  if (end < 0) return null;
+  const entries = [];
+  for (const line of lines.slice(1, end)) {
+    const m = /^([A-Za-z_][A-Za-z0-9_-]*):(.*)$/.exec(line);
+    if (m) entries.push({ key: m[1], lines: [line] });
+    else if (entries.length) entries[entries.length - 1].lines.push(line);
+    else entries.push({ key: '', lines: [line] });
+  }
+  return { entries, body: lines.slice(end + 1).join('\n') };
+}
+
+const CANON = ['type', 'when', 'repeat', 'due', 'done', 'dropped', 'tags', 'created', 'title', 'repo', 'lane', 'project'];
+const rank = (k) => (CANON.indexOf(k) < 0 ? CANON.length : CANON.indexOf(k));
+
+function getKey(entries, key) {
+  const e = entries.find((x) => x.key === key);
+  return e ? e.lines[0].slice(key.length + 1).trim().replace(/^"(.*)"$/, '$1') : '';
+}
+
+function setKey(entries, key, value) {
+  const e = { key, lines: [`${key}: ${yamlStr(value)}`] };
+  const i = entries.findIndex((x) => x.key === key);
+  if (i >= 0) return void (entries[i] = e);
+  const at = entries.findIndex((x) => x.key && rank(x.key) > rank(key));
+  entries.splice(at < 0 ? entries.length : at, 0, e);
+}
+
+function delKey(entries, key) {
+  const i = entries.findIndex((x) => x.key === key);
+  if (i >= 0) entries.splice(i, 1);
+}
+
+const serialize = ({ entries, body }) => `---\n${entries.flatMap((e) => e.lines).join('\n')}\n---\n${body}`;
+
+// A chore comes back with its checklist empty.
+const untick = (body) => body.replace(/^(\s*[-*+] +\[)[xX](\])/gm, '$1 $2');
 
 // The CLI's SanitizeTag: `#` off, every other run of punctuation a dash.
 const sanitizeTag = (t) => String(t).trim().replace(/^#/, '').replace(/[^A-Za-z0-9_/-]+/g, '-');
@@ -229,6 +334,7 @@ class TrackerPlugin extends Plugin {
         when: parseWhen(params.when),
         project: params.in,
         due: params.due,
+        repeat: params.repeat,
         tags: params.tags,
         notes: params.notes,
       };
@@ -290,7 +396,7 @@ class TrackerPlugin extends Plugin {
 
   // The keys go in the CLI's canonical order (when · due · tags · created ·
   // title) so a note from here and one from `tracker add` are the same bytes.
-  async createTodo({ title, when = 'later', project = '', due = '', tags = '', notes = '' }) {
+  async createTodo({ title, when = 'later', project = '', due = '', repeat = '', tags = '', notes = '' }) {
     const clean = tidy(title);
     const name = sanitize(clean);
     if (!name) throw new Error('empty title');
@@ -300,6 +406,9 @@ class TrackerPlugin extends Plugin {
     let path = `${dir}/${name}.md`;
     for (let n = 2; this.app.vault.getAbstractFileByPath(path); n++) path = `${dir}/${name} (${n}).md`;
     const lines = [`when: ${when}`];
+    const every = parseRepeat(repeat);
+    if (repeat && !every) new Notice(`Tracker: ignored repeat=${repeat} — daily | weekly | monthly | yearly | every N days`);
+    if (every) lines.push(`repeat: ${every}`);
     const deadline = parseDate(due);
     if (due && !deadline) new Notice(`Tracker: ignored due=${due} — today | tomorrow | +Nd | YYYY-MM-DD`);
     if (deadline) lines.push(`due: ${deadline}`);
@@ -316,11 +425,60 @@ class TrackerPlugin extends Plugin {
 
   async closeTodo(file, key) {
     const other = key === 'done' ? 'dropped' : 'done';
+    // `done` repeats, `drop` ends the series — and the occurrence is written
+    // first, so a series never loses its successor to a failed write.
+    const again = key === 'done' ? await this.repeatNext(file) : '';
     await this.app.fileManager.processFrontMatter(file, (fm) => {
       fm[key] = today();
       delete fm[other];
     });
-    new Notice(`Tracker: ${key} · ${idOf(file.path)}`);
+    new Notice(`Tracker: ${key} · ${idOf(file.path)}${again ? ` · ↻ ${again}` : ''}`);
+  }
+
+  // The next occurrence of a repeating to-do: the same note on its next date,
+  // beside this one, with a fresh `created:`, no `done:` / `dropped:` /
+  // `lane:` and an empty checklist — the bytes the CLI's Done writes. Returns
+  // its id, '' when the to-do does not repeat.
+  async repeatNext(file) {
+    const note = splitNote(await this.app.vault.read(file));
+    if (!note) return '';
+    const spec = getKey(note.entries, 'repeat');
+    if (!spec) return '';
+    const next = nextWhen(getKey(note.entries, 'when'), spec);
+    if (!next) {
+      new Notice(`Tracker: repeat ${spec} is not one — closed, nothing repeated`);
+      return '';
+    }
+    const title = getKey(note.entries, 'title') || file.basename;
+    const open = this.occurrence(file, title, spec);
+    if (open) return `${open} is open already`;
+    setKey(note.entries, 'when', next.when);
+    setKey(note.entries, 'created', today());
+    for (const k of ['done', 'dropped', 'lane']) delKey(note.entries, k);
+    const due = getKey(note.entries, 'due');
+    if (isDate(due)) setKey(note.entries, 'due', utcStamp(new Date(dayNum(due) + next.shift * 86400000)));
+    const dir = file.parent && file.parent.path ? file.parent.path : ROOT;
+    const name = sanitize(title) || file.basename;
+    let path = `${dir}/${name}.md`;
+    for (let n = 2; this.app.vault.getAbstractFileByPath(path); n++) path = `${dir}/${name} (${n}).md`;
+    // The file name had to step aside for the closed note: the title is kept,
+    // so it is still what you type and what every view shows.
+    if (path.slice(dir.length + 1, -3) === title) delKey(note.entries, 'title');
+    else setKey(note.entries, 'title', title);
+    note.body = untick(note.body);
+    await this.app.vault.create(path, serialize(note));
+    return idOf(path);
+  }
+
+  // An open to-do beside this one with the same title and the same `repeat:`
+  // — the same series, which a reopen and a second done would duplicate.
+  occurrence(file, title, spec) {
+    for (const f of (file.parent && file.parent.children) || []) {
+      if (f === file || !(f instanceof TFile) || f.extension !== 'md') continue;
+      const fm = this.frontmatter(f);
+      if (!fm.done && !fm.dropped && fm.repeat === spec && (fm.title || f.basename) === title) return idOf(f.path);
+    }
+    return '';
   }
 
   async reopen(file) {

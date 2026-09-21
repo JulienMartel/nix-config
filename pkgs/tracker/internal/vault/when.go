@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -115,4 +116,118 @@ func bucketRank(b string) int {
 		return 2
 	}
 	return 3
+}
+
+// ── repeat: the same to-do, again ────────────────────────────────────────────
+//
+// The grammar is narrow on purpose — it is a parser, not a schema, so it can
+// widen without any note changing. `repeat:` is the only property that says
+// anything about the future: `done` reads it, writes the next occurrence and
+// never touches it again.
+
+var (
+	repeatRE    = regexp.MustCompile(`^every (\d+) (day|week|month|year)s?$`)
+	repeatWords = map[string]string{"daily": "day", "weekly": "week", "monthly": "month", "yearly": "year"}
+	repeatUnit  = map[string]string{"day": "daily", "week": "weekly", "month": "monthly", "year": "yearly"}
+	repeatUsage = "daily | weekly | monthly | yearly | every N days"
+)
+
+// ParseRepeat canonicalizes what a verb was given into what `repeat:` stores:
+// one of the four words, or `every N days`. Empty, `none` and `never` clear
+// it — a to-do that no longer comes back.
+func ParseRepeat(s string) (string, error) {
+	spec := strings.ToLower(strings.Join(strings.Fields(s), " "))
+	switch spec {
+	case "", "none", "never":
+		return "", nil
+	}
+	n, unit, ok := repeatParts(spec)
+	if !ok {
+		return "", UsageError(fmt.Sprintf("%q is not a repeat — %s", s, repeatUsage))
+	}
+	if n == 1 {
+		return repeatUnit[unit], nil
+	}
+	return fmt.Sprintf("every %d %ss", n, unit), nil
+}
+
+// IsRepeat reports whether a spec is one this understands — false for the
+// `repeat: every other Tuesday` a note can hold, which is a note to a person.
+func IsRepeat(spec string) bool { _, _, ok := repeatParts(spec); return ok }
+
+func repeatParts(spec string) (int, string, bool) {
+	spec = strings.ToLower(strings.Join(strings.Fields(spec), " "))
+	if unit, ok := repeatWords[spec]; ok {
+		return 1, unit, true
+	}
+	if m := repeatRE.FindStringSubmatch(spec); m != nil {
+		n, err := strconv.Atoi(m[1])
+		if err != nil || n < 1 {
+			return 0, "", false
+		}
+		return n, m[2], true
+	}
+	return 0, "", false
+}
+
+// NextWhen is the `when:` a repeating to-do comes back on, and the days to
+// carry a `due:` by so a deadline keeps its lead time.
+//
+// The count is the note's OWN `when:`, never the day it was completed, so a
+// chore done three days late does not drift — and it is advanced until it is
+// past today, so the late one lands on its next real slot instead of a
+// backlog. A `when` that is a word (now | later | someday) has no grid to
+// keep, so it counts from today.
+func NextWhen(when, spec string, today time.Time) (string, int, error) {
+	n, unit, ok := repeatParts(spec)
+	if !ok {
+		return "", 0, UsageError(fmt.Sprintf("%q is not a repeat — %s", spec, repeatUsage))
+	}
+	today = dayOf(today)
+	from := today
+	if IsDate(when) {
+		from, _ = time.Parse(dateLayout, when)
+	}
+	// At least one step — a to-do done early still comes back a period after
+	// the day it was set for, not on it. The cap is a daily to-do whose
+	// `when` went a decade stale; past that the grid is not worth keeping and
+	// today is the only honest anchor.
+	next := advance(from, n, unit)
+	for i := 0; i < 4000 && !next.After(today); i++ {
+		next = advance(next, n, unit)
+	}
+	if !next.After(today) {
+		from, next = today, advance(today, n, unit)
+	}
+	return next.Format(dateLayout), int(next.Sub(from).Hours() / 24), nil
+}
+
+func advance(d time.Time, n int, unit string) time.Time {
+	switch unit {
+	case "day":
+		return d.AddDate(0, 0, n)
+	case "week":
+		return d.AddDate(0, 0, 7*n)
+	case "month":
+		return addMonths(d, n)
+	}
+	return addMonths(d, 12*n)
+}
+
+// addMonths keeps the day of the month, clamped to the length of the month it
+// lands in: the 31st monthly is the 30th in April and the 28th in February,
+// where Go's own AddDate spills into the month after.
+func addMonths(d time.Time, n int) time.Time {
+	y, m, day := d.Date()
+	first := time.Date(y, m, 1, 0, 0, 0, 0, time.UTC).AddDate(0, n, 0)
+	if last := time.Date(first.Year(), first.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day(); day > last {
+		day = last
+	}
+	return time.Date(first.Year(), first.Month(), day, 0, 0, 0, 0, time.UTC)
+}
+
+// dayOf drops the clock: every date this file compares is a midnight in UTC.
+func dayOf(t time.Time) time.Time {
+	y, m, d := t.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }

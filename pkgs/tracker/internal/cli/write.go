@@ -61,7 +61,7 @@ func (a *App) add(args []string) error {
 	}
 	title := f.text()
 	if title == "" {
-		return vault.UsageError("usage: tracker add <title> [--in <project>] [--now | --someday | --when <date>] [--due <date>] [--tags a,b] [--notes <text>] [--checklist 'a|b'] [--edit]")
+		return vault.UsageError("usage: tracker add <title> [--in <project>] [--now | --someday | --when <date>] [--due <date>] [--repeat <daily|weekly|monthly|yearly|every N days>] [--tags a,b] [--notes <text>] [--checklist 'a|b'] [--edit]")
 	}
 	idx, err := a.load()
 	if err != nil {
@@ -87,6 +87,11 @@ func (a *App) add(args []string) error {
 	}
 	if d, ok := f.vals["--due"]; ok {
 		if t.Due, err = vault.ParseDate(d, a.V.Now()); err != nil {
+			return err
+		}
+	}
+	if s, ok := f.vals["--repeat"]; ok {
+		if t.Repeat, err = vault.ParseRepeat(s); err != nil {
 			return err
 		}
 	}
@@ -133,6 +138,8 @@ func (a *App) oneItem(verb string, args []string) error {
 		if len(args) >= 2 {
 			id, rest = strings.Join(args[:len(args)-1], " "), args[len(args)-1:]
 		}
+	case "repeat":
+		id, rest = splitRepeat(args)
 	}
 	it, err := a.resolve(idx, id, verb == "reopen")
 	if err != nil {
@@ -174,6 +181,18 @@ func (a *App) oneItem(verb string, args []string) error {
 			return err
 		}
 		r, err = a.V.SetWhen(it, w)
+		if err != nil {
+			return err
+		}
+	case "repeat":
+		if len(rest) == 0 {
+			return vault.UsageError("usage: tracker repeat <id> <daily|weekly|monthly|yearly|every N days|none>")
+		}
+		spec, err := vault.ParseRepeat(strings.Join(rest, " "))
+		if err != nil {
+			return err
+		}
+		r, err = a.V.SetRepeat(it, spec)
 		if err != nil {
 			return err
 		}
@@ -227,6 +246,33 @@ func (a *App) oneItem(verb string, args []string) error {
 	return a.report(r)
 }
 
+// splitRepeat cuts `tracker repeat water the plants every 3 days` where it
+// reads: the longest trailing run of up to three words that is a repeat, the
+// id being everything before it.
+func splitRepeat(args []string) (string, []string) {
+	for n := 3; n >= 1; n-- {
+		if len(args) <= n {
+			continue
+		}
+		tail := args[len(args)-n:]
+		if s := strings.Join(tail, " "); s == "none" || s == "never" || vault.IsRepeat(s) {
+			return strings.Join(args[:len(args)-n], " "), tail
+		}
+	}
+	// Nothing trailing parses: the spec is still what the person meant it to
+	// be — from `every` on, or the last word — so the error names the repeat
+	// and not the to-do.
+	for i := len(args) - 1; i > 0; i-- {
+		if strings.EqualFold(args[i], "every") {
+			return strings.Join(args[:i], " "), args[i:]
+		}
+	}
+	if len(args) > 1 {
+		return strings.Join(args[:len(args)-1], " "), args[len(args)-1:]
+	}
+	return strings.Join(args, " "), nil
+}
+
 // update applies several changes in the order given; the report is theirs
 // joined, ending on the file the note ended up in.
 func (a *App) update(idx *vault.Index, it *vault.Item, args []string) (*vault.Report, error) {
@@ -235,7 +281,7 @@ func (a *App) update(idx *vault.Index, it *vault.Item, args []string) (*vault.Re
 		return nil, err
 	}
 	if len(f.set) == 0 {
-		return nil, vault.UsageError("usage: tracker update <id> [--when …] [--due …] [--tags …] [--add-tags …] [--in …] [--title …] [--append-notes …]")
+		return nil, vault.UsageError("usage: tracker update <id> [--when …] [--repeat …] [--due …] [--tags …] [--add-tags …] [--in …] [--title …] [--append-notes …]")
 	}
 	if len(f.words) > 0 {
 		return nil, vault.UsageError("unexpected " + strconv.Quote(f.text()))
@@ -250,7 +296,7 @@ func (a *App) update(idx *vault.Index, it *vault.Item, args []string) (*vault.Re
 		all.ID, all.Path = r.ID, r.Path
 		return nil
 	}
-	for _, name := range []string{"--when", "--due", "--tags", "--add-tags", "--append-notes", "--title", "--in"} {
+	for _, name := range []string{"--when", "--repeat", "--due", "--tags", "--add-tags", "--append-notes", "--title", "--in"} {
 		if !f.set[name] {
 			continue
 		}
@@ -263,6 +309,14 @@ func (a *App) update(idx *vault.Index, it *vault.Item, args []string) (*vault.Re
 			}
 			err = apply(a.V.SetWhen(it, w))
 			if err != nil {
+				return nil, err
+			}
+		case "--repeat":
+			spec, err := vault.ParseRepeat(val)
+			if err != nil {
+				return nil, err
+			}
+			if err := apply(a.V.SetRepeat(it, spec)); err != nil {
 				return nil, err
 			}
 		case "--due":

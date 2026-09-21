@@ -5,9 +5,8 @@ My to-do list: one markdown note per to-do in the Obsidian `notes` vault
 views, one Go binary for the shell: a CLI for agents and scripts, a fullscreen
 TUI for me. Two pounce commands, a tiny Obsidian plugin and a share-sheet
 Shortcut on the phone sit on top of it. Nothing here is a Things 3 clone: the
-base is four properties, and
-everything else (areas, boards, the logbook, lanes) falls out of Obsidian doing
-what it already does.
+base is five properties, and everything else (areas, boards, the logbook,
+lanes) falls out of Obsidian doing what it already does.
 
 ```
 ~/Library/Mobile Documents/iCloud~md~obsidian/Documents/notes/   # the vault
@@ -27,6 +26,7 @@ what it already does.
 ```yaml
 ---
 when: later          # REQUIRED · now | later | someday | YYYY-MM-DD
+repeat: weekly       # optional · it comes back when you complete it
 due: 2026-09-30      # optional · a hard deadline
 done: 2026-09-20     # set = closed on that day   (dropped: 2026-09-20 = abandoned instead)
 tags: [fable]        # optional · #fable = an agent can take it cold · #decide / #build = the kind of work
@@ -44,6 +44,21 @@ The notes. `- [ ]` lines are the checklist. Images the way Obsidian pastes them.
   close a to-do completely with one property. `tracker archive` sweeps closed
   notes older than 30 days into `log/` (stamping `project:` so history keeps
   its list), and the Done view is by `done`, wherever the file sits.
+- **`repeat` brings it back.** `daily | weekly | monthly | yearly | every N
+  days` — and `every N weeks | months | years`, which is the same rule.
+  Completing a repeating to-do closes that note exactly as it always did
+  **and** writes a fresh one for the next occurrence: same folder, same body
+  with the checklist emptied, its own `created:`, no `done:` or `lane:`. A
+  closed note is never rolled forward; closed is still a date, not a status.
+  The next date counts from the note's own `when:`, never from the day you got
+  round to it, and is advanced until it is past today — so a weekly chore done
+  three days late lands on its next slot, not on a backlog of missed ones. A
+  `due:` moves by the same number of days, keeping its lead time. `drop` is how
+  a series ends. Since the occurrence is a new file and the closed one still
+  holds the plain name, its id gains a ` (2)` — ` (3)` and up while earlier
+  ones are still about, until `tracker archive` sweeps them into `log/` and
+  frees the name. `title:` is kept, so the title stays what every view shows
+  and what you type.
 - **The inbox is what has not been triaged**: no project *and* `when: later`,
   which is what a fresh capture is. Giving it either — a project, or `now` /
   `someday` / a date — takes it out, the way Things 3's inbox emptied when a
@@ -73,8 +88,8 @@ with no `when` (made by hand in Obsidian) is `later`.
 ## Views (`tracker.base`)
 
 `tracker init` writes it; `--force` restores the shipped one. Property types
-(`due`, `done`, `dropped`, `created` as dates; `when` as text) go in
-`.obsidian/types.json`. Views: **Today** · **Later** (grouped by project) ·
+(`due`, `done`, `dropped`, `created` as dates; `when` and `repeat` as text) go
+in `.obsidian/types.json`. Views: **Today** · **Later** (grouped by project) ·
 **Upcoming** (dated) · **Someday** · **Due** · **Inbox** (untriaged) · **Done** ·
 **Project** (the one folder notes embed as `![[tracker.base#Project]]`; `this`
 is the embedding note, so one base serves every project). A `⚡ spawn` column
@@ -95,13 +110,15 @@ tracker link <id>                # file:// (clickable in a pane) then obsidian:/
 tracker index                    # every note, one row — the escape hatch
 
 tracker add <title> [--in <project>] [--now | --someday | --when <date|today|tomorrow|+3d>]
-                    [--due <date>] [--tags a,b] [--notes <text>] [--checklist 'a|b'] [--edit]
+                    [--due <date>] [--repeat <spec>] [--tags a,b] [--notes <text>]
+                    [--checklist 'a|b'] [--edit]
 tracker now | later | someday <id>          tracker when <id> <now|later|someday|date>
 tracker due <id> <date|none>                tracker done <id> · drop <id> · reopen <id>
+tracker repeat <id> <daily|weekly|monthly|yearly|every N days|none>
 tracker move <id> <project|unfiled>         tracker rename <id> <title>
 tracker tag <id> +a -b                      tracker note <id> <text>       (append)
 tracker edit <id>                           ($EDITOR, then re-read)
-tracker update <id> [--when …] [--due …] [--tags …] [--add-tags …] [--in …] [--title …] [--append-notes …]
+tracker update <id> [--when …] [--repeat …] [--due …] [--tags …] [--add-tags …] [--in …] [--title …] [--append-notes …]
 tracker project add <name> [--in <parent>] [--repo <path>] [--notes <brief>] [--todos 'a|b']
 tracker project set <name> repo=<path>      tracker promote <id>            (to-do → project folder)
 tracker spawn <id> [--repo <path>] [--follow] [--again]   # a lane for this to-do, background, banner when live
@@ -111,8 +128,8 @@ tracker archive [--older 30] [--dry-run]    tracker migrate [--dry-run]     trac
 Aliases kept for the skills: `complete`→`done`, `cancel`→`drop`, `anytime`→`later`,
 `add-project`→`project add`, `--project`→`--in`, `--deadline`→`--due`.
 
-- `--json` on any read → `[{id, title, folder, project, when, bucket, due, done,
-  dropped, tags, created, lane, repo, path}]`. `bucket` is `now` · `scheduled`
+- `--json` on any read → `[{id, title, folder, project, when, bucket, repeat,
+  due, done, dropped, tags, created, lane, repo, path}]`. `bucket` is `now` · `scheduled`
   · `later` · `someday`; `project` is the folder's first segment, `""` unfiled.
   `projects --json` is its own shape, one row per folder:
   `[{id, name, depth, open, repo, path}]`, the inbox first with `id: ""`.
@@ -199,14 +216,17 @@ by the terminal's background), resizes live, never reaches the last column.
 Bases cannot: commands **Tracker: quick add** (title + when), **done**,
 **drop**, **now / later / someday**, **spawn lane** (desktop: runs `tracker
 spawn`), and the `obsidian://tracker?spawn=<path>` · `?done=<path>` ·
-`?add=<title>[&when=][&in=][&due=][&tags=a,b][&notes=<body>]` protocol the ⚡
-column, pounce and the phone use. Mobile gets the commands, not spawn.
+`?add=<title>[&when=][&in=][&due=][&repeat=][&tags=a,b][&notes=<body>]`
+protocol the ⚡ column, pounce and the phone use. Mobile gets the commands, not
+spawn. **done** repeats here too — same date math, same bytes as the CLI — so
+a chore closed on the phone comes back without waiting for a Mac.
 
 `?add=` takes everything `tracker add` takes but the checklist, and writes the
 same bytes for it: same key order, same YAML quoting, same file name, the
 CLI's `now | later | someday | today | tomorrow | +Nd | YYYY-MM-DD` for `when`
-and `due`. A `due` that is none of those is refused in a Notice and the to-do
-is still made — a capture never fails on a bad parameter. An `?add=` with no
+and `due`, its grammar for `repeat`. A `due` or a `repeat` that is none of
+those is refused in a Notice and the to-do is still made — a capture never
+fails on a bad parameter. An `?add=` with no
 title opens quick add holding whatever else came with it, so a share that
 arrives without one keeps its URL.
 

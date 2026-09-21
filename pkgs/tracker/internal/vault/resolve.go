@@ -10,7 +10,9 @@ import (
 // ── resolving what the user typed ────────────────────────────────────────────
 
 // Resolve finds one to-do: an exact id (with or without `tracker/` or `.md`)
-// or a unique case-insensitive substring of an OPEN to-do's id or title.
+// or a unique case-insensitive substring of an OPEN to-do's id or title. An
+// exact id that is closed yields to an open match — the next occurrence of a
+// repeating to-do is the one you meant — and comes back only if there is none.
 // closed=true (the reopen verb) searches the closed ones instead, and a bare
 // name is tried under log/ too. Ambiguity is an error that lists the
 // candidates — show them, never pick one.
@@ -21,18 +23,33 @@ func (v *Vault) Resolve(idx *Index, query string, closed bool) (*Item, error) {
 	if s == "" {
 		return nil, UsageError("an id or a bit of a title is needed")
 	}
+	var exact *Item
 	if it := idx.Get(s); it != nil {
-		return it, nil
+		if closed || it.IsProject || it.Open() {
+			return it, nil
+		}
+		// An exact id naming a CLOSED to-do: a repeating one leaves its name
+		// on the note it closed, and the open occurrence beside it is what
+		// `done` means. Keep it as the fallback, so an ordinary closed to-do
+		// still refuses with "already closed" and not "nothing matches".
+		exact = it
 	}
 	if closed {
 		if it := idx.Get("log/" + s); it != nil {
 			return it, nil
 		}
 	}
-	// A file that exists but is not indexed (a race with a write) still counts.
+	// A file that exists but is not indexed (a race with a write) still counts,
+	// under the same rule: closed, it yields to an open match.
 	if _, err := os.Stat(v.Path(s)); err == nil {
 		if n, err := ReadNote(v.Path(s), s); err == nil {
-			return v.item(n), nil
+			it := v.item(n)
+			if closed || it.IsProject || it.Open() {
+				return it, nil
+			}
+			if exact == nil {
+				exact = it
+			}
 		}
 	}
 	q := strings.ToLower(s)
@@ -47,6 +64,9 @@ func (v *Vault) Resolve(idx *Index, query string, closed bool) (*Item, error) {
 	}
 	switch len(hits) {
 	case 0:
+		if exact != nil {
+			return exact, nil
+		}
 		if closed {
 			return nil, RefusedError("nothing closed matches " + quote(query))
 		}
