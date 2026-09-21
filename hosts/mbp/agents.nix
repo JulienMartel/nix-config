@@ -31,6 +31,15 @@ in
 
     namer = "api";
 
+    # Four tool skills this Mac's agents load every turn and never invoke
+    # (/skill-doctor, 2026-09-12). `handoff` is scruff's other skill and stays.
+    skillExclude = [
+      "factory"
+      "pounce"
+      "scruff"
+      "trill"
+    ];
+
     instructions = builtins.readFile ./instructions.md;
   };
 
