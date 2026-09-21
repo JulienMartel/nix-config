@@ -189,7 +189,7 @@ came with a reversal cost, and 3 paragraphs of SQLite theory I didn't ask for va
 
 ## My skills
 
-`ship`, `things`, `later`, `unslop`, `wizard`, `grill`, `conflicts`, `deepen`,
+`ship`, `tracker`, `later`, `unslop`, `wizard`, `grill`, `conflicts`, `deepen`,
 `blast-radius` and `show-me`; a client that does not index skills reads
 `~/.agents/skills/<name>/SKILL.md` by path.
 

@@ -58,6 +58,7 @@ var migrateRules = []string{
 	"deadline → due",
 	"evening dropped",
 	"area dropped",
+	"things dropped",
 	"project dropped (outside log/)",
 	"inbox/ → tracker/",
 	"folder note: ```base → embed",
@@ -94,6 +95,11 @@ func (v *Vault) Migrate() (*Report, *MigrateStats, error) {
 	var inbox []*Item
 	for _, it := range idx.Items {
 		n := it.Note
+		// The Things 3 uuid: provenance for an import whose source is gone.
+		if n.FM.Has("things") {
+			n.FM.Delete("things")
+			stats.add("things dropped")
+		}
 		if it.IsProject {
 			v.migrateFolderNote(n, stats)
 		} else {

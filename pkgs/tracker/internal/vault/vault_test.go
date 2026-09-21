@@ -48,6 +48,7 @@ func TestMigrate(t *testing.T) {
 		"deadline → due":                                          1,
 		"evening dropped":                                         1,
 		"area dropped":                                            2,
+		"things dropped":                                          3,
 		"project dropped (outside log/)":                          1,
 		"inbox/ → tracker/":                                       2,
 		"folder note: ```base → embed":                            4,
@@ -95,7 +96,7 @@ func TestMigrate(t *testing.T) {
 		t.Errorf("replace disk:\n%s", disk)
 	}
 	haus := mustRead(t, v.Path("hausfold/hausfold"))
-	if !strings.Contains(haus, "repo: \"~/code/workshop\"\n") || !strings.Contains(haus, ProjectEmbed) || strings.Contains(haus, "```base") || strings.Contains(haus, "area:") {
+	if !strings.Contains(haus, "repo: \"~/code/workshop\"\n") || !strings.Contains(haus, ProjectEmbed) || strings.Contains(haus, "```base") || strings.Contains(haus, "area:") || strings.Contains(haus, "things:") {
 		t.Errorf("hausfold folder note:\n%s", haus)
 	}
 	personal := mustRead(t, v.Path("Personal/Personal"))
@@ -107,7 +108,7 @@ func TestMigrate(t *testing.T) {
 		t.Errorf("unknown key lost:\n%s", v2)
 	}
 	types := mustRead(t, filepath.Join(v.Root, ".obsidian", "types.json"))
-	for _, old := range []string{`"status"`, `"heading"`, `"deadline"`, `"evening"`, `"area"`, `"": `} {
+	for _, old := range []string{`"status"`, `"heading"`, `"deadline"`, `"evening"`, `"area"`, `"things"`, `"": `} {
 		if strings.Contains(types, old) {
 			t.Errorf("types.json still has %s", old)
 		}

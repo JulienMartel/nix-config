@@ -258,7 +258,7 @@ func (fm *Frontmatter) Keys() []string {
 // canonical is the order a freshly written note lists its keys in. A new key
 // slots in before the first existing key that comes after it here; a key not
 // on the list goes to the end. Untouched keys never move.
-var canonical = []string{"type", "when", "due", "done", "dropped", "tags", "created", "title", "repo", "lane", "project", "things"}
+var canonical = []string{"type", "when", "due", "done", "dropped", "tags", "created", "title", "repo", "lane", "project"}
 
 func rank(key string) int {
 	for i, k := range canonical {

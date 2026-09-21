@@ -118,5 +118,6 @@ reached first.
 
 `legacy/from-things` imported Things whole in 2026-07, in the old shape
 (`legacy/tracker` is the bash CLI it sources); `tracker migrate` converts that shape
-to this one and is idempotent. A `things:` uuid stays on each imported note. Nothing
-writes it again.
+to this one and is idempotent. That import left a `things:` uuid on each note;
+`tracker migrate` now strips it, since Things 3 is gone and the uuid points at
+nothing.

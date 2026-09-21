@@ -16,12 +16,13 @@ import (
 // compares a date as a date and `when` — a word or a date — as text.
 var propertyTypes = map[string]string{
 	"when": "text", "due": "date", "done": "date", "dropped": "date", "created": "date",
-	"type": "text", "repo": "text", "lane": "text", "project": "text", "title": "text", "things": "text",
+	"type": "text", "repo": "text", "lane": "text", "project": "text", "title": "text",
 }
 
-// oldPropertyKeys are the Things-shaped keys, and the "" key an early
-// experiment left behind; init removes them.
-var oldPropertyKeys = []string{"status", "heading", "deadline", "evening", "area", ""}
+// oldPropertyKeys are the Things-shaped keys, `things` (the Things 3 import's
+// uuid, retired with Things 3 itself), and the "" key an early experiment left
+// behind; init removes them.
+var oldPropertyKeys = []string{"status", "heading", "deadline", "evening", "area", "things", ""}
 
 // Init makes tracker/ and log/, writes tracker.base (force restores it),
 // merges the property types, and installs the plugin.
