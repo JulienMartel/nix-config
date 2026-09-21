@@ -44,6 +44,12 @@ The notes. `- [ ]` lines are the checklist. Images the way Obsidian pastes them.
   close a to-do completely with one property. `tracker archive` sweeps closed
   notes older than 30 days into `log/` (stamping `project:` so history keeps
   its list), and the Done view is by `done`, wherever the file sits.
+- **The inbox is what has not been triaged**: no project *and* `when: later`,
+  which is what a fresh capture is. Giving it either — a project, or `now` /
+  `someday` / a date — takes it out, the way Things 3's inbox emptied when a
+  task got a home. An unfiled to-do you have decided about still lives in the
+  root; `tracker projects` counts every one of them under `(unfiled)`, which
+  is why that number is the larger one.
 - **No project = the root of `tracker/`.** A folder is a project; its folder
   note (`<folder>/<folder>.md`) carries `type: project`, the brief, an optional
   `repo:` (what `tracker spawn` spawns on), and embeds the Project view. A
@@ -70,7 +76,7 @@ with no `when` (made by hand in Obsidian) is `later`.
 `tracker init` writes it; `--force` restores the shipped one. Property types
 (`due`, `done`, `dropped`, `created` as dates; `when` as text) go in
 `.obsidian/types.json`. Views: **Today** · **Later** (grouped by project) ·
-**Upcoming** (dated) · **Someday** · **Due** · **Inbox** (unfiled) · **Done** ·
+**Upcoming** (dated) · **Someday** · **Due** · **Inbox** (untriaged) · **Done** ·
 **Project** (the one folder notes embed as `![[tracker.base#Project]]`; `this`
 is the embedding note, so one base serves every project). A `⚡ spawn` column
 links to `obsidian://tracker?spawn=<path>`, which the plugin turns into
@@ -93,7 +99,7 @@ tracker add <title> [--in <project>] [--now | --someday | --when <date|today|tom
                     [--due <date>] [--tags a,b] [--notes <text>] [--checklist 'a|b'] [--edit]
 tracker now | later | someday <id>          tracker when <id> <now|later|someday|date>
 tracker due <id> <date|none>                tracker done <id> · drop <id> · reopen <id>
-tracker move <id> <project|inbox>           tracker rename <id> <title>
+tracker move <id> <project|unfiled>         tracker rename <id> <title>
 tracker tag <id> +a -b                      tracker note <id> <text>       (append)
 tracker edit <id>                           ($EDITOR, then re-read)
 tracker update <id> [--when …] [--due …] [--tags …] [--add-tags …] [--in …] [--title …] [--append-notes …]

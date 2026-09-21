@@ -189,7 +189,7 @@ var views = []view{
 		group: nil, less: []func(a, b *vault.Item) int{cmpWhen, cmpTitle}},
 	{name: "Due", glyph: "!", keep: func(it *vault.Item) bool { return it.Open() && it.Due != "" },
 		group: nil, less: []func(a, b *vault.Item) int{cmpDue, cmpTitle}},
-	{name: "Inbox", glyph: "▸", keep: func(it *vault.Item) bool { return it.Open() && it.Folder == "" },
+	{name: "Inbox", glyph: "▸", keep: func(it *vault.Item) bool { return it.Open() && it.Folder == "" && it.Bucket == vault.BucketLater },
 		group: nil, less: []func(a, b *vault.Item) int{cmpCreatedDesc, cmpTitle}},
 	{name: "Done", glyph: "✓", keep: func(it *vault.Item) bool { return !it.IsProject && !it.Open() },
 		group: byProject, less: []func(a, b *vault.Item) int{cmpClosedDesc, cmpTitle}},
@@ -197,14 +197,14 @@ var views = []view{
 
 func byProject(it *vault.Item) string {
 	if it.Project == "" {
-		return "inbox"
+		return "unfiled"
 	}
 	return it.Project
 }
 
 func byFolder(it *vault.Item) string {
 	if it.Folder == "" {
-		return "inbox"
+		return "unfiled"
 	}
 	return it.Folder
 }
@@ -353,10 +353,10 @@ func (m *Model) buildRows() {
 		items = kept
 	}
 	if group != nil {
-		// Unfiled first: the inbox is what needs filing.
+		// Unfiled first: a to-do with no project is what needs filing.
 		key := func(it *vault.Item) string {
 			g := group(it)
-			if g == "inbox" {
+			if g == "unfiled" {
 				return ""
 			}
 			return strings.ToLower(g)

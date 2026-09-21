@@ -89,7 +89,7 @@ func TestReads(t *testing.T) {
 		t.Errorf("row %v", items[0])
 	}
 	_, o, _ = run(t, a, out, errw, "later")
-	if !strings.Contains(o, "── hausfold ──") || !strings.Contains(o, "── (inbox) ──") {
+	if !strings.Contains(o, "── hausfold ──") || !strings.Contains(o, "── (unfiled) ──") {
 		t.Errorf("later groups:\n%s", o)
 	}
 	_, o, _ = run(t, a, out, errw, "upcoming", "30000")
@@ -109,7 +109,7 @@ func TestReads(t *testing.T) {
 		t.Errorf("list:\n%s", o)
 	}
 	_, o, _ = run(t, a, out, errw, "projects")
-	if !strings.Contains(o, "  ci ") || !strings.Contains(o, "~/code/workshop") || !strings.Contains(o, "(inbox)") {
+	if !strings.Contains(o, "  ci ") || !strings.Contains(o, "~/code/workshop") || !strings.Contains(o, "(unfiled)") {
 		t.Errorf("projects:\n%s", o)
 	}
 	_, o, _ = run(t, a, out, errw, "projects", "--json")
@@ -284,5 +284,55 @@ func TestLaterSomedayDue(t *testing.T) {
 	}
 	if code, _, _ := run(t, a, out, errw, "due", "call mom"); code != 2 {
 		t.Errorf("due with an id and no date is usage, got %d", code)
+	}
+}
+
+// The inbox is what has not been triaged: no project AND no decision about
+// when. Giving a to-do either — a project, or now / someday / a date — takes
+// it out, the way Things 3's inbox emptied when you gave a task a home.
+// `tracker projects` still counts every unfiled to-do, triaged or not, and
+// says "(unfiled)" so the two numbers do not both claim to be the inbox.
+func TestInboxIsUntriaged(t *testing.T) {
+	a, out, errw := app(t)
+	in := func() string {
+		_, o, _ := run(t, a, out, errw, "inbox")
+		return o
+	}
+	// The fixture: `organize notes` is unfiled and later; `buy cat food` is
+	// unfiled with a date that has arrived, so it reads as now.
+	if o := in(); !strings.Contains(o, "organize notes") || strings.Contains(o, "buy cat food") {
+		t.Errorf("a now to-do is still in the inbox:\n%s", o)
+	}
+	for _, when := range []string{"now", "someday", "2099-01-01"} {
+		if code, _, e := run(t, a, out, errw, "when", "organize notes", when); code != 0 {
+			t.Fatalf("when %s: %s", when, e)
+		}
+		if o := in(); strings.Contains(o, "organize notes") {
+			t.Errorf("when=%s did not clear the inbox:\n%s", when, o)
+		}
+		if code, _, e := run(t, a, out, errw, "later", "organize notes"); code != 0 {
+			t.Fatalf("back to later: %s", e)
+		}
+		if o := in(); !strings.Contains(o, "organize notes") {
+			t.Errorf("back to later did not return it to the inbox:\n%s", o)
+		}
+	}
+	// A project takes it out too, and "unfiled" puts it back.
+	if code, _, e := run(t, a, out, errw, "move", "organize notes", "hausfold"); code != 0 {
+		t.Fatalf("move: %s", e)
+	}
+	if o := in(); strings.Contains(o, "organize notes") {
+		t.Errorf("a filed to-do is still in the inbox:\n%s", o)
+	}
+	if code, _, e := run(t, a, out, errw, "move", "hausfold/organize notes", "unfiled"); code != 0 {
+		t.Fatalf("move back: %s", e)
+	}
+	if o := in(); !strings.Contains(o, "organize notes") {
+		t.Errorf("unfiled did not put it back in the inbox:\n%s", o)
+	}
+	// The tree counts every unfiled to-do, triaged or not: both of them.
+	_, o, _ := run(t, a, out, errw, "projects")
+	if !strings.Contains(o, "(unfiled)") || !strings.Contains(o, "2 open") {
+		t.Errorf("projects should still count both unfiled to-dos:\n%s", o)
 	}
 }

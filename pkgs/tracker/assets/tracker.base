@@ -105,6 +105,7 @@ views:
       and:
         - formula.state == "open"
         - file.folder == "tracker"
+        - formula.bucket == "later"
     order:
       - file.name
       - when

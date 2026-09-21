@@ -59,7 +59,7 @@ func (a *App) view(name string, args []string) error {
 		items = filter(idx.Open(), func(it *vault.Item) bool { return it.Due != "" && it.Due <= until })
 		sortBy(items, byDue, byID)
 	case "inbox":
-		items = filter(idx.Open(), func(it *vault.Item) bool { return it.Folder == "" })
+		items = filter(idx.Open(), func(it *vault.Item) bool { return it.Folder == "" && it.Bucket == vault.BucketLater })
 		sortBy(items, byCreatedDesc, byID)
 	case "done-list":
 		n, err := arg(20)
@@ -131,15 +131,15 @@ func (a *App) projects() error {
 		return err
 	}
 	folders := a.V.Folders(idx)
-	inbox := len(filter(idx.Open(), func(it *vault.Item) bool { return it.Folder == "" }))
+	unfiled := len(filter(idx.Open(), func(it *vault.Item) bool { return it.Folder == "" }))
 	if a.JSON {
-		rows := []projectRow{{ID: "", Name: "inbox", Open: inbox, Path: a.V.Dir}}
+		rows := []projectRow{{ID: "", Name: "inbox", Open: unfiled, Path: a.V.Dir}}
 		for _, f := range folders {
 			rows = append(rows, projectRow{ID: f.Path, Name: f.Name, Depth: f.Depth, Open: f.Open, Repo: f.Repo, Path: a.V.Path(f.Path + "/" + f.Name)})
 		}
 		return a.printJSON(rows)
 	}
-	fmt.Fprintf(a.Out, "%-44s %4d open\n", "(inbox)", inbox)
+	fmt.Fprintf(a.Out, "%-44s %4d open\n", "(unfiled)", unfiled)
 	for _, f := range folders {
 		name := strings.Repeat("  ", f.Depth) + f.Name
 		line := fmt.Sprintf("%-44s %4d open", name, f.Open)
@@ -243,7 +243,7 @@ func (a *App) rows(items []*vault.Item, group string) error {
 				}
 				label := key
 				if label == "" {
-					label = "(inbox)"
+					label = "(unfiled)"
 				}
 				fmt.Fprintf(a.Out, "── %s ──\n", label)
 				prev = key

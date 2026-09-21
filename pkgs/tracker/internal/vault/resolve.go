@@ -69,7 +69,7 @@ func (v *Vault) ResolveFolder(idx *Index, query string) (string, error) {
 	s := strings.Trim(strings.TrimSpace(query), "/")
 	s = strings.TrimPrefix(s, "tracker/")
 	switch strings.ToLower(s) {
-	case "", "inbox", ".", "root":
+	case "", "inbox", "unfiled", ".", "root":
 		return "", nil
 	}
 	if s == "log" || strings.HasPrefix(s, "log/") {
