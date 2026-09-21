@@ -273,6 +273,11 @@ func (v *Vault) Folders(idx *Index) []*Folder {
 		return nil
 	})
 	for _, it := range idx.Items {
+		if it.InLog() {
+			// log/ is the archive, never a project — a folder note that was
+			// demoted and swept there must not put a row back on the tree.
+			continue
+		}
 		if it.IsProject {
 			f := add(it.Folder)
 			if it.ID == it.Folder+"/"+path.Base(it.Folder) {

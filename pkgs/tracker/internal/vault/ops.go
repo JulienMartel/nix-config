@@ -165,13 +165,7 @@ func (v *Vault) Promote(it *Item) (*Report, error) {
 		n.FM.Delete(k)
 	}
 	n.FM.Set("type", "project")
-	if !strings.Contains(n.Body, ProjectEmbed) {
-		body := strings.TrimRight(n.Body, "\n")
-		if body != "" {
-			body += "\n\n"
-		}
-		n.Body = body + ProjectEmbed + "\n"
-	}
+	n.Body = withEmbed(n.Body)
 	r := &Report{}
 	if err := v.save(r, n); err != nil {
 		return nil, err

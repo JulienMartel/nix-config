@@ -31,7 +31,7 @@ notes/tracker/
 │   ├── hausfold.md         # the folder note: type: project, repo:, the brief, ![[tracker.base#Project]]
 │   ├── <to-do>.md
 │   └── <sub-project>/      # a folder in a folder; a folder of folders is an area
-└── log/                    # the archive `tracker archive` moves closed notes into
+└── log/                    # the archive `archive` and `project done` move closed notes into
 ```
 
 A to-do, all of it:
@@ -74,6 +74,7 @@ someday`.
 tracker add "buy cat food" --in buy --now --tags errand
 tracker add "ship the thing" --in hausfold --due 2026-09-30 --notes "context" --checklist 'draft|review|merge'
 tracker project add "kitchen reno" --in Personal --notes "<brief>" --todos 'measure|quote|order'
+tracker project done "kitchen reno"      # finished: its notes → log/, the folder goes
 
 tracker now | later | someday <id>       tracker when <id> tomorrow|+3d|2026-10-01
 tracker due <id> 2026-09-30|none         tracker move <id> nas · rename · tag <id> +a -b · note <id> "…"
@@ -84,7 +85,7 @@ tracker spawn <id>                       # a lane for it: prompt from the note, 
 
 No `--in` → unfiled. A project must exist (`tracker projects`); `project add` makes
 one, `--in` nests it. `--dry-run` / `DRY_RUN=1` on `add`, `spawn`, `archive`,
-`migrate`. Every write is atomic and ends with a `file://` line.
+`migrate`, `project done`. Every write is atomic and ends with a `file://` line.
 
 ## House rules for you, the agent
 
@@ -96,11 +97,19 @@ one, `--in` nests it. `--dry-run` / `DRY_RUN=1` on `add`, `spawn`, `archive`,
    fine, unprompted; more than one, or anything I only implied, gets confirmed first.
 4. **Never `rm`.** `drop` is the reversible version (`reopen` undoes it); deleting is
    mine. `archive` only moves closed notes and only when asked.
-5. **End a write report with the `file://` line** the verb prints — the link I can
+5. **Retiring a project is asked for, never inferred.** `tracker project done
+   <name>` is how a finished one leaves: its closed to-dos and its brief go to
+   `log/`, and the folder goes with them, which is the only thing that takes the
+   row off `tracker projects`. It refuses while anything is open, and `tracker
+   reopen <id>` on the brief brings the folder back with the brief as its folder
+   note — the closed to-dos stay in `log/`, reopened one by one by name. Zero open
+   to-dos is not by itself a reason to run it — a project can sit empty between
+   passes.
+6. **End a write report with the `file://` line** the verb prints — the link I can
    click in a pane. Never the `obsidian://` one alone: no terminal makes it clickable.
-6. **Never run `obsidian` (the CLI) or `open`.** Both take the screen. Files only.
+7. **Never run `obsidian` (the CLI) or `open`.** Both take the screen. Files only.
    `tracker spawn` is fine: it spawns in the background and a banner tells me.
-7. **Edit a note only through `tracker`**, or `sed`/`cat` on the file if it has no
+8. **Edit a note only through `tracker`**, or `sed`/`cat` on the file if it has no
    verb — keeping the shape above. A `when:` that is not one of the four forms falls
    out of every view for everyone.
 
