@@ -67,10 +67,16 @@ func Tags(spec string) []string {
 	return out
 }
 
+// yamlEscape is what a double-quoted scalar escapes and unquote decodes: the
+// backslash and the quote, then the line breaks and tabs — a raw newline in a
+// value would end the line and take the rest of the frontmatter with it, which
+// is how a title shared from a phone could corrupt a note.
+var yamlEscape = strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`, "\r", `\r`, "\t", `\t`)
+
 // YAMLStr quotes a scalar only when a bare one would be misread: bare when it
 // starts with a letter and is made of the characters a title usually is, or
-// is a date; double-quoted with `\` and `"` escaped otherwise. The YAML words
-// (`yes`, `null`, …) are quoted so they stay strings.
+// is a date; double-quoted and escaped otherwise. The YAML words (`yes`,
+// `null`, …) are quoted so they stay strings.
 func YAMLStr(s string) string {
 	if yamlDate.MatchString(s) {
 		return s
@@ -78,5 +84,5 @@ func YAMLStr(s string) string {
 	if yamlBare.MatchString(s) && !yamlWords[strings.ToLower(s)] && s == strings.TrimSpace(s) {
 		return s
 	}
-	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
+	return `"` + yamlEscape.Replace(s) + `"`
 }

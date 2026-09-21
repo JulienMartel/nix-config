@@ -12,8 +12,10 @@ import "embed"
 //go:embed assets/tracker.base
 var Base []byte
 
-// Plugin is the obsidian-plugin/ directory: main.js and manifest.json, plain
-// JS with no build step, installed into .obsidian/plugins/tracker/.
+// Plugin is the plugin itself: main.js and manifest.json, plain JS with no
+// build step, installed into .obsidian/plugins/tracker/. Named file by file,
+// not `obsidian-plugin/*`, so what sits beside them — main.test.js today —
+// never ends up in a vault. plugin_test.go holds that line.
 //
-//go:embed obsidian-plugin/*
+//go:embed obsidian-plugin/main.js obsidian-plugin/manifest.json
 var Plugin embed.FS

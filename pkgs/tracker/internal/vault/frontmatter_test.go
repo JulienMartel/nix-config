@@ -89,10 +89,34 @@ func TestYAMLStr(t *testing.T) {
 		"#tag":           `"#tag"`,
 		"trail ":         `"trail "`,
 		"hausfold/ci":    "hausfold/ci",
+		"two\nlines":     `"two\nlines"`,
+		"a\tb\r":         `"a\tb\r"`,
 	}
 	for in, want := range cases {
 		if got := YAMLStr(in); got != want {
 			t.Errorf("YAMLStr(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// A value with a line break in it used to end the line and take the rest of
+// the frontmatter with it: `tracker add $'two\nlines'` wrote a note nothing
+// could parse. Whatever goes in has to come back out, and the block has to
+// still be a block.
+func TestFrontmatterSurvivesLineBreaks(t *testing.T) {
+	for _, v := range []string{"two\nlines", "a\tb", "carriage\rreturn", "---\nwhen: now", `quote " and \ back`} {
+		fm := Empty()
+		fm.Set("title", v)
+		fm.Set("when", Now)
+		data := fm.Serialize("the body\n")
+		back, body := Parse(data)
+		switch {
+		case body != "the body\n":
+			t.Errorf("%q: body = %q", v, body)
+		case back.Get("title") != v:
+			t.Errorf("%q: title came back %q\n%s", v, back.Get("title"), data)
+		case back.Get("when") != Now:
+			t.Errorf("%q: when came back %q — the block was cut short\n%s", v, back.Get("when"), data)
 		}
 	}
 }

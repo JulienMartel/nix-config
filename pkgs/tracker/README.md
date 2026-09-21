@@ -3,8 +3,9 @@
 My to-do list: one markdown note per to-do in the Obsidian `notes` vault
 (iCloud, so the phone has it), one folder per project, Obsidian Bases for the
 views, one Go binary for the shell: a CLI for agents and scripts, a fullscreen
-TUI for me. Two pounce commands and a tiny Obsidian plugin sit on top of the
-CLI. Nothing here is a Things 3 clone: the base is four properties, and
+TUI for me. Two pounce commands, a tiny Obsidian plugin and a share-sheet
+Shortcut on the phone sit on top of it. Nothing here is a Things 3 clone: the
+base is four properties, and
 everything else (areas, boards, the logbook, lanes) falls out of Obsidian doing
 what it already does.
 
@@ -193,8 +194,82 @@ by the terminal's background), resizes live, never reaches the last column.
 Bases cannot: commands **Tracker: quick add** (title + when), **done**,
 **drop**, **now / later / someday**, **spawn lane** (desktop: runs `tracker
 spawn`), and the `obsidian://tracker?spawn=<path>` · `?done=<path>` ·
-`?add=<title>` protocol the ⚡ column and pounce use. Mobile gets the commands,
-not spawn.
+`?add=<title>[&when=][&in=][&due=][&tags=a,b][&notes=<body>]` protocol the ⚡
+column, pounce and the phone use. Mobile gets the commands, not spawn.
+
+`?add=` takes everything `tracker add` takes but the checklist, and writes the
+same bytes for it: same key order, same YAML quoting, same file name, the
+CLI's `now | later | someday | today | tomorrow | +Nd | YYYY-MM-DD` for `when`
+and `due`. A `due` that is none of those is refused in a Notice and the to-do
+is still made — a capture never fails on a bad parameter. An `?add=` with no
+title opens quick add holding whatever else came with it, so a share that
+arrives without one keeps its URL.
+
+## Capture from the phone
+
+Share a link or a selection from any iOS app and it lands unfiled in
+`tracker/`, filed later on the Mac — what Things 3's share extension did. A
+Shortcut in the share sheet writes the note itself, straight into the vault
+folder over iCloud: nothing launches, it works on a plane, and the Mac sees
+the file as soon as iCloud carries it.
+
+Only a person can build a Shortcut, so the phone half is a wizard:
+
+```
+bash pkgs/tracker/scripts/setup-ios-capture          # ~10 min, all of it on the phone
+bash pkgs/tracker/scripts/setup-ios-capture verify   # just the watch-for-it stage
+```
+
+Nine actions: `Get Name` of the share, three regex `Replace Text` to make it a
+file name, `Format Date` for `created:`, one `Text` holding the note, `Set
+Name`, `Save File` into `tracker/`. The last stage watches the vault from the
+Mac until the first capture lands and prints it. What it writes:
+
+```yaml
+---
+when: later          # unfiled + later = the inbox
+created: 2026-09-20  # yyyy-MM-dd — the Inbox view sorts on it
+title: "Why Nix flakes: a field guide | example.com"
+---
+https://example.com/nix-flakes
+```
+
+The phone always writes `title:`, where the CLI writes it only when the file
+name had to be sanitized: one line, and a shared title never loses its colons.
+`testdata/capture.golden.md` is that note and both halves are held to it —
+`internal/vault/capture_test.go` for the CLI, `obsidian-plugin/main.test.js`
+for the plugin. A note with nothing but a body still reads as an unfiled
+`later` to-do, so a capture that writes less than this is not lost.
+
+### Why the Shortcut writes the file
+
+| | taps | Obsidian opens | offline | two at once |
+|---|---|---|---|---|
+| **a Shortcut writing the `.md`** | **2** | **no** | yes | a name twice = a second note, never a lost one |
+| Obsidian's own Share to Obsidian | 3–4 | no | yes | same, but one global destination for every share, and no `when:` |
+| a Shortcut calling `obsidian://tracker?add=` | 2 + the launch | **yes, every time** | yes | Obsidian's own write |
+| Reminders + a Mac-side importer | 2, or none by Siri | no | yes | CloudKit, genuinely conflict-free |
+
+Obsidian opening is what kills a capture habit, which rules out the protocol
+for the common case and leaves it the fallback below. Share to Obsidian can
+only have one destination folder for the whole vault, so `tracker/` would
+swallow every clipping. Reminders wins on conflicts and on Siri, and loses on
+the thing that matters more: the to-do would not exist in the tracker until a
+Mac woke up and drained it, and a second store of truth is the one thing this
+list does not have.
+
+The iCloud file race is the honest cost: two devices writing the *same* name
+in the same second get a conflicted copy, which reads as one extra to-do in
+the inbox. Visible, and deletable in a tap.
+
+### If `Save File` fights you
+
+The protocol path, five actions, as a second Shortcut: `Get Name` →
+`URL Encode` it → `URL Encode` the `Shortcut Input` → `Text`:
+`obsidian://tracker?add=[name]&notes=[input]` → `Open URLs`. Obsidian
+foregrounds and the plugin writes the note, with the CLI's own sanitizing and
+`(2)` collision handling instead of the Shortcut's. Add `&in=<project>` to a
+copy of it and you have a one-tap "straight into hausfold" share.
 
 ## Migration from the Things-shaped tracker (`tracker migrate`)
 
@@ -226,8 +301,11 @@ Then `tracker.base`, `types.json` (old keys removed), the plugin.
 ## Build
 
 ```
-nix build ~/.config/nix#tracker            # → result/bin/tracker
-nix shell nixpkgs#go -c go test ./...      # from pkgs/tracker
+nix build ~/.config/nix#tracker                        # → result/bin/tracker
+nix shell nixpkgs#go nixpkgs#nodejs -c go test ./...   # from pkgs/tracker
 ```
+
+`go test` runs the plugin's own tests through node; without node on PATH that
+one test skips and the rest still run.
 
 `hosts/mbp/apps.nix` puts the package on PATH; `haus rebuild` activates.
