@@ -31,10 +31,107 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.load()
 		return m, nil
+	case tea.MouseMsg:
+		return m.mouse(msg)
 	case tea.KeyMsg:
 		return m.key(msg)
 	}
 	return m, nil
+}
+
+// mouse: a click selects what is under it, the wheel scrolls the pane under the
+// pointer. Everything it can do has a key as well — this is for the hand that
+// is already on the trackpad, never the only way to reach something.
+func (m *Model) mouse(e tea.MouseMsg) (tea.Model, tea.Cmd) {
+	// A modal owns the screen; a stray click behind it must not move the list.
+	if m.mode != modeNormal {
+		return m, nil
+	}
+	switch e.Button {
+	case tea.MouseButtonWheelUp:
+		return m, m.scrollAt(e.X, e.Y, -1)
+	case tea.MouseButtonWheelDown:
+		return m, m.scrollAt(e.X, e.Y, 1)
+	case tea.MouseButtonLeft:
+		if e.Action != tea.MouseActionPress {
+			return m, nil
+		}
+	default:
+		return m, nil
+	}
+	// The tab bar, which is what the header looks like.
+	if e.Y < headerH {
+		for _, sp := range m.tabHits {
+			if e.X >= sp.x0 && e.X < sp.x1 {
+				m.gotoView(sp.i)
+				return m, nil
+			}
+		}
+		return m, nil
+	}
+	b := m.boxAt(e.X, e.Y)
+	if b == nil {
+		return m, nil
+	}
+	switch b.which {
+	case paneSidebar:
+		if i := hitIndex(b, e.Y); i >= 0 {
+			m.focus = paneSidebar
+			m.selectSide(i)
+		}
+	case paneList:
+		if i := hitIndex(b, e.Y); i >= 0 {
+			// A click on the row already under the cursor is the second half
+			// of "open it" — the same thing ⏎ does from here.
+			if m.focus == paneList && i == m.listCur {
+				m.focus = paneNote
+			} else {
+				m.focus = paneList
+				m.listCur = i
+				m.noteOff, m.checkCur = 0, 0
+			}
+		}
+	case paneNote:
+		m.focus = paneNote
+	}
+	return m, nil
+}
+
+// boxAt is the pane drawn under a point last frame.
+func (m *Model) boxAt(x, y int) *box {
+	for i := range m.boxes {
+		b := &m.boxes[i]
+		if y >= b.y0 && y < b.y1 && x >= b.x0 && x < b.x1 {
+			return b
+		}
+	}
+	return nil
+}
+
+// hitIndex maps a screen row back to the index the pane drew there.
+func hitIndex(b *box, y int) int {
+	n := y - b.y0
+	if n < 0 || n >= len(b.hits) {
+		return -1
+	}
+	return b.hits[n]
+}
+
+// scrollAt moves the pane under the pointer without taking focus from the one
+// that has it — the wheel is a look, not a choice.
+func (m *Model) scrollAt(x, y, delta int) tea.Cmd {
+	b := m.boxAt(x, y)
+	if b == nil {
+		if y < headerH {
+			m.gotoView(m.viewIndex() + delta)
+		}
+		return nil
+	}
+	saved := m.focus
+	m.focus = b.which
+	m.down(delta * 3)
+	m.focus = saved
+	return nil
 }
 
 func (m *Model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -70,11 +167,25 @@ func (m *Model) keyNormal(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "?":
 		m.mode = modeHelp
 		return m, nil
-	case "tab", "right":
+	case "tab", "]":
+		m.gotoView(m.viewIndex() + 1)
+		return m, nil
+	case "shift+tab", "[":
+		m.gotoView(m.viewIndex() - 1)
+		return m, nil
+	case "right":
 		m.focus = (m.focus + 1) % 3
 		return m, nil
-	case "shift+tab", "left", "h":
+	case "left":
 		m.focus = (m.focus + 2) % 3
+		return m, nil
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		// The header is a row of tabs and reads like one, so it gets the
+		// numbers as well as the cycle. Out of range is a no-op, not an error:
+		// the count moves with the views table, and a digit is not a wrap.
+		if n := int(s[0] - '1'); n < len(views) {
+			m.gotoView(n)
+		}
 		return m, nil
 	case "esc":
 		if m.filter != "" {
@@ -111,11 +222,6 @@ func (m *Model) keyNormal(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.focus = paneNote
 		}
 		return m, nil
-	case "l":
-		if m.focus != paneList {
-			m.focus = (m.focus + 1) % 3
-			return m, nil
-		}
 	case "/":
 		m.mode = modeFilter
 		m.input.SetValue(m.filter)
