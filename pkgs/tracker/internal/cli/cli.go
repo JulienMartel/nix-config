@@ -111,7 +111,7 @@ func (a *App) dispatch(verb string, args []string) error {
 		return a.add(args)
 	case "now", "drop", "reopen", "promote", "edit":
 		return a.oneItem(verb, args)
-	case "when", "due-set", "move", "rename", "tag", "note", "update", "spawn":
+	case "when", "repeat", "due-set", "move", "rename", "tag", "note", "update", "spawn":
 		return a.oneItem(verb, args)
 	case "project-add":
 		return a.projectAdd(args)
@@ -189,17 +189,21 @@ const Usage = `tracker — my to-do list: markdown notes in the Obsidian vault, 
 READ   tracker today | later | someday | upcoming [days=14] | due [days=30] | inbox | done [n=20]
        tracker list <project> · projects · search <text> · show <id> · link <id> · index
 WRITE  tracker add <title> [--in <project>] [--now | --someday | --when <date|today|tomorrow|+3d>]
-                           [--due <date>] [--tags a,b] [--notes <text>] [--checklist 'a|b'] [--edit]
+                           [--due <date>] [--repeat <spec>] [--tags a,b] [--notes <text>]
+                           [--checklist 'a|b'] [--edit]
        tracker now | later | someday <id>       tracker when <id> <now|later|someday|date>
        tracker due <id> <date|none>             tracker done <id> · drop <id> · reopen <id>
+       tracker repeat <id> <daily | weekly | monthly | yearly | every N days | none>
        tracker move <id> <project|inbox>        tracker rename <id> <title>
        tracker tag <id> +a -b                   tracker note <id> <text>        (append)
        tracker edit <id>                        ($EDITOR, then re-read)
-       tracker update <id> [--when …] [--due …] [--tags …] [--add-tags …] [--in …] [--title …] [--append-notes …]
+       tracker update <id> [--when …] [--repeat …] [--due …] [--tags …] [--add-tags …] [--in …] [--title …] [--append-notes …]
        tracker project add <name> [--in <parent>] [--repo <path>] [--notes <brief>] [--todos 'a|b']
        tracker project set <name> repo=<path>   tracker promote <id>           (to-do → project)
        tracker spawn <id> [--repo <path>] [--follow] [--again]   a lane for this to-do
        tracker archive [--older 30] [--dry-run] · migrate [--dry-run] · init [--force]
+REPEAT done on a repeating to-do closes it and writes the next occurrence, counted
+       from the note's own when: — never from the day you got round to it; drop ends it.
 IDS    folder/name under tracker/ (no .md), or any unique bit of an open to-do's id or title
 FLAGS  --json on any read · DRY_RUN=1 / --dry-run on add, archive, migrate, spawn
 EXIT   0 ok · 1 nothing matched / refused · 2 usage

@@ -80,7 +80,7 @@ func TestReads(t *testing.T) {
 	if err := json.Unmarshal([]byte(o), &items); err != nil || len(items) != 2 {
 		t.Fatalf("today --json: %v\n%s", err, o)
 	}
-	for _, k := range []string{"id", "title", "folder", "project", "when", "bucket", "due", "done", "dropped", "tags", "created", "lane", "repo", "path"} {
+	for _, k := range []string{"id", "title", "folder", "project", "when", "bucket", "repeat", "due", "done", "dropped", "tags", "created", "lane", "repo", "path"} {
 		if _, ok := items[0][k]; !ok {
 			t.Errorf("json lacks %q", k)
 		}
@@ -334,5 +334,35 @@ func TestInboxIsUntriaged(t *testing.T) {
 	_, o, _ := run(t, a, out, errw, "projects")
 	if !strings.Contains(o, "(unfiled)") || !strings.Contains(o, "2 open") {
 		t.Errorf("projects should still count both unfiled to-dos:\n%s", o)
+	}
+}
+
+func TestRepeat(t *testing.T) {
+	a, out, errw := app(t)
+	code, o, e := run(t, a, out, errw, "add", "water the plants", "--in", "Personal", "--when", "+2d", "--repeat", "every 3 days")
+	if code != 0 || !strings.Contains(o, "added: Personal/water the plants") {
+		t.Fatalf("add --repeat: %d\n%s%s", code, o, e)
+	}
+	// The spec is the trailing words that are one, so the id reads as typed.
+	code, o, e = run(t, a, out, errw, "repeat", "water the plants", "weekly")
+	if code != 0 || !strings.Contains(o, "↻ water the plants  → repeat: weekly") {
+		t.Fatalf("repeat: %d\n%s%s", code, o, e)
+	}
+	code, _, e = run(t, a, out, errw, "repeat", "water the plants", "every", "other", "tuesday")
+	if code != 2 || !strings.Contains(e, "is not a repeat") {
+		t.Errorf("a repeat that is not one: %d %s", code, e)
+	}
+	code, o, e = run(t, a, out, errw, "done", "water the plants")
+	if code != 0 || !strings.Contains(o, "↻ Personal/water the plants (2)  → when: 2026-09-29") {
+		t.Fatalf("done: %d\n%s%s", code, o, e)
+	}
+	// The open one is the occurrence; clearing the repeat ends the series.
+	code, o, e = run(t, a, out, errw, "update", "water the plants", "--repeat", "none")
+	if code != 0 || !strings.Contains(o, "→ no repeat") {
+		t.Fatalf("update --repeat none: %d\n%s%s", code, o, e)
+	}
+	code, o, _ = run(t, a, out, errw, "done", "water the plants")
+	if code != 0 || strings.Contains(o, "↻") {
+		t.Errorf("a cleared repeat still repeated: %d\n%s", code, o)
 	}
 }

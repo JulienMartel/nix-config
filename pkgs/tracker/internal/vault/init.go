@@ -15,7 +15,7 @@ import (
 // propertyTypes is what .obsidian/types.json says about our keys, so Bases
 // compares a date as a date and `when` — a word or a date — as text.
 var propertyTypes = map[string]string{
-	"when": "text", "due": "date", "done": "date", "dropped": "date", "created": "date",
+	"when": "text", "repeat": "text", "due": "date", "done": "date", "dropped": "date", "created": "date",
 	"type": "text", "repo": "text", "lane": "text", "project": "text", "title": "text",
 }
 

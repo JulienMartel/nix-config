@@ -83,6 +83,7 @@ function plugin(folders = ['tracker', 'tracker/hausfold']) {
   const files = new Map();
   const vault = {
     created: [],
+    files,
     getFolderByPath: (p) => (folders.includes(p) ? { path: p } : null),
     getAbstractFileByPath: (p) => files.get(p) || null,
     async create(p, data) {
@@ -91,9 +92,44 @@ function plugin(folders = ['tracker', 'tracker/hausfold']) {
       vault.created.push(file);
       return file;
     },
+    async read(file) {
+      return file.data;
+    },
   };
+  // processFrontMatter is Obsidian's own YAML writer; what matters here is
+  // which keys a verb set, so the stub hands the verb a plain object.
+  const fileManager = {
+    async processFrontMatter(file, fn) {
+      file.frontmatter = { ...(file.frontmatter || {}) };
+      fn(file.frontmatter);
+    },
+  };
+  const metadataCache = { getFileCache: (f) => (f && f.frontmatter ? { frontmatter: f.frontmatter } : null) };
   notices.length = 0;
-  return new TrackerPlugin({ vault, metadataCache: { getFileCache: () => null }, workspace: {} });
+  return new TrackerPlugin({ vault, fileManager, metadataCache, workspace: {} });
+}
+
+// A note already in the vault: what the verbs that read one are given.
+function seed(p, path, data, frontmatter) {
+  const dir = path.slice(0, path.lastIndexOf('/'));
+  const file = Object.assign(new obsidian.TFile(), {
+    path,
+    data,
+    basename: path.slice(dir.length + 1, -3),
+    extension: 'md',
+    frontmatter,
+  });
+  const folder = { path: dir, children: [] };
+  for (const f of p.app.vault.files.values()) {
+    if (f.path.slice(0, f.path.lastIndexOf('/')) === dir) {
+      f.parent = folder;
+      folder.children.push(f);
+    }
+  }
+  file.parent = folder;
+  folder.children.push(file);
+  p.app.vault.files.set(path, file);
+  return file;
 }
 
 // The one note in the vault after a capture: its path and its bytes.
@@ -246,4 +282,71 @@ test('a name already taken gets the CLI’s (2)', async () => {
 
 test('a title that sanitizes to nothing is refused', async () => {
   await assert.rejects(plugin().createTodo({ title: ' /// ' }), /empty title/);
+});
+
+// ---- repeat ---------------------------------------------------------------
+
+const Repeating = `---
+when: 2026-09-18
+repeat: weekly
+due: 2026-09-19
+tags:
+  - home
+created: 2026-09-14
+---
+- [x] kitchen
+- [ ] hall
+`;
+
+test('a repeat goes in the note right after when:, canonical', async () => {
+  const p = plugin();
+  await p.createTodo({ title: 'water the plants', when: 'later', repeat: 'EVERY 2  weeks', due: '2026-09-30' });
+  assert.equal(only(p).data, '---\nwhen: later\nrepeat: every 2 weeks\ndue: 2026-09-30\ncreated: 2026-09-20\n---\n');
+});
+
+test('a repeat that is not one is refused out loud, and the capture still lands', async () => {
+  const p = plugin();
+  await p.handleProtocol({ action: 'tracker', add: 'water the plants', repeat: 'every other tuesday' });
+  assert.equal(only(p).data, '---\nwhen: later\ncreated: 2026-09-20\n---\n');
+  assert.ok(notices.some((n) => n.includes('ignored repeat=every other tuesday')));
+});
+
+test('done writes the next occurrence — the bytes the CLI writes for it', async () => {
+  const p = plugin();
+  const file = seed(p, 'tracker/hausfold/water the plants.md', Repeating);
+  await p.closeTodo(file, 'done');
+  assert.equal(file.frontmatter.done, '2026-09-20');
+  const next = only(p);
+  assert.equal(next.path, 'tracker/hausfold/water the plants (2).md');
+  assert.equal(
+    next.data,
+    `---
+when: 2026-09-25
+repeat: weekly
+due: 2026-09-26
+tags:
+  - home
+created: 2026-09-20
+title: water the plants
+---
+- [ ] kitchen
+- [ ] hall
+`,
+  );
+});
+
+test('drop ends the series, and a to-do with no repeat never had one', async () => {
+  const p = plugin();
+  await p.closeTodo(seed(p, 'tracker/hausfold/water the plants.md', Repeating), 'dropped');
+  await p.closeTodo(seed(p, 'tracker/hausfold/once.md', '---\nwhen: now\ncreated: 2026-09-14\n---\n'), 'done');
+  assert.equal(p.app.vault.created.length, 0, 'wrote an occurrence it should not have');
+});
+
+test('an occurrence already open is left alone, not written twice', async () => {
+  const p = plugin();
+  const file = seed(p, 'tracker/hausfold/water the plants.md', Repeating);
+  seed(p, 'tracker/hausfold/water the plants (2).md', Repeating, { when: '2026-09-25', repeat: 'weekly', title: 'water the plants' });
+  await p.closeTodo(file, 'done');
+  assert.equal(p.app.vault.created.length, 0);
+  assert.ok(notices.some((n) => n.includes('water the plants (2) is open already')));
 });

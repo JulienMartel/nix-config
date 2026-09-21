@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"time"
 )
 
 // ── writes: atomic, recorded, reported ───────────────────────────────────────
@@ -183,20 +185,137 @@ func (v *Vault) SetDue(it *Item, due string) (*Report, error) {
 	return v.finish(r, it)
 }
 
+// SetRepeat sets or, with "", clears how often a to-do comes back. Nothing
+// happens until it is done: `repeat:` is read only there.
+func (v *Vault) SetRepeat(it *Item, spec string) (*Report, error) {
+	if err := requireOpen(it); err != nil {
+		return nil, err
+	}
+	it.Note.FM.Set("repeat", spec)
+	r := &Report{}
+	if spec == "" {
+		r.say("%s  → no repeat", it.Title)
+	} else {
+		r.say("↻ %s  → repeat: %s", it.Title, spec)
+	}
+	return v.finish(r, it)
+}
+
 // Done closes a to-do today. Nothing moves: closed is a date, not a place.
+// A `repeat:` to-do also comes back as a fresh note beside this one — written
+// first, so a series can never lose its successor to a failed write.
 func (v *Vault) Done(it *Item) (*Report, error) {
 	if err := requireOpen(it); err != nil {
+		return nil, err
+	}
+	r := &Report{}
+	again, err := v.repeatNext(r, it)
+	if err != nil {
 		return nil, err
 	}
 	n := it.Note
 	n.FM.Set("done", v.Today())
 	n.FM.Delete("dropped")
-	r := &Report{}
 	r.say("✓ %s  (%s)", it.Title, it.ID)
+	if again != "" {
+		r.say("%s", again)
+	}
 	return v.finish(r, it)
 }
 
-// Drop abandons a to-do today.
+// repeatNext writes the note a repeating to-do comes back as: the same to-do
+// on its next date, in the same folder, carrying every key and the body it was
+// closed with — but its own `created:`, no `done:` / `dropped:` / `lane:`, and
+// an untouched checklist. A closed note is never rolled forward.
+//
+// It returns the line the report says about it, "" when the to-do does not
+// repeat.
+func (v *Vault) repeatNext(r *Report, it *Item) (string, error) {
+	if it.Repeat == "" {
+		return "", nil
+	}
+	when, shift, err := NextWhen(it.Note.FM.Get("when"), it.Repeat, v.Now())
+	if err != nil {
+		// A `repeat:` typed by hand that this does not parse must never block
+		// the completion — the to-do closes, and says what it could not read.
+		return "↻ " + err.Error() + " — closed, nothing repeated", nil
+	}
+	dir := filepath.Dir(it.Note.Path)
+	if id, ok := v.occurrence(dir, it.Title, it.Repeat, it.Note.Path); ok {
+		return "↻ next: " + id + " is open already", nil
+	}
+	fm := it.Note.FM.Clone()
+	fm.Set("when", when)
+	fm.Set("created", v.Today())
+	for _, k := range []string{"done", "dropped", "lane"} {
+		fm.Delete(k)
+	}
+	if due := fm.Get("due"); IsDate(due) {
+		d, _ := time.Parse(dateLayout, due)
+		fm.Set("due", d.AddDate(0, 0, shift).Format(dateLayout))
+	}
+	name := Sanitize(it.Title)
+	if name == "" {
+		name = it.Note.Name()
+	}
+	dest := UniquePath(dir, name)
+	if base := strings.TrimSuffix(filepath.Base(dest), ".md"); base == it.Title {
+		fm.Delete("title")
+	} else {
+		fm.Set("title", it.Title)
+	}
+	n := &Note{Path: dest, ID: v.ID(dest), FM: fm, Body: untick(it.Body())}
+	if v.DryRun {
+		return fmt.Sprintf("↻ would repeat: %s  → when: %s", n.ID, when), nil
+	}
+	r.Change.record(dest)
+	if err := writeAtomic(dest, n.Bytes()); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("↻ %s  → when: %s", n.ID, when), nil
+}
+
+// occurrence is an open to-do in dir, other than `self`, with the same title
+// and the same `repeat:` — the same series, in other words. It is what a
+// `reopen` and a second `done` would otherwise duplicate.
+func (v *Vault) occurrence(dir, title, spec, self string) (string, bool) {
+	if spec == "" {
+		return "", false
+	}
+	ents, err := os.ReadDir(dir)
+	if err != nil {
+		return "", false
+	}
+	for _, e := range ents {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		p := filepath.Join(dir, e.Name())
+		if p == self {
+			continue
+		}
+		n, err := ReadNote(p, v.ID(p))
+		if err != nil || n.IsFolderNote() {
+			continue
+		}
+		if n.Title() != title || n.FM.Get("repeat") != spec {
+			continue
+		}
+		if n.FM.Get("done") == "" && n.FM.Get("dropped") == "" {
+			return n.ID, true
+		}
+	}
+	return "", false
+}
+
+// ticked is a checked box anywhere in a body; a chore comes back with its
+// checklist empty.
+var ticked = regexp.MustCompile(`(?m)^(\s*[-*+] +\[)[xX](\])`)
+
+func untick(body string) string { return ticked.ReplaceAllString(body, "${1} ${2}") }
+
+// Drop abandons a to-do today. A repeating one ends here: drop is how a
+// series stops, where `done` is how it goes round again.
 func (v *Vault) Drop(it *Item) (*Report, error) {
 	if err := requireOpen(it); err != nil {
 		return nil, err
@@ -222,6 +341,11 @@ func (v *Vault) Reopen(it *Item) (*Report, error) {
 	n.FM.Delete("done")
 	n.FM.Delete("dropped")
 	r := &Report{}
+	if id, ok := v.occurrence(filepath.Dir(n.Path), it.Title, it.Repeat, n.Path); ok {
+		// The occurrence `done` wrote stays where it is: reopening the note
+		// that made it is not a reason to take it back.
+		r.say("↻ next: %s is open already", id)
+	}
 	if it.InLog() {
 		folder := n.FM.Get("project")
 		n.FM.Delete("project")

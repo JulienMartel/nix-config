@@ -14,6 +14,7 @@ type NewTodo struct {
 	Title     string
 	Folder    string // "" = unfiled
 	When      string // already normalized; "" = later
+	Repeat    string // already canonical; "" = once and done
 	Due       string
 	Tags      []string
 	Notes     string
@@ -43,6 +44,7 @@ func (v *Vault) Add(t NewTodo) (*Report, error) {
 		when = Later
 	}
 	fm.Set("when", when)
+	fm.Set("repeat", t.Repeat)
 	fm.Set("due", t.Due)
 	fm.SetList("tags", t.Tags)
 	fm.Set("created", v.Today())
@@ -159,7 +161,7 @@ func (v *Vault) Promote(it *Item) (*Report, error) {
 	if _, err := os.Stat(dir); err == nil {
 		return nil, RefusedError(quote(v.ID(dir)) + " exists already")
 	}
-	for _, k := range []string{"when", "due", "done", "dropped", "lane"} {
+	for _, k := range []string{"when", "repeat", "due", "done", "dropped", "lane"} {
 		n.FM.Delete(k)
 	}
 	n.FM.Set("type", "project")

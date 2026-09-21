@@ -468,6 +468,9 @@ func (m *Model) note(w, h int) []string {
 	if it.Due != "" {
 		meta = append(meta, theme.Warn.Render("due "+it.Due))
 	}
+	if it.Repeat != "" {
+		meta = append(meta, theme.Muted.Render("↻ "+it.Repeat))
+	}
 	if len(it.Tags) > 0 {
 		meta = append(meta, theme.Muted.Render("#"+strings.Join(it.Tags, " #")))
 	}

@@ -76,6 +76,7 @@ type Item struct {
 	Project string   `json:"project"`
 	When    string   `json:"when"`
 	Bucket  string   `json:"bucket"`
+	Repeat  string   `json:"repeat"`
 	Due     string   `json:"due"`
 	Done    string   `json:"done"`
 	Dropped string   `json:"dropped"`
@@ -111,6 +112,7 @@ func (v *Vault) item(n *Note) *Item {
 		ID:        n.ID,
 		Title:     n.Title(),
 		Folder:    n.Folder(),
+		Repeat:    n.FM.Get("repeat"),
 		Due:       n.FM.Get("due"),
 		Done:      n.FM.Get("done"),
 		Dropped:   n.FM.Get("dropped"),
@@ -145,7 +147,9 @@ type Index struct {
 
 // Load walks tracker/ and reads every note. A to-do whose `when` is a date
 // that has arrived is written back as `now` here — the one write a read
-// makes, so the phone and the CLI agree on what Today is.
+// makes, so the phone and the CLI agree on what Today is. A repeating one
+// keeps its date: that date is the grid its next occurrence counts from, and
+// the index reads it as now either way, as does the Bases Today view.
 func (v *Vault) Load() (*Index, error) {
 	if !v.Exists() {
 		return nil, RefusedError("no tracker at " + v.Dir + " — run: tracker init")
@@ -170,7 +174,7 @@ func (v *Vault) Load() (*Index, error) {
 			return nil
 		}
 		it := v.item(n)
-		if it.Open() && !it.IsProject && IsDate(n.FM.Get("when")) && it.When == Now && !v.NoNormalize && !v.DryRun {
+		if it.Open() && !it.IsProject && it.Repeat == "" && IsDate(n.FM.Get("when")) && it.When == Now && !v.NoNormalize && !v.DryRun {
 			n.FM.Set("when", Now)
 			_ = v.writeFile(n.Path, n.Bytes())
 			n.raw = n.Bytes()

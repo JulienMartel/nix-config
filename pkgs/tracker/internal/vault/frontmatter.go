@@ -258,7 +258,7 @@ func (fm *Frontmatter) Keys() []string {
 // canonical is the order a freshly written note lists its keys in. A new key
 // slots in before the first existing key that comes after it here; a key not
 // on the list goes to the end. Untouched keys never move.
-var canonical = []string{"type", "when", "due", "done", "dropped", "tags", "created", "title", "repo", "lane", "project"}
+var canonical = []string{"type", "when", "repeat", "due", "done", "dropped", "tags", "created", "title", "repo", "lane", "project"}
 
 func rank(key string) int {
 	for i, k := range canonical {
@@ -346,6 +346,18 @@ func (fm *Frontmatter) Rename(old, new string) {
 	}
 	v := strings.TrimSpace(e.value)
 	fm.entries[i] = entry{key: new, value: v, raw: []string{new + ": " + YAMLStr(v)}}
+}
+
+// Clone is a deep copy: the note a repeating to-do comes back as starts from
+// the one it closed, so every key a person added is carried with it.
+func (fm *Frontmatter) Clone() *Frontmatter {
+	out := &Frontmatter{present: fm.present, closeNL: fm.closeNL, entries: make([]entry, len(fm.entries))}
+	for i, e := range fm.entries {
+		e.raw = append([]string(nil), e.raw...)
+		e.list = append([]string(nil), e.list...)
+		out.entries[i] = e
+	}
+	return out
 }
 
 // Empty is a frontmatter with no keys and no block — for a new note.
