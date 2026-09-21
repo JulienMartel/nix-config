@@ -56,6 +56,12 @@ func (v *Vault) RetireProject(idx *Index, folder string) (*Report, error) {
 			folder, n, plural(n), theyThem(n)))
 	}
 	note := idx.FolderNote(folder)
+	if note != nil {
+		if k := toDoField(note.Note); k != "" {
+			return nil, RefusedError(note.ID + " carries a to-do's " + k +
+				": — open work the index reads as a folder note, not a brief. Rename it first")
+		}
+	}
 	if err := v.retireLeftovers(dir, closed, note); err != nil {
 		return nil, err
 	}
@@ -83,11 +89,14 @@ func (v *Vault) RetireProject(idx *Index, folder string) (*Report, error) {
 		r.ID, r.Path = n.ID, n.Path
 	}
 	if !v.DryRun {
+		// Every note has moved by now, so a failure here leaves the folder
+		// empty rather than half swept — say that, because re-running the
+		// verb on an emptied folder is all it takes to finish the job.
 		if err := os.Remove(filepath.Join(dir, dsStore)); err != nil && !os.IsNotExist(err) {
-			return nil, err
+			return nil, halfRetired(err, folder)
 		}
 		if err := os.Remove(dir); err != nil {
-			return nil, err
+			return nil, halfRetired(err, folder)
 		}
 	}
 	if v.DryRun {
@@ -178,4 +187,24 @@ func withEmbed(body string) string {
 		body += "\n\n"
 	}
 	return body + ProjectEmbed + "\n"
+}
+
+// toDoField names the first of a to-do's own fields on a note, "" if it has
+// none. A folder note never carries one — `project add` writes none and
+// `promote` deletes them all — so a note named after its folder that does is
+// somebody's to-do the index is reading as a brief, and closing a project is
+// not the verb that gets to close it.
+func toDoField(n *Note) string {
+	for _, k := range []string{"when", "repeat", "due", "lane"} {
+		if n.FM.Has(k) {
+			return k
+		}
+	}
+	return ""
+}
+
+// halfRetired says what state the vault is in when the folder outlives its
+// notes, which is the only way this verb can stop halfway.
+func halfRetired(err error, folder string) error {
+	return fmt.Errorf("%w — the notes are in log/ already; %s is empty, re-run to finish", err, folder)
 }

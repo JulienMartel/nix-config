@@ -101,8 +101,10 @@ one, `--in` nests it. `--dry-run` / `DRY_RUN=1` on `add`, `spawn`, `archive`,
    <name>` is how a finished one leaves: its closed to-dos and its brief go to
    `log/`, and the folder goes with them, which is the only thing that takes the
    row off `tracker projects`. It refuses while anything is open, and `tracker
-   reopen <id>` on the brief puts the whole project back. Zero open to-dos is not
-   by itself a reason to run it — a project can sit empty between passes.
+   reopen <id>` on the brief brings the folder back with the brief as its folder
+   note — the closed to-dos stay in `log/`, reopened one by one by name. Zero open
+   to-dos is not by itself a reason to run it — a project can sit empty between
+   passes.
 6. **End a write report with the `file://` line** the verb prints — the link I can
    click in a pane. Never the `obsidian://` one alone: no terminal makes it clickable.
 7. **Never run `obsidian` (the CLI) or `open`.** Both take the screen. Files only.

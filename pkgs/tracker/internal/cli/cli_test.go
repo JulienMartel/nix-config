@@ -366,3 +366,45 @@ func TestRepeat(t *testing.T) {
 		t.Errorf("a cleared repeat still repeated: %d\n%s", code, o)
 	}
 }
+
+// `project done` over the CLI: the multi-word name, the dry run, the report's
+// last line, and the two ways it refuses.
+func TestProjectDone(t *testing.T) {
+	a, out, errw := app(t)
+	if code, _, e := run(t, a, out, errw, "project", "done"); code != 2 || !strings.Contains(e, "tracker project done <name>") {
+		t.Errorf("no name should be a usage error: %d %s", code, e)
+	}
+	if code, o, e := run(t, a, out, errw, "project", "done", "hausfold"); code != 1 || !strings.Contains(e, "sub-project") {
+		t.Errorf("a parent project should refuse: %d %s %s", code, o, e)
+	}
+	if code, _, e := run(t, a, out, errw, "project", "done", "hausfold/ci"); code != 1 || !strings.Contains(e, "open to-do") {
+		t.Errorf("an open to-do should refuse: %d %s", code, e)
+	}
+
+	// Close the one to-do in it, and it is a finished project.
+	if code, o, e := run(t, a, out, errw, "done", "cache the store"); code != 0 {
+		t.Fatalf("done: %d %s %s", code, o, e)
+	}
+	code, o, _ := run(t, a, out, errw, "project", "done", "hausfold/ci", "--dry-run")
+	if code != 0 || !strings.Contains(o, "dry run, nothing written") {
+		t.Fatalf("dry run: %d %s", code, o)
+	}
+	a.V.DryRun = false
+	code, o, _ = run(t, a, out, errw, "project", "done", "hausfold/ci")
+	if code != 0 || !strings.Contains(o, "retired: hausfold/ci") || !strings.Contains(o, "log/ci") {
+		t.Fatalf("project done: %d %s", code, o)
+	}
+	if !strings.Contains(o, "file://") {
+		t.Errorf("no clickable line: %s", o)
+	}
+	code, o, _ = run(t, a, out, errw, "projects")
+	for _, line := range strings.Split(o, "\n") {
+		if name, _, _ := strings.Cut(strings.TrimSpace(line), "  "); name == "ci" {
+			t.Errorf("projects still lists it:\n%s", o)
+		}
+	}
+	code, o, _ = run(t, a, out, errw, "done", "5")
+	if code != 0 || !strings.Contains(o, "log/ci") {
+		t.Errorf("the brief is not in Done: %d %s", code, o)
+	}
+}

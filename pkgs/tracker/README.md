@@ -51,8 +51,14 @@ The notes. `- [ ]` lines are the checklist. Images the way Obsidian pastes them.
   what finally takes the row off `tracker projects`: that list walks the
   directory tree, so a project lives as long as its folder does. The brief
   keeps its body and reads in Done as the day the work ended. Open to-dos, a
-  sub-project or a file that is not a note refuse the whole thing; `tracker
-  reopen <id>` on the brief is the inverse and puts the project back whole.
+  sub-project, a file that is not a note, or a folder note carrying a to-do's
+  own fields refuse the whole thing, before anything has moved. `tracker reopen
+  <id>` on the brief is the inverse: the folder comes back with the brief in it
+  as its folder note, `type:` and the Project view and all. The closed to-dos
+  stay in `log/`, where the Done view reads them wherever they sit — reopen one
+  by name to pull it back up. That restore drops `when` / `repeat` / `due` /
+  `lane` from the note it rebuilds, which a brief never has and a folder note
+  cannot use.
 - **`repeat` brings it back.** `daily | weekly | monthly | yearly | every N
   days` — and `every N weeks | months | years`, which is the same rule.
   Completing a repeating to-do closes that note exactly as it always did
@@ -143,7 +149,7 @@ Aliases kept for the skills: `complete`→`done`, `cancel`→`drop`, `anytime`�
   · `later` · `someday`; `project` is the folder's first segment, `""` unfiled.
   `projects --json` is its own shape, one row per folder:
   `[{id, name, depth, open, repo, path}]`, the inbox first with `id: ""`.
-- `DRY_RUN=1` (or `--dry-run`) on `add`, `archive`, `migrate`, `spawn`.
+- `DRY_RUN=1` (or `--dry-run`) on `add`, `archive`, `migrate`, `spawn`, `project done`.
 - Exit codes: 0 ok · 1 nothing matched / refused · 2 usage.
 - Every write is atomic (write beside, rename) so iCloud and Obsidian see one
   change, and every write report ends with the `file://` line.

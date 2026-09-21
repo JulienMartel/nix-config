@@ -208,7 +208,7 @@ WRITE  tracker add <title> [--in <project>] [--now | --someday | --when <date|to
 REPEAT done on a repeating to-do closes it and writes the next occurrence, counted
        from the note's own when: — never from the day you got round to it; drop ends it.
 IDS    folder/name under tracker/ (no .md), or any unique bit of an open to-do's id or title
-FLAGS  --json on any read · DRY_RUN=1 / --dry-run on add, archive, migrate, spawn
+FLAGS  --json on any read · DRY_RUN=1 / --dry-run on add, archive, migrate, spawn, project done
 EXIT   0 ok · 1 nothing matched / refused · 2 usage
 ENV    TRACKER_VAULT / TRACKER_DIR point it elsewhere
 `

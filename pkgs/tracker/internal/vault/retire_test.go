@@ -113,14 +113,46 @@ func TestRetireProjectRefuses(t *testing.T) {
 	if _, err := v.RetireProject(idx, "hausfold/ci"); err == nil {
 		t.Error("a folder with an attachment was retired")
 	}
+	// The to-dos move before the folder note does, so they are the assertion
+	// that matters: the refusal has to land before the first rename.
+	if _, err := os.Stat(v.Path("log/cache the store")); !os.IsNotExist(err) {
+		t.Error("the refusal swept a to-do anyway")
+	}
 	if _, err := os.Stat(v.Path("hausfold/ci/ci")); err != nil {
-		t.Error("the refusal moved a note anyway")
+		t.Error("the refusal moved the folder note anyway")
+	}
+
+	// A note named after its folder that carries a to-do's own fields is
+	// somebody's open work, not a brief — even though the index reads it as
+	// the folder note.
+	v, idx = migrated(t)
+	if err := os.WriteFile(v.Path("hausfold/ci/ci"),
+		[]byte("---\ntype: project\nwhen: now\ndue: 2026-10-01\ncreated: 2026-09-01\n---\nmilk\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	it, err := v.Resolve(idx, "cache the store", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := v.Done(it); err != nil {
+		t.Fatal(err)
+	}
+	if idx, err = v.Load(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := v.RetireProject(idx, "hausfold/ci"); err == nil {
+		t.Error("a folder note carrying a to-do's fields was closed")
+	} else if !strings.Contains(err.Error(), "when:") {
+		t.Errorf("the refusal does not name the field: %v", err)
 	}
 }
 
 func TestRetireProjectDryRun(t *testing.T) {
 	v, idx := retirable(t)
 	before := mustRead(t, v.Path("hausfold/ci/ci"))
+	if err := os.WriteFile(filepath.Join(v.Dir, "hausfold", "ci", dsStore), []byte("finder"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	v.DryRun = true
 	if _, err := v.RetireProject(idx, "hausfold/ci"); err != nil {
 		t.Fatal(err)
@@ -130,6 +162,12 @@ func TestRetireProjectDryRun(t *testing.T) {
 	}
 	if _, err := os.Stat(v.Path("log/ci")); !os.IsNotExist(err) {
 		t.Error("dry run moved a note")
+	}
+	if _, err := os.Stat(filepath.Join(v.Dir, "hausfold", "ci")); err != nil {
+		t.Error("dry run removed the folder")
+	}
+	if _, err := os.Stat(filepath.Join(v.Dir, "hausfold", "ci", dsStore)); err != nil {
+		t.Error("dry run removed .DS_Store")
 	}
 }
 
@@ -149,5 +187,59 @@ func TestFoldersIgnoreLog(t *testing.T) {
 		if f.Path == "log" {
 			t.Error("log/ is listed as a project")
 		}
+	}
+}
+
+// The fixture's hausfold/ci brief is frontmatter and the embed alone. This is
+// the same round trip over a brief that has prose and a `repo:` — the two
+// things the README promises come back.
+func TestRetireProjectKeepsTheBrief(t *testing.T) {
+	v, idx := retirable(t)
+	if _, err := v.RetireProject(idx, "hausfold/ci"); err != nil {
+		t.Fatal(err)
+	}
+	idx, err := v.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, q := range []string{"ship the thing", "write docs"} {
+		it, err := v.Resolve(idx, q, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := v.Done(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if idx, err = v.Load(); err != nil {
+		t.Fatal(err)
+	}
+	before := mustRead(t, v.Path("hausfold/hausfold"))
+	if !strings.Contains(before, "repo:") || !strings.Contains(before, "The brief.") {
+		t.Fatalf("the fixture brief lost its shape before the test ran:\n%s", before)
+	}
+	if _, err := v.RetireProject(idx, "hausfold"); err != nil {
+		t.Fatal(err)
+	}
+	brief := mustRead(t, v.Path("log/hausfold"))
+	if !strings.Contains(brief, "The brief.") || !strings.Contains(brief, "repo:") {
+		t.Errorf("the demoted brief lost its body or its repo:\n%s", brief)
+	}
+	if idx, err = v.Load(); err != nil {
+		t.Fatal(err)
+	}
+	it, err := v.Resolve(idx, "log/hausfold", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := v.Reopen(it); err != nil {
+		t.Fatal(err)
+	}
+	if got := mustRead(t, v.Path("hausfold/hausfold")); got != before {
+		t.Errorf("the brief did not come back byte for byte:\nwant:\n%s\ngot:\n%s", before, got)
+	}
+	// The closed to-dos stay in log/ — what the README and the skill say.
+	if _, err := os.Stat(v.Path("log/ship the thing")); err != nil {
+		t.Error("reopen dragged a closed to-do back out of log/")
 	}
 }
