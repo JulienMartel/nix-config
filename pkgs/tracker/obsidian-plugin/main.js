@@ -6,8 +6,13 @@
  * no build step. Bases draws every view (tracker.base); this does only what
  * Bases cannot — quick add, done / drop / reopen, when (now · later · someday),
  * spawn a lane (desktop: `tracker spawn <id>`), and the obsidian://tracker
- * protocol (?spawn=<path> · ?done=<path> · ?add=<title>[&when=…][&in=<project>])
- * that the ⚡ column and pounce use.
+ * protocol (?spawn=<path> · ?done=<path> · ?add=<title>[&when=][&in=][&due=]
+ * [&tags=][&notes=]) that the ⚡ column, pounce and the phone's share sheet use.
+ *
+ * A note this writes is byte for byte what `tracker add` writes for the same
+ * to-do — same key order, same YAML quoting, same file name, same body — so
+ * the two halves never disagree about what a note looks like. Both are held
+ * to testdata/capture.golden.md; main.test.js is this side of that.
  *
  * A to-do is a .md under tracker/ that is not a folder note (type: project, or
  * named after its folder); its id is the path under tracker/ without .md.
@@ -22,28 +27,87 @@ const MAX_NAME = 120;
 const SPAWN_TIMEOUT = 120000;
 
 const pad = (n) => String(n).padStart(2, '0');
-const today = () => {
+const stamp = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today = () => stamp(new Date());
+const daysOut = (n) => {
   const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  d.setDate(d.getDate() + n);
+  return stamp(d);
 };
 
 // One space between words, trimmed: the title as stored.
 const tidy = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 
-// The CLI's file-name rule: drop what Obsidian and the filesystem refuse,
-// no leading dot, at most 120 characters.
+// The CLI's file-name rule (internal/vault/sanitize.go): line breaks gone,
+// every run of what Obsidian refuses in a link a single space, no leading dot,
+// and at most 120 — cut back to a word boundary when one is near, so a long
+// page title does not end mid-word. The one place it differs: createTodo
+// tidies first, so a shared selection is named `line break`, not `linebreak`.
 function sanitize(title) {
-  const s = tidy(tidy(title).replace(/[\\/:*?"<>|#^[\]]/g, '')).replace(/^[.\s]+/, '');
-  return s.slice(0, MAX_NAME).trim();
+  let s = tidy(String(title || '').replace(/[\r\n]+/g, '').replace(/[\\/:*?"<>|^#[\]]+/g, ' ')).replace(/^\.+/, '');
+  if (s.length > MAX_NAME) {
+    s = s.slice(0, MAX_NAME);
+    const cut = s.lastIndexOf(' ');
+    if (cut > MAX_NAME - 20) s = s.slice(0, cut);
+  }
+  return s.trim();
 }
 
 const idOf = (path) => (path.startsWith(`${ROOT}/`) ? path.slice(ROOT.length + 1) : path).replace(/\.md$/, '');
 
-// now | later | someday | YYYY-MM-DD; anything else is the default, later.
+// The CLI's YAMLStr (internal/vault/sanitize.go): bare when a bare scalar
+// cannot be misread, double-quoted otherwise, a date always bare.
+const yamlBare = /^[A-Za-z][A-Za-z0-9_ ./()+-]*$/;
+const yamlDate = /^\d{4}-\d{2}-\d{2}$/;
+const yamlWords = new Set(['true', 'false', 'yes', 'no', 'null', 'on', 'off']);
+function yamlStr(s) {
+  if (yamlDate.test(s)) return s;
+  if (yamlBare.test(s) && !yamlWords.has(s.toLowerCase()) && s === s.trim()) return s;
+  return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
+// A YYYY-MM-DD that exists.
+const isDate = (s) => yamlDate.test(s) && stamp(new Date(`${s}T00:00:00`)) === s;
+
+// today | tomorrow | +Nd | YYYY-MM-DD → a date; "" when it is none of those.
+function parseDate(v) {
+  const s = String(v || '').trim().toLowerCase();
+  if (s === 'today') return today();
+  if (s === 'tomorrow') return daysOut(1);
+  const m = /^\+(\d+)d$/.exec(s);
+  if (m) return daysOut(Number(m[1]));
+  return isDate(s) ? s : '';
+}
+
+// now | later | someday | a date, arrived dates folded into now (the CLI's
+// ParseWhen + Normalize); anything else is the default, later.
 function parseWhen(v) {
   const s = String(v || '').trim().toLowerCase();
-  return WHENS.includes(s) || /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : 'later';
+  if (WHENS.includes(s)) return s;
+  if (s === 'anytime') return 'later';
+  const d = parseDate(s);
+  if (!d) return 'later';
+  return d <= today() ? 'now' : d;
 }
+
+// The CLI's SanitizeTag: `#` off, every other run of punctuation a dash.
+const sanitizeTag = (t) => String(t).trim().replace(/^#/, '').replace(/[^A-Za-z0-9_/-]+/g, '-');
+
+// `a,b, c` → clean, de-duplicated tags, order kept (the CLI's Tags).
+function parseTags(spec) {
+  const out = [];
+  const seen = new Set();
+  for (const part of String(spec || '').split(',')) {
+    const t = sanitizeTag(part);
+    if (!t || t === '-' || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
+// The body of a new note: what was shared, one trailing newline, never CRLF.
+const parseNotes = (v) => String(v || '').replace(/\r\n?/g, '\n').trim();
 
 // A protocol path or id → the vault path. Accepts `tracker/a/b.md`,
 // `tracker/a/b`, `a/b.md` and `a/b`.
@@ -59,11 +123,14 @@ const firstLine = (s) => String(s || '').replace(/\x1b\[[0-9;]*m/g, '').trim().s
 const oops = (e) => new Notice(`Tracker: ${(e && e.message) || e}`);
 
 class QuickAddModal extends Modal {
-  constructor(plugin) {
+  // seed is what a caller already knows — a share sheet that sent notes but no
+  // title opens this with the notes still attached, so nothing sent is lost.
+  constructor(plugin, seed = {}) {
     super(plugin.app);
     this.plugin = plugin;
-    this.when = 'later';
-    this.project = '';
+    this.seed = seed;
+    this.when = seed.when || 'later';
+    this.project = tidy(seed.project || '');
     this.buttons = [];
   }
 
@@ -73,6 +140,7 @@ class QuickAddModal extends Modal {
 
     this.input = contentEl.createEl('input', { type: 'text', placeholder: 'What needs doing?' });
     this.input.style.width = '100%';
+    this.input.value = tidy(this.seed.title || '');
     this.input.addEventListener('keydown', (e) => {
       if (e.key === 'Tab') {
         e.preventDefault();
@@ -95,8 +163,10 @@ class QuickAddModal extends Modal {
 
     new Setting(contentEl).setName('Project').addDropdown((d) => {
       d.addOption('', 'inbox');
-      for (const p of this.plugin.projects()) d.addOption(p, p);
-      d.setValue('').onChange((v) => { this.project = v; });
+      const projects = this.plugin.projects();
+      for (const p of projects) d.addOption(p, p);
+      if (!projects.includes(this.project)) this.project = '';
+      d.setValue(this.project).onChange((v) => { this.project = v; });
     });
 
     new Setting(contentEl).addButton((b) => b.setButtonText('Add').setCta().onClick(() => this.submit()));
@@ -123,7 +193,8 @@ class QuickAddModal extends Modal {
     const title = this.input.value;
     if (!sanitize(title)) return void new Notice('Tracker: empty title');
     this.close();
-    this.plugin.createTodo({ title, when: this.when, project: this.project }).catch(oops);
+    const { title: _seedTitle, when: _seedWhen, project: _seedProject, ...rest } = this.seed;
+    this.plugin.createTodo({ ...rest, title, when: this.when, project: this.project }).catch(oops);
   }
 
   onClose() {
@@ -145,19 +216,30 @@ class TrackerPlugin extends Plugin {
     this.registerObsidianProtocolHandler('tracker', (params) => this.handleProtocol(params));
   }
 
-  // obsidian://tracker?spawn=<path> · ?done=<path> · ?add=<title>[&when=…][&in=<project>]
+  // obsidian://tracker?spawn=<path> · ?done=<path>
+  //   ?add=<title>[&when=][&in=<project>][&due=][&tags=a,b][&notes=<body>]
+  // The phone's share sheet is an ?add= with the page title and &notes= the
+  // URL or the selection; an ?add= with no title opens quick add holding it.
   handleProtocol(params) {
     if (params.spawn != null) return this.withTodo((f) => this.spawn(f), params.spawn);
     if (params.done != null) return this.withTodo((f) => this.closeTodo(f, 'done'), params.done);
     if (params.add != null) {
-      if (!tidy(params.add)) return this.quickAdd();
-      return this.createTodo({ title: params.add, when: parseWhen(params.when), project: params.in }).catch(oops);
+      const todo = {
+        title: params.add,
+        when: parseWhen(params.when),
+        project: params.in,
+        due: params.due,
+        tags: params.tags,
+        notes: params.notes,
+      };
+      if (!tidy(params.add)) return this.quickAdd(todo);
+      return this.createTodo(todo).catch(oops);
     }
     new Notice('Tracker: obsidian://tracker takes ?spawn=<path>, ?done=<path> or ?add=<title>');
   }
 
-  quickAdd() {
-    new QuickAddModal(this).open();
+  quickAdd(seed) {
+    new QuickAddModal(this, seed).open();
   }
 
   // ---- the vault -------------------------------------------------------
@@ -206,7 +288,9 @@ class TrackerPlugin extends Plugin {
 
   // ---- the verbs -------------------------------------------------------
 
-  async createTodo({ title, when = 'later', project = '' }) {
+  // The keys go in the CLI's canonical order (when · due · tags · created ·
+  // title) so a note from here and one from `tracker add` are the same bytes.
+  async createTodo({ title, when = 'later', project = '', due = '', tags = '', notes = '' }) {
     const clean = tidy(title);
     const name = sanitize(clean);
     if (!name) throw new Error('empty title');
@@ -215,10 +299,17 @@ class TrackerPlugin extends Plugin {
     if (!this.app.vault.getFolderByPath(dir)) throw new Error(`no folder ${dir}/`);
     let path = `${dir}/${name}.md`;
     for (let n = 2; this.app.vault.getAbstractFileByPath(path); n++) path = `${dir}/${name} (${n}).md`;
-    const lines = [`when: ${when}`, `created: ${today()}`];
+    const lines = [`when: ${when}`];
+    const deadline = parseDate(due);
+    if (due && !deadline) new Notice(`Tracker: ignored due=${due} — today | tomorrow | +Nd | YYYY-MM-DD`);
+    if (deadline) lines.push(`due: ${deadline}`);
+    const tagList = parseTags(tags);
+    if (tagList.length) lines.push('tags:', ...tagList.map((t) => `  - ${yamlStr(t)}`));
+    lines.push(`created: ${today()}`);
     // title: only when the file name is not the title (sanitized, or a ` (2)` collision).
-    if (path.slice(dir.length + 1, -3) !== clean) lines.push(`title: ${JSON.stringify(clean)}`);
-    const file = await this.app.vault.create(path, `---\n${lines.join('\n')}\n---\n`);
+    if (path.slice(dir.length + 1, -3) !== clean) lines.push(`title: ${yamlStr(clean)}`);
+    const body = parseNotes(notes);
+    const file = await this.app.vault.create(path, `---\n${lines.join('\n')}\n---\n${body ? `${body}\n` : ''}`);
     new Notice(`Tracker: added · ${idOf(path)}`);
     return file;
   }

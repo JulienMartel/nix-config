@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+# setup-ios-capture — the phone half of tracker's share-sheet capture.
+#
+# A Shortcut in the iOS share sheet writes one markdown note straight into
+# tracker/ over iCloud: no Obsidian launch, no network, works on a plane. Only
+# you can build it — a Shortcut cannot be installed from a Mac — so this walks
+# the build and then WATCHES the vault from here until the first capture lands.
+#
+#   bash pkgs/tracker/scripts/setup-ios-capture          # the whole thing
+#   bash pkgs/tracker/scripts/setup-ios-capture verify   # just the last stage
+#
+# Re-running is free. Ctrl-C any time.
+set -euo pipefail
+
+TOTAL=8
+STEP=0
+b=$'\033[1m'; d=$'\033[2m'; g=$'\033[32m'; y=$'\033[33m'; r=$'\033[0m'
+
+stage()   { STEP=$((STEP+1)); printf '\n%s[%d/%d] %s%s\n' "$b" "$STEP" "$TOTAL" "$1" "$r"; }
+note()    { printf '%s      %s%s\n' "$d" "$1" "$r"; }
+tap()     { printf '      %s\n' "$1"; }
+ok()      { printf '%s      ✓ %s%s\n' "$g" "$1" "$r"; }
+warn()    { printf '%s      ! %s%s\n' "$y" "$1" "$r"; }
+pause()   { read -r -p "      press ↵ when done (Ctrl-C to stop) "; }
+ask()     { read -r -p "      $1 [y/N] " a; [ "${a:-n}" = "y" ] || [ "${a:-n}" = "Y" ]; }
+
+VAULT="${TRACKER_VAULT:-$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/notes}"
+DIR="${TRACKER_DIR:-$VAULT/tracker}"
+
+snapshot() { find "$DIR" -maxdepth 1 -name '*.md' -print | sort; }
+
+# ---- the stages ------------------------------------------------------------
+
+check_mac() {
+  stage "The Mac end: is there a vault for the phone to write into?"
+  command -v tracker >/dev/null || { warn "tracker is not on PATH — haus rebuild first"; exit 1; }
+  [ -d "$DIR" ] || { warn "no tracker at $DIR — run: tracker init"; exit 1; }
+  ok "$(snapshot | wc -l | tr -d ' ') notes in the inbox folder"
+  note "the same folder, as the phone's Files app shows it:"
+  tap "iCloud Drive › Obsidian › $(basename "$VAULT") › tracker"
+  note "that path is the one thing the Shortcut has to get right."
+}
+
+build_input() {
+  stage "A new Shortcut that the share sheet can reach"
+  note "on the phone: Shortcuts › the + in the corner"
+  tap "1. tap the ⓘ (Details) at the bottom, or the ▾ by the name"
+  tap "2. turn ON  'Show in Share Sheet'"
+  tap "3. tap 'Share Sheet Types' and keep only:"
+  tap "      Safari web pages · URLs · Text · Articles"
+  tap "4. 'If there's no input:'  →  Ask For Text"
+  pause; ok "the shortcut is in the share sheet"
+}
+
+build_title() {
+  stage "The title: what got shared, made safe for a file name"
+  note "four actions, in this order. 'Regular Expression' ON in each Replace."
+  tap "1. Get Name           of  Shortcut Input"
+  tap "      (a Safari page gives its title; a selection gives its text)"
+  tap "2. Replace Text       Find  [\"\\\\]        Replace with  '"
+  tap "      in  Name        → rename this output  Title"
+  tap "3. Replace Text       Find  [/:*?<>|^#\\[\\]]+   Replace with  a single space"
+  tap "      in  Title       → rename this output  FileName"
+  tap "4. Replace Text       Find  ^ +| +\$        Replace with  nothing"
+  tap "      in  FileName    → rename this output  Name"
+  note "2 keeps the title safe to quote in YAML; 3 and 4 make it a file name."
+  pause; ok "the title is clean"
+}
+
+build_date() {
+  stage "The date: created: is what the Inbox view sorts on"
+  tap "5. Format Date        Date  →  Current Date"
+  tap "      Format: Custom,  yyyy-MM-dd"
+  tap "      rename this output  Today"
+  pause; ok "the date is a date tracker reads"
+}
+
+build_note() {
+  stage "The note itself — one Text action"
+  tap "6. Text  — type this, then put the variables in place of «…»:"
+  printf '\n'
+  printf '      ---\n      when: later\n      created: «Today»\n      title: "«Title»"\n      ---\n      «Shortcut Input»\n\n'
+  note "the quotes around «Title» stay. «Shortcut Input» is the URL or the selection."
+  note "rename this output  Note"
+  if command -v pbcopy >/dev/null && ask "copy the skeleton so you can paste it on the phone?"; then
+    printf -- '---\nwhen: later\ncreated: \ntitle: ""\n---\n' | pbcopy
+    ok "on the clipboard — Universal Clipboard puts it on the phone; fill the gaps with the variables"
+  fi
+  note "when: later + no folder = unfiled. That IS the inbox; you file it on the Mac."
+  pause; ok "the note is shaped like a to-do"
+}
+
+build_save() {
+  stage "Writing it into the vault"
+  tap "7. Set Name           of  Note        to  «Name».md"
+  tap "      'Don't Include File Extension'  OFF"
+  tap "8. Save File          the output of Set Name"
+  tap "      'Ask Where to Save'       OFF"
+  tap "      'Overwrite If File Exists' OFF"
+  tap "      tap the path and pick:  Obsidian › $(basename "$VAULT") › tracker"
+  note "Files asks for permission the first time. Grant it once."
+  note "sharing the same page twice hits a name that exists — with Overwrite"
+  note "off, Shortcuts either numbers it or complains. Try it once and see;"
+  note "either way the note you already have is safe."
+  pause; ok "it writes where the Mac reads"
+}
+
+finish_shortcut() {
+  stage "Name it, and let Safari offer it"
+  tap "9. (optional) Show Notification   «Name» · inbox"
+  tap "10. name the shortcut  Tracker  and give it an icon you recognise"
+  note "Safari › share sheet › Edit Actions › pin Tracker to the top."
+  pause; ok "one tap from any share sheet"
+}
+
+verify() {
+  stage "Now share something, and watch it land here"
+  local before after new
+  before=$(snapshot)
+  note "on the phone: open any web page, Share, tap Tracker."
+  note "watching $DIR for 2 minutes…"
+  for _ in $(seq 60); do
+    sleep 2
+    after=$(snapshot)
+    new=$(comm -13 <(printf '%s\n' "$before") <(printf '%s\n' "$after") || true)
+    if [ -n "$new" ]; then break; fi
+  done
+  if [ -z "${new:-}" ]; then
+    warn "nothing arrived."
+    note "iCloud can lag — check the phone's Files app for the note first."
+    note "if the note is there but not here, it is sync, not the Shortcut."
+    note "if Save File fought you, pkgs/tracker/README.md has the obsidian://"
+    note "fallback: five actions, but Obsidian has to open on every capture."
+    exit 1
+  fi
+  ok "landed: $(basename "$new")"
+  printf '\n'
+  sed 's/^/      /' "$new"
+  printf '\n'
+  note "and how tracker reads it:"
+  tracker show "$(basename "$new" .md)" 2>/dev/null | sed 's/^/      /' || true
+  printf '\n'
+  note "one more, to prove the other half: share a SELECTION of text this time."
+  note "if the note comes out named after the text, Get Name handles both and"
+  note "you are done. If it comes out empty, add after action 1:"
+  tap "   If  Name  has no value  →  Text: «Shortcut Input»  →  Otherwise: Text: «Name»"
+  if ask "did the text selection work too?"; then ok "both kinds of share capture"; else
+    warn "add the If above, then: bash $0 verify"
+  fi
+}
+
+# ---- run -------------------------------------------------------------------
+
+printf '%s\n%s\n' "${b}tracker: capture from the iOS share sheet${r}" \
+  "${d}~10 min on the phone. Ctrl-C any time; re-running is safe.${r}"
+
+if [ "${1:-}" = "verify" ]; then
+  STEP=$((TOTAL - 1))
+  verify
+else
+  check_mac
+  build_input
+  build_title
+  build_date
+  build_note
+  build_save
+  finish_shortcut
+  verify
+fi
+
+printf '\n%s✓ done.%s  a share lands unfiled; you file it here with %stracker inbox%s\n' "$g" "$r" "$b" "$r"
