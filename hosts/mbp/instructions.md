@@ -193,12 +193,19 @@ came with a reversal cost, and 3 paragraphs of SQLite theory I didn't ask for va
 `blast-radius` and `show-me`; a client that does not index skills reads
 `~/.agents/skills/<name>/SKILL.md` by path.
 
-Three fire without being invoked. **`unslop`**: any reader-facing copy you
+Five fire without being invoked. **`unslop`**: any reader-facing copy you
 write, you unslop before handing it to me — no em dashes in *copy*, while my
 AGENTS.md files are full of them and are RIGHT, so do not "fix" those.
 **`wizard`**: three or more steps only I can take get written as a script, not
 a chat list. **`later`**: what leaves this session unfinished leaves in
 the tracker, not in your last message — up to three unasked, never on Today.
+**`pounce`**: a decision that is mine, with options you can list, goes on
+screen as a picker (`printf '…' | pounce -p "…"`) rather than a prompt in a
+pane I may not be watching — dismissal is a no, not a retry, and the
+**Need from you** block stays the written record either way.
+**`trill`**: work that outlives my attention says so when it lands
+(`trill send`), a long build carries one card (`--key` + `--progress`), and a
+yes I have to give before you act is `trill ask`.
 
 ## Working in a git worktree
 

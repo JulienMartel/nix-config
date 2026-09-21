@@ -31,13 +31,14 @@ in
 
     namer = "api";
 
-    # Four tool skills this Mac's agents load every turn and never invoke
-    # (/skill-doctor, 2026-09-12). `handoff` is scruff's other skill and stays.
+    # Two tool skills no agent here invokes, for reasons a better description
+    # wouldn't fix: `factory` needs a merge lease this machine doesn't hold,
+    # and `scruff`'s verbs are already in ai.instructions. `handoff` is
+    # scruff's other skill and is deliberately not named. `pounce` and `trill`
+    # stay installed because instructions.md carries the rules that fire them.
     skillExclude = [
       "factory"
-      "pounce"
       "scruff"
-      "trill"
     ];
 
     instructions = builtins.readFile ./instructions.md;
