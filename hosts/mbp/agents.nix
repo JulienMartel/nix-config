@@ -31,6 +31,13 @@ in
 
     namer = "api";
 
+    # A caffeinate assertion for exactly as long as an agent is mid-turn, so a
+    # run driven from the phone over `claude remote-control` outlives the idle
+    # sleep `haus.power.*` would otherwise take. `"idle"` and not `"lid"`
+    # because the deeper stop only writes `power.lidAwake.enable` at
+    # `mkDefault`, and default.nix names that option itself.
+    keepAwake = "idle";
+
     # Two tool skills no agent here invokes, for reasons a better description
     # wouldn't fix: `factory` needs a merge lease this machine doesn't hold,
     # and `scruff`'s verbs are already in ai.instructions. `handoff` is
