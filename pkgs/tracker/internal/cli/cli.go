@@ -117,6 +117,8 @@ func (a *App) dispatch(verb string, args []string) error {
 		return a.projectAdd(args)
 	case "project-set":
 		return a.projectSet(args)
+	case "project-done":
+		return a.projectDone(args)
 	case "archive":
 		return a.archive(args)
 	case "migrate":
@@ -200,6 +202,7 @@ WRITE  tracker add <title> [--in <project>] [--now | --someday | --when <date|to
        tracker update <id> [--when …] [--repeat …] [--due …] [--tags …] [--add-tags …] [--in …] [--title …] [--append-notes …]
        tracker project add <name> [--in <parent>] [--repo <path>] [--notes <brief>] [--todos 'a|b']
        tracker project set <name> repo=<path>   tracker promote <id>           (to-do → project)
+       tracker project done <name>              (finished: its notes → log/, the folder goes)
        tracker spawn <id> [--repo <path>] [--follow] [--again]   a lane for this to-do
        tracker archive [--older 30] [--dry-run] · migrate [--dry-run] · init [--force]
 REPEAT done on a repeating to-do closes it and writes the next occurrence, counted

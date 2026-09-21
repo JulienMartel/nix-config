@@ -18,7 +18,7 @@ lanes) falls out of Obsidian doing what it already does.
     │   ├── <to-do>.md
     │   └── ci/                 # a folder inside a folder is a sub-project; a folder of folders is an area
     ├── Personal/ · Work/ · buy/ · code/ · nas/
-    └── log/                    # the archive: closed notes `tracker archive` moved out of the way
+    └── log/                    # the archive: what `tracker archive` and `project done` moved out of the way
 ```
 
 ## The base: a to-do
@@ -44,6 +44,15 @@ The notes. `- [ ]` lines are the checklist. Images the way Obsidian pastes them.
   close a to-do completely with one property. `tracker archive` sweeps closed
   notes older than 30 days into `log/` (stamping `project:` so history keeps
   its list), and the Done view is by `done`, wherever the file sits.
+- **A project ends the same way, with `tracker project done <name>`.** Its
+  closed to-dos go to `log/` the way `archive` sends them, its folder note is
+  demoted to a closed note — `done:` today, `project:` stamped, the Project
+  view line dropped — and follows them, and the empty folder goes, which is
+  what finally takes the row off `tracker projects`: that list walks the
+  directory tree, so a project lives as long as its folder does. The brief
+  keeps its body and reads in Done as the day the work ended. Open to-dos, a
+  sub-project or a file that is not a note refuse the whole thing; `tracker
+  reopen <id>` on the brief is the inverse and puts the project back whole.
 - **`repeat` brings it back.** `daily | weekly | monthly | yearly | every N
   days` — and `every N weeks | months | years`, which is the same rule.
   Completing a repeating to-do closes that note exactly as it always did
@@ -121,6 +130,7 @@ tracker edit <id>                           ($EDITOR, then re-read)
 tracker update <id> [--when …] [--repeat …] [--due …] [--tags …] [--add-tags …] [--in …] [--title …] [--append-notes …]
 tracker project add <name> [--in <parent>] [--repo <path>] [--notes <brief>] [--todos 'a|b']
 tracker project set <name> repo=<path>      tracker promote <id>            (to-do → project folder)
+tracker project done <name>                 # finished: its notes → log/, the folder goes
 tracker spawn <id> [--repo <path>] [--follow] [--again]   # a lane for this to-do, background, banner when live
 tracker archive [--older 30] [--dry-run]    tracker migrate [--dry-run]     tracker init [--force]
 ```

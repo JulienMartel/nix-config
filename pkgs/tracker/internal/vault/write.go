@@ -355,6 +355,21 @@ func (v *Vault) Reopen(it *Item) (*Report, error) {
 		if err := v.move(r, n, filepath.Join(v.Dir, filepath.FromSlash(folder))); err != nil {
 			return nil, err
 		}
+		// Back where its name makes it the folder's note — a brief that
+		// `project done` demoted, or a to-do sharing its project's name,
+		// which the index has always read as a folder note anyway. Write the
+		// shape down rather than leave half of one: this is retiring's
+		// inverse, and what makes `project done` reversible with one verb.
+		if n.IsFolderNote() {
+			for _, k := range []string{"when", "repeat", "due", "lane"} {
+				n.FM.Delete(k)
+			}
+			n.FM.Set("type", "project")
+			n.Body = withEmbed(n.Body)
+			if err := v.save(r, n); err != nil {
+				return nil, err
+			}
+		}
 	}
 	r.say("reopened: %s", n.ID)
 	return v.finish(r, it)

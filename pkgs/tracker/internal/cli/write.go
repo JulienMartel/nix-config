@@ -432,6 +432,26 @@ func (a *App) projectSet(args []string) error {
 	return a.report(all)
 }
 
+func (a *App) projectDone(args []string) error {
+	name := strings.TrimSpace(strings.Join(args, " "))
+	if name == "" {
+		return vault.UsageError("usage: tracker project done <name>")
+	}
+	idx, err := a.load()
+	if err != nil {
+		return err
+	}
+	folder, err := a.V.ResolveFolder(idx, name)
+	if err != nil {
+		return err
+	}
+	r, err := a.V.RetireProject(idx, folder)
+	if err != nil {
+		return err
+	}
+	return a.report(r)
+}
+
 func (a *App) archive(args []string) error {
 	f, err := parseFlags(args)
 	if err != nil {
