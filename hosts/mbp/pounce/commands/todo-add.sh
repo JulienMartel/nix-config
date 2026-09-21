@@ -226,18 +226,17 @@ do_add() {
 }
 
 # The receipt, and a door to the note. Through haus-notify, so trill draws it
-# when it can and `rules.json` can route it by source. trill's action targets
-# are http(s)/file URLs, app:bundle.id and lane:repo/name — an obsidian://
-# target is refused at the CLI (trill's TrillCLI.swift), and the refusal costs
-# the WHOLE send its trill rendering, so Open carries the note's file:// URL.
-# Under haus.terminal.hijackFileAssociations that opens in the haus editor
-# rather than in Obsidian; ⌃↵ is the way to the note in Obsidian.
+# when it can and `rules.json` can route it by source. Open carries the note's
+# obsidian:// URL, so the banner lands in Obsidian like ⌃↵ does. Needs trill
+# ≥ 2026.09.21, which added obsidian to its openable schemes: older trill
+# refuses the target at the CLI and the refusal costs the WHOLE send its trill
+# rendering, leaving Apple's plain banner with no button at all.
 banner() {
   local args
   args=(--source tracker --kind pulse --symbol "$ICON"
         --title "tracker · added"
         --body "$title · ${project:-inbox} · $when")
-  [ -n "$note_path" ] && args+=(--action "Open=file://$(uri_path "$note_path")")
+  [ -n "$note_path" ] && args+=(--action "Open=obsidian://open?vault=$(uri_path "$VAULT")&file=$(uri_path "tracker/$id.md")")
   /run/current-system/sw/bin/haus-notify "${args[@]}" >/dev/null 2>&1
 }
 
