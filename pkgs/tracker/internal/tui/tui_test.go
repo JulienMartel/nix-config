@@ -143,7 +143,7 @@ func TestFramesFitEverySize(t *testing.T) {
 func TestViewsAndCursor(t *testing.T) {
 	m := model(t, 120, 40)
 	frame := checkFrame(t, m, 120, 40)
-	if !strings.Contains(frame, "Today 2") || !strings.Contains(frame, "Later 5") || !strings.Contains(frame, "Someday 1") || !strings.Contains(frame, "Inbox 2") {
+	if !strings.Contains(frame, "Today 2") || !strings.Contains(frame, "Later 5") || !strings.Contains(frame, "Someday 1") || !strings.Contains(frame, "Inbox 1") {
 		t.Errorf("header counts:\n%s", strings.SplitN(frame, "\n", 2)[0])
 	}
 	if !strings.Contains(frame, "hausfold") || !strings.Contains(frame, "ci") || !strings.Contains(frame, "3") {

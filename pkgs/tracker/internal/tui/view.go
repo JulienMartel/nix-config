@@ -476,7 +476,7 @@ func (m *Model) note(w, h int) []string {
 	}
 	where := it.Folder
 	if where == "" {
-		where = "inbox"
+		where = "unfiled"
 	}
 	meta = append(meta, theme.Path.Render(where))
 	lines = append(lines, " "+strings.Join(meta, theme.Rule.Render(" · ")))
@@ -617,7 +617,7 @@ func (m *Model) footer() []string {
 		}
 		where := m.currentFolder()
 		if where == "" {
-			where = "inbox"
+			where = "unfiled"
 		}
 		last = " " + theme.Accent.Render("add ›") + " " + chip + due + " " + theme.Path.Render(where) + " " + m.input.View() + "  " + hint
 	case modePrompt:
