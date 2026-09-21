@@ -220,7 +220,7 @@ bash pkgs/tracker/scripts/setup-ios-capture          # ~10 min, all of it on the
 bash pkgs/tracker/scripts/setup-ios-capture verify   # just the watch-for-it stage
 ```
 
-Nine actions: `Get Name` of the share, three regex `Replace Text` to make it a
+Ten actions: `Get Name` of the share, four regex `Replace Text` to make it a
 file name, `Format Date` for `created:`, one `Text` holding the note, `Set
 Name`, `Save File` into `tracker/`. The last stage watches the vault from the
 Mac until the first capture lands and prints it. What it writes:

@@ -46,41 +46,63 @@ build_input() {
   note "on the phone: Shortcuts › the + in the corner"
   tap "1. tap the ⓘ (Details) at the bottom, or the ▾ by the name"
   tap "2. turn ON  'Show in Share Sheet'"
-  tap "3. tap 'Share Sheet Types' and keep only:"
-  tap "      Safari web pages · URLs · Text · Articles"
-  tap "4. 'If there's no input:'  →  Ask For Text"
+  tap "3. 'Share Sheet Types' — leave them ALL on. The web and text ones do"
+  tap "      the real work; Images, Files and PDFs land a note with a name"
+  tap "      and no body, which is junk you delete, not damage."
+  tap "4. 'If there's no input:'  →  Ask For TEXT"
+  note "Ask For Photos is the default the suggestions like, and it is wrong:"
+  note "it makes running this from anywhere but a share sheet ask for a photo."
   pause; ok "the shortcut is in the share sheet"
 }
 
 build_title() {
   stage "The title: what got shared, made safe for a file name"
-  note "four actions, in this order. 'Regular Expression' ON in each Replace."
+  warn "open the ⟩ on EVERY Replace and turn 'Regular Expression' ON."
+  note "off, it looks for those brackets literally, matches nothing, and a"
+  note "page title with a / in it reaches Save File as a folder. It is the"
+  note "one setting that fails silently."
   tap "1. Get Name           of  Shortcut Input"
   tap "      (a Safari page gives its title; a selection gives its text)"
-  tap "2. Replace Text       Find  [\"\\\\]        Replace with  '"
-  tap "      in  Name        → rename this output  Title"
-  tap "3. Replace Text       Find  [/:*?<>|^#\\[\\]]+   Replace with  a single space"
+  tap "2. Replace Text       Find  \\s+           Replace with  a single space"
+  tap "      in  Name        → rename this output  Tidy"
+  tap "3. Replace Text       Find  [\"\\\\]        Replace with  '"
+  tap "      in  Tidy        → rename this output  Title"
+  tap "4. Replace Text       Find  [/:*?<>|^#\\[\\]]+   Replace with  a single space"
   tap "      in  Title       → rename this output  FileName"
-  tap "4. Replace Text       Find  ^ +| +\$        Replace with  nothing"
+  tap "5. Replace Text       Find  ^ +| +\$        Replace with  nothing"
   tap "      in  FileName    → rename this output  Name"
-  note "2 keeps the title safe to quote in YAML; 3 and 4 make it a file name."
+  note "2 folds a shared paragraph onto one line — a raw line break inside"
+  note "title: \"…\" ends the line and takes the frontmatter with it. 3 keeps"
+  note "it safe to quote. 4 and 5 make it a file name."
+  warn "rename each output. Shortcuts calls all four 'Updated Text', and the"
+  warn "next stages need two different ones: Title for the note, Name for the"
+  warn "file. Untangling identical chips later is worse than renaming now."
   pause; ok "the title is clean"
 }
 
 build_date() {
   stage "The date: created: is what the Inbox view sorts on"
-  tap "5. Format Date        Date  →  Current Date"
-  tap "      Format: Custom,  yyyy-MM-dd"
+  tap "6. Format Date        Date  →  Current Date"
+  tap "      tap the ⟩ — Date Format: CUSTOM,  Format String: yyyy-MM-dd"
   tap "      rename this output  Today"
+  warn "the default format writes 'September 21, 2026 at 3:25 AM', which is"
+  warn "not a date to Obsidian or to tracker: the Inbox view sorts on created"
+  warn "and would put every capture nowhere. Check the preview reads 2026-09-21."
   pause; ok "the date is a date tracker reads"
 }
 
 build_note() {
   stage "The note itself — one Text action"
-  tap "6. Text  — type this, then put the variables in place of «…»:"
+  warn "the plain yellow 'Text' action. NOT 'Show Result', which the"
+  warn "suggestions reach for: that one puts a preview on screen every"
+  warn "single capture, which is the opposite of what this is for."
+  tap "7. Text  — type this, then put the variables in place of «…»:"
   printf '\n'
   printf '      ---\n      when: later\n      created: «Today»\n      title: "«Title»"\n      ---\n      «Shortcut Input»\n\n'
   note "the quotes around «Title» stay. «Shortcut Input» is the URL or the selection."
+  note "«Title» is the output of Replace 3, not the last one — the note keeps"
+  note "the colons and slashes the FILE name had to drop. That is the whole"
+  note "reason title: is in there."
   note "rename this output  Note"
   if command -v pbcopy >/dev/null && ask "copy the skeleton so you can paste it on the phone?"; then
     printf -- '---\nwhen: later\ncreated: \ntitle: ""\n---\n' | pbcopy
@@ -92,9 +114,9 @@ build_note() {
 
 build_save() {
   stage "Writing it into the vault"
-  tap "7. Set Name           of  Note        to  «Name».md"
+  tap "8. Set Name           of  Note        to  «Name».md"
   tap "      'Don't Include File Extension'  OFF"
-  tap "8. Save File          the output of Set Name"
+  tap "9. Save File          the output of Set Name"
   tap "      'Ask Where to Save'       OFF"
   tap "      'Overwrite If File Exists' OFF"
   tap "      tap the path and pick:  Obsidian › $(basename "$VAULT") › tracker"
@@ -107,8 +129,8 @@ build_save() {
 
 finish_shortcut() {
   stage "Name it, and let Safari offer it"
-  tap "9. (optional) Show Notification   «Name» · inbox"
-  tap "10. name the shortcut  Tracker  and give it an icon you recognise"
+  tap "10. (optional) Show Notification   «Name» · inbox"
+  tap "11. name the shortcut  Tracker  and give it an icon you recognise"
   note "Safari › share sheet › Edit Actions › pin Tracker to the top."
   pause; ok "one tap from any share sheet"
 }
