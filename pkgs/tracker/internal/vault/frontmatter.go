@@ -159,6 +159,8 @@ func unquote(s string) string {
 				switch inner[i] {
 				case 'n':
 					b.WriteByte('\n')
+				case 'r':
+					b.WriteByte('\r')
 				case 't':
 					b.WriteByte('\t')
 				default:
