@@ -12,13 +12,6 @@
       appId = "md.obsidian";
       cask = "obsidian";
     };
-    things = {
-      order = 30;
-      key = "r";
-      name = "Things3";
-      appId = "com.culturedcode.ThingsMac";
-      appStoreId = 904280696;
-    };
     slack = {
       order = 40;
       key = "s";
@@ -128,11 +121,6 @@
       key = "n";
       icon = ":obsidian:";
       apps = [ "obsidian" ];
-    };
-    R = {
-      key = "r";
-      icon = ":things:";
-      apps = [ "things" ];
     };
     S = {
       key = "s";

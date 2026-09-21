@@ -57,8 +57,7 @@ The notes. `- [ ]` lines are the checklist. Images the way Obsidian pastes them.
   `area` type, no `heading`, no `status`, no `evening`.
 - **Optional extras**, all written by verbs: `title:` when the file name had to
   be sanitized, `lane: <repo>/<name>` once `tracker spawn` ran, `repo:` on a
-  to-do to override its project's, `project:` only on archived notes,
-  `things:` on notes imported from Things 3 (history; never written again).
+  to-do to override its project's, `project:` only on archived notes.
 
 An **id** is the path under `tracker/` without `.md`: `hausfold/ship the
 thing`, or `buy cat food` for an unfiled one. Every verb that takes one also
@@ -297,6 +296,7 @@ note, idempotent (a v2 note is untouched):
 | `deadline:` | `due:` |
 | `evening:` | dropped |
 | `area:` on a folder note | dropped |
+| `things:` (the Things 3 import's uuid) | dropped |
 | `project:` outside `log/` | dropped |
 | `inbox/<note>.md` | `tracker/<note>.md` |
 | a folder note's ```` ```base ```` block | `![[tracker.base#Project]]` |
