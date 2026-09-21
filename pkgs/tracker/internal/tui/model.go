@@ -62,6 +62,17 @@ type sideItem struct {
 	folder *vault.Folder
 }
 
+// span is one clickable run on a row: columns [x0,x1) select index i.
+type span struct{ x0, x1, i int }
+
+// box is where one pane landed on screen this frame, and how its rows map back
+// to indices: line n of the pane is hits[n] (-1 = not selectable).
+type box struct {
+	which          pane
+	y0, y1, x0, x1 int
+	hits           []int
+}
+
 // row is one list line: a group header (item == nil) or an item.
 type row struct {
 	header string
@@ -104,6 +115,12 @@ type Model struct {
 	undo      *vault.Change
 	undoWhat  string
 
+	// Where things were drawn last frame, for the mouse. Filled by View.
+	tabHits  []span
+	boxes    []box
+	sideHits []int
+	listHits []int
+
 	reload  chan struct{}
 	watcher *watcher
 	quit    bool
@@ -120,7 +137,10 @@ func New(v *vault.Vault) *Model {
 // Run opens the TUI and returns the exit code.
 func Run(v *vault.Vault) int {
 	m := New(v)
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	// Mouse reporting: the header reads as a row of tabs and the panes as
+	// lists, so they should answer a click. It costs the terminal's own
+	// text selection, which in Ghostty comes back with ⇧ held.
+	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "tracker:", err)
 		return 1
@@ -423,6 +443,42 @@ func (m *Model) moveList(delta int) {
 			return
 		}
 	}
+}
+
+// viewIndex is the view the list is showing. The sidebar's cursor doubles as it,
+// so a project row (view -1) reports the view it was filtered out of — which is
+// what makes ⇥ from a project land on Today rather than nowhere.
+func (m *Model) viewIndex() int {
+	if m.sideCur >= 0 && m.sideCur < len(m.side) && m.side[m.sideCur].view >= 0 {
+		return m.side[m.sideCur].view
+	}
+	return 0
+}
+
+// gotoView selects a view by index, wrapping, and is what ⇥ and the digits and
+// a click on the header all go through.
+func (m *Model) gotoView(i int) {
+	if len(views) == 0 {
+		return
+	}
+	if i < 0 {
+		i = len(views) - 1
+	}
+	if i >= len(views) {
+		i = 0
+	}
+	m.selectSide(i)
+}
+
+// selectSide puts the sidebar cursor on one row and rebuilds the list under it.
+func (m *Model) selectSide(i int) {
+	if i < 0 || i >= len(m.side) || i == m.sideCur {
+		return
+	}
+	m.sideCur = i
+	m.listCur, m.listOff = 0, 0
+	m.buildRows()
+	m.clampList()
 }
 
 func (m *Model) moveSide(delta int) {

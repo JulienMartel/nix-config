@@ -94,17 +94,27 @@ func (m *Model) header() []string {
 	var b strings.Builder
 	b.WriteString(theme.Accent.Bold(true).Render("tracker"))
 	b.WriteString("  ")
+	m.tabHits = m.tabHits[:0]
+	col := lipgloss.Width("tracker") + 2
+	cur := m.viewIndex()
 	for i, vw := range views {
 		label := fmt.Sprintf("%s %d", vw.name, m.counts[i])
 		if vw.name == "Done" {
 			label = vw.name
 		}
-		if m.sideCur == i {
+		// The digit is the key that jumps here (update.go), dim so the tab
+		// still reads as its name.
+		num := fmt.Sprintf("%d", i+1)
+		b.WriteString(theme.Rule.Render(num) + " ")
+		if cur == i {
 			b.WriteString(theme.Bold.Render(label))
 		} else {
 			b.WriteString(theme.Field.Render(label))
 		}
 		b.WriteString("  ")
+		wide := lipgloss.Width(num) + 1 + lipgloss.Width(label)
+		m.tabHits = append(m.tabHits, span{x0: col, x1: col + wide, i: i})
+		col += wide + 2
 	}
 	if m.lanes > 0 {
 		b.WriteString(theme.Rule.Render("│ ") + theme.Accent.Render(fmt.Sprintf("⚡ %d", m.lanes)))
@@ -119,6 +129,13 @@ func (m *Model) body() []string {
 	w, h := m.usable(), m.bodyHeight()
 	if h < 1 {
 		return nil
+	}
+	m.boxes = m.boxes[:0]
+	// The pane renderers fill m.sideHits / m.listHits as they draw, so the box
+	// is recorded AFTER the column that owns it has run.
+	at := func(which pane, y0, rows, x0, x1 int, hits []int) {
+		h := append([]int(nil), hits...)
+		m.boxes = append(m.boxes, box{which: which, y0: y0, y1: y0 + rows, x0: x0, x1: x1, hits: h})
 	}
 	sep := theme.Rule.Render("│")
 	rule := func(n int) string { return theme.Rule.Render(strings.Repeat("─", n)) }
@@ -143,28 +160,43 @@ func (m *Model) body() []string {
 			noteW = maxNoteW
 		}
 		listW := w - sidebarW - noteW - 2
-		return join(column(m.sidebar(sidebarW, h), sidebarW, h), column(m.list(listW, h), listW, h), column(m.note(noteW, h), noteW, h))
+		side := column(m.sidebar(sidebarW, h), sidebarW, h)
+		at(paneSidebar, headerH, h, 0, sidebarW, m.sideHits)
+		list := column(m.list(listW, h), listW, h)
+		at(paneList, headerH, h, sidebarW+1, sidebarW+1+listW, m.listHits)
+		note := column(m.note(noteW, h), noteW, h)
+		at(paneNote, headerH, h, sidebarW+listW+2, w, nil)
+		return join(side, list, note)
 	case w >= mediumAt:
 		sideW := 18
 		rightW := w - sideW - 1
 		listH := h * 55 / 100
 		noteH := h - listH - 1
 		right := append(column(m.list(rightW, listH), rightW, listH), rule(rightW))
+		at(paneList, headerH, listH, sideW+1, w, m.listHits)
 		right = append(right, column(m.note(rightW, noteH), rightW, noteH)...)
-		return join(column(m.sidebar(sideW, h), sideW, h), right)
+		at(paneNote, headerH+listH+1, noteH, sideW+1, w, nil)
+		side := column(m.sidebar(sideW, h), sideW, h)
+		at(paneSidebar, headerH, h, 0, sideW, m.sideHits)
+		return join(side, right)
 	}
 	listH := h * 55 / 100
 	noteH := h - listH - 1
 	out := []string{fit(m.tabs(w), w)}
 	out = append(out, column(m.list(w, listH), w, listH)...)
+	at(paneList, headerH+1, listH, 0, w, m.listHits)
 	out = append(out, rule(w))
-	return append(out, column(m.note(w, noteH), w, noteH)...)
+	out = append(out, column(m.note(w, noteH), w, noteH)...)
+	at(paneNote, headerH+listH+2, noteH, 0, w, nil)
+	return out
 }
 
 // ── sidebar ──────────────────────────────────────────────────────────────────
 
 func (m *Model) sidebar(w, h int) []string {
 	var lines []string
+	m.sideHits = m.sideHits[:0]
+	hit := func(i int) { m.sideHits = append(m.sideHits, i) }
 	for i, s := range m.side {
 		var line string
 		if s.view >= 0 {
@@ -179,6 +211,7 @@ func (m *Model) sidebar(w, h int) []string {
 		}
 		if i == len(views) {
 			lines = append(lines, " "+theme.Rule.Render(strings.Repeat("─", w-2)))
+			hit(-1)
 		}
 		if i == m.sideCur {
 			style := theme.Selected
@@ -188,6 +221,7 @@ func (m *Model) sidebar(w, h int) []string {
 			line = style.Render(fit(line, w))
 		}
 		lines = append(lines, line)
+		hit(i)
 	}
 	// Keep the cursor visible.
 	cur := m.sideCur
@@ -205,6 +239,7 @@ func (m *Model) sidebar(w, h int) []string {
 	}
 	if m.sideOff < len(lines) {
 		lines = lines[m.sideOff:]
+		m.sideHits = m.sideHits[m.sideOff:]
 	}
 	return lines
 }
@@ -288,10 +323,12 @@ func (m *Model) list(w, h int) []string {
 	}
 	folder := m.currentFolder()
 	var lines []string
+	m.listHits = m.listHits[:0]
 	for i := m.listOff; i < len(m.rows) && len(lines) < h; i++ {
 		r := m.rows[i]
 		if r.item == nil {
 			lines = append(lines, " "+theme.Subject.Render(r.header))
+			m.listHits = append(m.listHits, -1)
 			continue
 		}
 		line := m.rowLine(r.item, w, folder)
@@ -303,6 +340,7 @@ func (m *Model) list(w, h int) []string {
 			line = style.Render(fit(line, w))
 		}
 		lines = append(lines, line)
+		m.listHits = append(m.listHits, i)
 	}
 	return lines
 }
@@ -558,9 +596,15 @@ func markLinks(line string) string {
 
 func (m *Model) footer() []string {
 	w := m.usable()
-	keys := "a add  ⏎ open  x done  n now  l later  s someday  w when  d due  m move  t tags  r rename  S spawn  e edit  o obsidian  u undo  / filter  A archive  ? help  q quit"
+	if m.mode == modeHelp {
+		return []string{theme.Rule.Render(strings.Repeat("─", w)), "", fit(" "+theme.Muted.Render("any key closes this"), w)}
+	}
+	keys := "⇥ view  1-7 jump  ←→ pane  jk move  ⏎ open  a add  x done  n/l/s now/later/someday  w when  d due  m project  t tags  r rename  S spawn  e edit  o obsidian  u undo  / filter  A archive  ? help  q quit"
 	if m.focus == paneNote {
-		keys = "j/k checklist  space tick  e edit  o obsidian  tab pane  ? help  q quit"
+		keys = "jk checklist  space tick  e edit  o obsidian  ←→ pane  esc back  ⇥ view  ? help  q quit"
+	}
+	if m.focus == paneSidebar {
+		keys = "jk pick  ⏎ show it  ⇥ view  1-7 jump  →  back to the list  / filter  ? help  q quit"
 	}
 	var last string
 	switch m.mode {
@@ -600,23 +644,31 @@ func (m *Model) footer() []string {
 func (m *Model) help() []string {
 	return []string{
 		"",
-		"  " + theme.Accent.Bold(true).Render("keys"),
+		"  " + theme.Accent.Bold(true).Render("get around"),
 		"",
-		"  j k ↑ ↓      move          tab ← → h    pane (l: later in the list, else pane right)",
-		"  ⏎            open in the note pane / into the list",
-		"  g G          top / bottom  ⌃d ⌃u        page",
-		"  a            add — ⇥ cycles now/later/someday, ⌃d sets due, ⏎ adds into the selected project",
-		"  x space      done          X            drop          R    reopen",
-		"  n l s        now / later / someday      w    when (date)   d    due",
-		"  m            move (fuzzy project picker)",
-		"  t            tags          r            rename",
-		"  S            spawn a lane  e            $EDITOR       o    open in Obsidian",
-		"  u            undo the last write",
-		"  /            filter        esc          clear the filter",
-		"  A            archive closed notes older than 30 days into log/",
-		"  space        in the note pane: tick the checklist line under the cursor",
-		"  ?            this          q            quit",
+		"  ⇥ ⇧⇥  [ ]   the view tabs along the top: Today · Later · Someday · Upcoming · Due · Inbox · Done",
+		"  1 … 7       jump straight to one of them",
+		"  ← →         the three panes: the sidebar, the list, the note",
+		"  ⏎           into the next pane right      esc   back to the list (or clear the filter)",
+		"  j k ↑ ↓     move            g G   top / bottom      ⌃d ⌃u   page",
+		"  click       a tab, a sidebar row, a list row       wheel   scrolls the pane under the pointer",
+		"  " + theme.Muted.Render("  (the sidebar's lower half is your projects — ← to it, j k, ⏎)"),
 		"",
-		"  " + theme.Muted.Render("any key closes this"),
+		"  " + theme.Accent.Bold(true).Render("do something to the selected to-do"),
+		"",
+		"  a           add — ⇥ cycles now/later/someday, ⌃d sets due, ⏎ adds into the selected project",
+		"  x space     done            X     drop              R       reopen",
+		"  n l s       now / later / someday",
+		"  w           when (a date)   d     due               t       tags        r   rename",
+		"  m           move it to another project (fuzzy picker)",
+		"  S           spawn an agent lane for it",
+		"  e           $EDITOR         o     open in Obsidian",
+		"  u           undo the last write",
+		"",
+		"  " + theme.Accent.Bold(true).Render("the rest"),
+		"",
+		"  /           filter the list      A   archive closed notes older than 30 days into log/",
+		"  space       in the note pane: tick the checklist line under the cursor",
+		"  ?           this                q   quit",
 	}
 }

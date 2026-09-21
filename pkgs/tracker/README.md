@@ -159,12 +159,18 @@ by the terminal's background), resizes live, never reaches the last column.
   someday`, due dates right-aligned, `#tags` muted), the note (rendered body,
   checklist ticks toggleable with space). Under 100 columns the note pane
   folds under the list; under 70 the sidebar becomes a top tab strip.
-- Keys: `j/k ↑↓` move · `h/l ←→ tab` pane · `⏎` open in the note pane ·
-  `a` add (a one-line box; `⇥` cycles now/later/someday, `⌃d` sets due) ·
-  `x`/`space` done · `X` drop · `R` reopen · `n` `l` `s` now/later/someday ·
-  `w` when (date) · `d` due · `m` move (fuzzy project picker) · `t` tags · `r` rename ·
-  `S` spawn lane · `e` `$EDITOR` · `o` open in Obsidian (my key, my screen) ·
-  `u` undo last write · `/` filter · `g`/`G` · `A` archive · `?` help · `q`.
+- Keys, navigation first: `⇥`/`⇧⇥` (or `[`/`]`) walk the view tabs and `1`-`7`
+  jump straight to one; `←`/`→` move between the three panes, `⏎` goes one pane
+  right, `esc` comes back to the list; `j/k ↑↓` move, `g`/`G`, `⌃d`/`⌃u` page.
+  Clicking works too: a tab, a sidebar row, a list row (a second click on the
+  selected row opens it), and the wheel scrolls whatever is under the pointer.
+  Then, on the selected to-do: `a` add (a one-line box; `⇥` cycles
+  now/later/someday, `⌃d` sets due) · `x`/`space` done · `X` drop · `R` reopen ·
+  `n` `l` `s` now/later/someday · `w` when (date) · `d` due · `m` move to
+  another project (fuzzy picker) · `t` tags · `r` rename · `S` spawn a lane ·
+  `e` `$EDITOR` · `o` open in Obsidian (my key, my screen) · `u` undo the last
+  write · `/` filter · `A` archive · `?` help · `q` quit. No key means two
+  things: `l` is later everywhere, never a pane move.
 - The vault is watched (fsnotify): a change from Obsidian or the phone repaints
   within a second. Writes go through the same code the CLI uses.
 

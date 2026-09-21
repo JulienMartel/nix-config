@@ -355,7 +355,7 @@ func TestHelpAndQuit(t *testing.T) {
 	m := model(t, 100, 30)
 	press(m, "?")
 	frame := checkFrame(t, m, 100, 30)
-	if !strings.Contains(frame, "spawn a lane") {
+	if !strings.Contains(frame, "get around") || !strings.Contains(frame, "spawn an agent lane") {
 		t.Error("help overlay")
 	}
 	press(m, "j")
@@ -417,11 +417,105 @@ func TestNowLaterSomeday(t *testing.T) {
 	if m.counts[0] != 2 {
 		t.Errorf("Today should have it back: %d", m.counts[0])
 	}
-	// `l` with the sidebar focused moves focus, writes nothing.
+	// `l` means later in every pane — it never moves focus, which is the whole
+	// point of the arrows owning that job.
 	m.focus = paneSidebar
 	press(m, "l")
-	if m.focus != paneList {
-		t.Error("l from the sidebar should focus the list")
+	if m.focus != paneSidebar {
+		t.Error("l must not move focus")
 	}
 	checkFrame(t, m, 90, 30)
+}
+
+// The header is a row of tabs: ⇥ cycles it, a digit jumps, ←→ move panes, and
+// a click on a tab or a row selects it. The keys a person hunts for first.
+func TestNavigate(t *testing.T) {
+	m := model(t, 120, 30)
+	if m.viewIndex() != 0 {
+		t.Fatalf("starts on Today, got %d", m.viewIndex())
+	}
+	press(m, "tab")
+	if m.viewIndex() != 1 {
+		t.Errorf("tab → Later, got %d", m.viewIndex())
+	}
+	press(m, "shift+tab")
+	if m.viewIndex() != 0 {
+		t.Errorf("shift+tab → Today, got %d", m.viewIndex())
+	}
+	// Wrapping both ways, so neither end is a dead key.
+	press(m, "shift+tab")
+	if m.viewIndex() != len(views)-1 {
+		t.Errorf("shift+tab from Today wraps to the last view, got %d", m.viewIndex())
+	}
+	press(m, "tab")
+	if m.viewIndex() != 0 {
+		t.Errorf("tab from the last view wraps to Today, got %d", m.viewIndex())
+	}
+	press(m, "3")
+	if m.viewIndex() != 2 {
+		t.Errorf("3 → Someday, got %d", m.viewIndex())
+	}
+	press(m, "9") // past the last view: nothing moves
+	if m.viewIndex() != 2 {
+		t.Errorf("9 is out of range and must not move, got %d", m.viewIndex())
+	}
+	press(m, "1")
+
+	if m.focus != paneList {
+		t.Fatalf("focus starts on the list, got %v", m.focus)
+	}
+	press(m, "left")
+	if m.focus != paneSidebar {
+		t.Errorf("← → sidebar, got %v", m.focus)
+	}
+	press(m, "right")
+	if m.focus != paneList {
+		t.Errorf("→ → list, got %v", m.focus)
+	}
+
+	// Clicks, against the geometry the last frame recorded.
+	checkFrame(t, m, 120, 30)
+	tab := m.tabHits[3] // Upcoming
+	click(m, tab.x0+1, 0)
+	if m.viewIndex() != 3 {
+		t.Errorf("a click on a tab selects it, got %d", m.viewIndex())
+	}
+	press(m, "1")
+	checkFrame(t, m, 120, 30)
+	list := boxOf(t, m, paneList)
+	row := -1
+	for n, i := range list.hits {
+		if i >= 0 && i != m.listCur {
+			row = n
+			break
+		}
+	}
+	if row < 0 {
+		t.Fatal("no clickable list row")
+	}
+	click(m, list.x0+2, list.y0+row)
+	if m.focus != paneList || m.listCur != list.hits[row] {
+		t.Errorf("a click selects the row under it: focus %v cur %d want %d", m.focus, m.listCur, list.hits[row])
+	}
+	// The same row again opens it, the way ⏎ does.
+	click(m, list.x0+2, list.y0+row)
+	if m.focus != paneNote {
+		t.Errorf("a second click opens the note, got %v", m.focus)
+	}
+	checkFrame(t, m, 120, 30)
+}
+
+func click(m *Model, x, y int) {
+	m.Update(tea.MouseMsg{X: x, Y: y, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress})
+}
+
+func boxOf(t *testing.T, m *Model, which pane) box {
+	t.Helper()
+	for _, b := range m.boxes {
+		if b.which == which {
+			return b
+		}
+	}
+	t.Fatalf("no box for pane %v", which)
+	return box{}
 }
