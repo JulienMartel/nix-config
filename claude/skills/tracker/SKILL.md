@@ -116,8 +116,9 @@ reached first.
 
 ## Things 3 (history)
 
-`legacy/from-things` imported Things whole in 2026-07, in the old shape
-(`legacy/tracker` is the bash CLI it sources); `tracker migrate` converts that shape
-to this one and is idempotent. That import left a `things:` uuid on each note;
-`tracker migrate` now strips it, since Things 3 is gone and the uuid points at
-nothing.
+Things 3 is gone — off this Mac, out of the roster, and its `r` hotkey with it.
+A bash `from-things` imported it whole in 2026-07, in the old shape; `tracker
+migrate` converts that shape to this one and is idempotent. Both scripts lived
+in `legacy/` here until the import was done with; `git log -- claude/skills/tracker/legacy`
+has them if the history is ever wanted. The import left a `things:` uuid on each
+note, and `tracker migrate` now strips that too.
