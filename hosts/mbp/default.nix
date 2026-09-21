@@ -42,6 +42,13 @@
     launcher = {
       fnKey = "remap";
 
+      # The tracker's palette commands (shell.nix links the scripts): "todo"
+      # finds Add To-do, "todos" the list.
+      items = {
+        "cmd:todo-add".alias = "todo";
+        "cmd:todos".alias = "todos";
+      };
+
       autoQuit = {
         enable = true;
         exclude = [

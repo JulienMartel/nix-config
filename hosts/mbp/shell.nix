@@ -26,16 +26,34 @@ in
       ];
 
       pouncePluginPkg = pkgs.pounce-commands.override { plugins = pouncePlugins; };
+
+      # The tracker's two palette commands (Add To-do, To-dos) — out-of-store
+      # symlinks into this repo, the same trick agents.nix plays for skills, so
+      # an edit to hosts/mbp/pounce/commands/<name>.sh is on the next ⌘Space
+      # with no rebuild. They point at the MAIN checkout (~/.config/nix): from a
+      # worktree the target is there only once the branch has landed, and the
+      # dangling-link sweep below reaps the link until it is.
+      trackerCommands = [
+        "todo-add"
+        "todos"
+      ];
+      liveCommand = name: {
+        source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/hosts/mbp/pounce/commands/${name}.sh";
+      };
     in
     {
-      xdg.configFile = lib.listToAttrs (
-        map (
-          p:
-          lib.nameValuePair "pounce/commands/${p}.sh" {
-            source = "${pouncePluginPkg}/share/pounce/commands/${p}.sh";
-          }
-        ) pouncePlugins
-      );
+      xdg.configFile =
+        lib.listToAttrs (
+          map (
+            p:
+            lib.nameValuePair "pounce/commands/${p}.sh" {
+              source = "${pouncePluginPkg}/share/pounce/commands/${p}.sh";
+            }
+          ) pouncePlugins
+        )
+        // lib.listToAttrs (
+          map (name: lib.nameValuePair "pounce/commands/${name}.sh" (liveCommand name)) trackerCommands
+        );
 
       home.activation.pounceCommandsReapDangling = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
         run sh -c '

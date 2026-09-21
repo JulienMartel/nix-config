@@ -40,6 +40,14 @@ in
       command = "/etc/profiles/per-user/${username}/bin/pounce run cmd:spawn-agent";
       caption = "Spawn Agent";
     }
+    # leader → a: the tracker's one-box add (hosts/mbp/pounce/commands/todo-add.sh).
+    # `a` is free of the roster letters (apps.nix), the built-in launch keys and
+    # the workspace throws; the windows room asserts as much on every build.
+    {
+      key = "a";
+      command = "/etc/profiles/per-user/${username}/bin/pounce run cmd:todo-add";
+      caption = "Add To-do";
+    }
   ];
 
   home-manager.users.${username} =

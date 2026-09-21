@@ -1,103 +1,90 @@
 ---
 name: tracker
 description: >-
-  Read and write my to-do / issue list from the shell: Today, Inbox, due dates,
-  adding, completing, rescheduling. The list is markdown notes in my Obsidian `notes`
-  vault (tracker/), one folder per project. Use when I say /tracker, "what's on my
-  list", "what's due", "what's in my inbox", "add a todo", "add this to the tracker",
-  "remind me to…", "mark X done", "put that on today", "move it to someday", or when
-  work we just finished matches a to-do of mine. `later` decides what to file unasked;
+  Read and write my to-do list from the shell: Today, Later, Someday, due dates,
+  adding, completing, rescheduling, spawning a lane for one. The list is markdown
+  notes in my Obsidian `notes` vault (tracker/), one folder per project, Bases for
+  the views. Use when I say /tracker, "what's on my list", "what's due", "what's in
+  my inbox", "add a todo", "add this to the tracker", "remind me to…", "mark X
+  done", "put that on today", "move it to someday", "spawn that todo", or when work
+  we just finished matches a to-do of mine. `later` decides what to file unasked;
   this is the plumbing.
 ---
 
-# Tracker — markdown notes in the vault, one script over them
+# Tracker — markdown notes in the vault, one binary over them
 
 ```
-~/.config/nix/claude/skills/tracker/tracker    # canonical path — always works
-tracker                                        # zsh alias, for me at a prompt
+tracker                      # on PATH (a Go binary from ~/.config/nix/pkgs/tracker)
+tracker help                 # the verb list
 ```
 
-`tracker help` prints the flag list. Plain bash, live-edited (out-of-store symlink):
-fix it in place, no rebuild.
+The manual is `~/.config/nix/pkgs/tracker/README.md`: the schema, the views, every
+verb, the TUI keys. What follows is what an agent needs.
 
 ## What the list is
 
 ```text
-~/Library/Mobile Documents/iCloud~md~obsidian/Documents/notes/   # the `notes` vault; iCloud → phone
-└── tracker/
-    ├── tracker.base            # the views: Today · Inbox · Upcoming · Anytime · Someday · Deadlines · Logbook
-    ├── inbox/<to-do>.md        # unfiled
-    ├── hausfold/
-    │   ├── hausfold.md         # the folder note: type: project, the brief, an embedded base of its to-dos
-    │   └── <to-do>.md          # type: todo
-    ├── buy/ · nas/ · Personal/ · code/ · Work/ …     # a folder per project or area
-    └── log/<to-do>.md          # done and canceled, moved here with `done:` and `project:` stamped
+notes/tracker/
+├── tracker.base            # the views: Today · Later · Upcoming · Someday · Due · Inbox · Done · Project
+├── <to-do>.md              # unfiled ("inbox") = the root
+├── hausfold/
+│   ├── hausfold.md         # the folder note: type: project, repo:, the brief, ![[tracker.base#Project]]
+│   ├── <to-do>.md
+│   └── <sub-project>/      # a folder in a folder; a folder of folders is an area
+└── log/                    # the archive `tracker archive` moves closed notes into
 ```
 
-A to-do's frontmatter, all of it:
+A to-do, all of it:
 
 ```yaml
-type: todo
-status: open          # open · someday · done · canceled
-when: 2026-09-12      # a date → on Today from that day; absent → Anytime
-evening: true         # optional
-deadline: 2026-09-30  # optional
-heading: later        # optional grouping inside a project: later · now · build · decide · …
-tags: [fable, haus]   # Obsidian tags; `#fable` = an agent can take it cold
-created: 2026-09-12
-things: <uuid>        # only on items imported from Things 3
+when: later          # REQUIRED · now | later | someday | YYYY-MM-DD (later until that day, then now)
+due: 2026-09-30      # optional
+done: 2026-09-20     # set = closed that day · `dropped:` instead when abandoned
+tags: [fable]        # #fable = an agent can take it cold · #decide / #build = the kind of work
+created: 2026-09-20
+lane: workshop/x     # written by `tracker spawn`
 ```
 
-The body is the notes; `- [ ]` lines are the checklist. Images go in the body the way
-Obsidian pastes them (`![[…]]`) — that is the whole reason the list is here.
-
-**An id is the path under `tracker/` without `.md`**: `hausfold/ship the thing`. Every
-read prints it as the last column; `update`/`complete` take it, or any unique
-case-insensitive substring of an open item's id or title. Ambiguity prints the
-candidates and refuses — show me the candidates, don't pick one.
+The body is the notes; `- [ ]` lines are the checklist. Closing never moves a file
+and there is no status field: `done:` set is done. **An id is the path under
+`tracker/` without `.md`** (`hausfold/ship the thing`, or `buy milk` unfiled); every
+verb takes it, or any unique case-insensitive substring of an open item's id or
+title. Ambiguity prints the candidates and exits 1 — show me them, don't pick.
 
 ## Reading
 
 ```bash
-tracker today                 # when ≤ today, status open — the list I live in
-tracker inbox                 # unfiled
-tracker upcoming [days]       # default 14
-tracker deadlines [days]      # default 30
-tracker anytime | someday     # grouped by folder
-tracker log [n]               # recently done/canceled
-tracker list <project|area>   # one folder, grouped under its `── heading ──` sections
-tracker search <text>         # title or body, open and log
-tracker show <id|title>       # the whole note, with its links first
-tracker link <id|title>       # file:// (clickable in a pane) and obsidian:// (for the app)
-tracker projects              # folders with open counts
-tracker index [--json]        # every note as one row — the escape hatch; pipe to awk/jq
+tracker today                 # when: now, or a date that has arrived — the list I live in
+tracker later | someday       # grouped by project
+tracker upcoming [days]       # dated, default 14 · tracker due [days]  deadlines, default 30
+tracker inbox                 # unfiled · tracker done [n]  recently closed
+tracker list <project>        # one folder (subfolders in), grouped now · scheduled · later · someday
+tracker projects              # folders with open counts · tracker search <text>
+tracker show <id>             # the note, links first · tracker link <id>  file:// then obsidian://
+tracker index                 # every note, one row — the escape hatch
 ```
 
-`--json` on any read → `[{id, folder, type, status, when, deadline, heading, tags,
-done, title, evening, project}]`.
+`--json` on any read → `[{id, title, folder, project, when, bucket, due, done,
+dropped, tags, created, lane, repo, path}]`; `bucket` is `now · scheduled · later ·
+someday`.
 
 ## Writing
 
 ```bash
-tracker add "buy cat food" --project buy --when today --tags Errand
-tracker add "ship the thing" --project hausfold --heading later --deadline 2026-09-30 \
-            --notes "context here" --checklist 'draft|review|merge'
-tracker add-project "kitchen reno" --area Personal --notes "<brief>" --todos 'measure|quote|order'
+tracker add "buy cat food" --in buy --now --tags errand
+tracker add "ship the thing" --in hausfold --due 2026-09-30 --notes "context" --checklist 'draft|review|merge'
+tracker project add "kitchen reno" --in Personal --notes "<brief>" --todos 'measure|quote|order'
 
-tracker update <id|title> --when tomorrow --add-tags Important --append-notes "…"
-tracker update <id|title> --project nas          # moves the file
-tracker complete <id|title>                      # status: done, done: <today>, → log/
-tracker cancel   <id|title>                      # same, status: canceled
-tracker reopen   log/<name>                      # back to its project
-tracker sweep [--dry-run]                        # finish to-dos I closed in Obsidian
+tracker now | later | someday <id>       tracker when <id> tomorrow|+3d|2026-10-01
+tracker due <id> 2026-09-30|none         tracker move <id> nas · rename · tag <id> +a -b · note <id> "…"
+tracker done <id> · drop <id> · reopen <id>
+tracker update <id> [--when …] [--due …] [--add-tags …] [--in …] [--append-notes "…"]
+tracker spawn <id>                       # a lane for it: prompt from the note, `lane:` stamped, banner when live
 ```
 
-`--when` takes `today`, `tomorrow`, `someday`, `anytime` or `yyyy-mm-dd`. No project
-→ `inbox/`. A project must exist (`tracker projects`); `add-project` makes one.
-`DRY_RUN=1` makes `add` and `sweep` print instead of writing; `sweep` also takes `--dry-run`.
-
-Every write is a file edit: atomic (write beside, `mv`), so iCloud and Obsidian see one
-change. Obsidian picks it up live when it is open; the phone when iCloud syncs.
+No `--in` → unfiled. A project must exist (`tracker projects`); `project add` makes
+one, `--in` nests it. `--dry-run` / `DRY_RUN=1` on `add`, `spawn`, `archive`,
+`migrate`. Every write is atomic and ends with a `file://` line.
 
 ## House rules for you, the agent
 
@@ -107,57 +94,29 @@ change. Obsidian picks it up live when it is open; the phone when iCloud syncs.
    bulk-reschedule. Filing follow-ups you discovered is the `later` skill's job.
 3. **Completing is a 3/5 action** — I may have wanted it open. One item I named is
    fine, unprompted; more than one, or anything I only implied, gets confirmed first.
-4. **Never `rm`.** `cancel` (→ `log/`) is the reversible version; deleting is mine.
-5. **End a write report with the `file://` line** `tracker link` prints — that is the
-   link I can click in a pane. Never the `obsidian://` one alone: no terminal makes
-   it clickable.
-6. **Never run `obsidian` (the CLI) or `open`.** The CLI launches the app when it is
-   not running, and both take the screen. Files only.
-7. **Edit a note by hand only through `tracker`, or `sed`/`cat` on the file if the
-   script has no verb for it** — and then keep the frontmatter shape above. A `when:`
-   that isn't `yyyy-mm-dd` breaks the Today view for everyone.
+4. **Never `rm`.** `drop` is the reversible version (`reopen` undoes it); deleting is
+   mine. `archive` only moves closed notes and only when asked.
+5. **End a write report with the `file://` line** the verb prints — the link I can
+   click in a pane. Never the `obsidian://` one alone: no terminal makes it clickable.
+6. **Never run `obsidian` (the CLI) or `open`.** Both take the screen. Files only.
+   `tracker spawn` is fine: it spawns in the background and a banner tells me.
+7. **Edit a note only through `tracker`**, or `sed`/`cat` on the file if it has no
+   verb — keeping the shape above. A `when:` that is not one of the four forms falls
+   out of every view for everyone.
 
 ## Views (Obsidian)
 
-`tracker/tracker.base` is written by `tracker init` and is mine to reshape in the app;
-`tracker init --force` restores the shipped one. Property types (`when`, `deadline`,
-`created`, `done` as dates) live in the vault's `.obsidian/types.json` — `init` merges
-them in. Each folder note embeds a base filtered on `file.folder == this.file.folder`,
-so a project page lists its own to-dos grouped by heading — `DESC`, so `now` sits
-above `later` and `decide` above `build` (Bases orders groups by value only).
+`tracker.base` is written by `tracker init`, mine to reshape in the app, and
+`--force` restores it. Folder notes embed `![[tracker.base#Project]]` — one base,
+every project, `this` being the embedding note. The `⚡ spawn` column is the plugin's
+`obsidian://tracker?spawn=…` handler calling `tracker spawn`. The phone closes a
+to-do by setting `done` to today; no sweep, nothing to finish. The CLI turns an
+arrived date into `now` on every read, and the Today view catches one the phone
+reached first.
 
-**Closing a to-do in the app only gets halfway.** Setting `status` to `done` in the
-Properties panel or a Bases cell — which is all the phone can do — leaves the note in
-its project folder with no `done:` date: it drops out of Today, never reaches the
-Logbook (that view filters on the folder), and if it has a `deadline` it keeps showing
-in Deadlines. `tracker sweep` finishes those, stamping `done:` from the note's own
-mtime (the closest thing to when I ticked it) and moving it to `log/`. It is safe to
-run any time and does nothing when there is nothing half-closed, so run it unasked
-before reading Today or Deadlines back to me if the answer would be wrong without it —
-and say how many it moved.
+## Things 3 (history)
 
-## Things 3
-
-`from-things` (beside the script) imported Things whole: every open item into its
-project or area folder, and `--logged` every stopped one into `log/`, shaped the way
-`tracker complete` leaves a note. A `things:` uuid is on each, so a re-run only adds
-what is new.
-
-```bash
-from-things                 # open items → their project / area folder
-from-things --logged        # open items, plus the Logbook → log/
-from-things --logged-only   # the Logbook alone
-DRY_RUN=1 from-things …     # print what would be written, touch nothing
-```
-
-Two things the Logbook pass decides, and both are deliberate. A to-do keeps the
-`project:` stamp of the list it sat in even when that list is gone from Things — the
-history is the point, and nothing here makes a folder for it. And the four sample
-projects Things ships with the app (`Meet Things for Mac`, `Meet Things for iPhone`,
-`Convert to project`, `new project!!!`) are dropped: that copy is Cultured Code's, not
-mine.
-
-A re-run skips a to-do already in the vault, so one I ticked in Things *after* it was
-imported stays open here. Finding those is a uuid comparison against the app's SQLite,
-not something the script does — close them with `tracker complete` and correct the
-`done:` stamp to the day Things stopped them.
+`legacy/from-things` imported Things whole in 2026-07, in the old shape
+(`legacy/tracker` is the bash CLI it sources); `tracker migrate` converts that shape
+to this one and is idempotent. A `things:` uuid stays on each imported note. Nothing
+writes it again.

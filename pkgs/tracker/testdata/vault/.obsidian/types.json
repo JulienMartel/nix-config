@@ -1,0 +1,19 @@
+{
+  "types": {
+    "aliases": "aliases",
+    "cssclasses": "multitext",
+    "tags": "tags",
+    "": "checkbox",
+    "when": "date",
+    "deadline": "date",
+    "created": "date",
+    "done": "date",
+    "evening": "checkbox",
+    "status": "text",
+    "heading": "text",
+    "type": "text",
+    "project": "text",
+    "area": "text",
+    "things": "text"
+  }
+}

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# LEGACY — the bash CLI over the Things-shaped schema (2026-07 → 2026-09). Kept only
+# because from-things sources it; `tracker migrate` converts what it wrote. Not on PATH.
 # tracker — my to-do / issue list: one markdown note per item in the Obsidian
 # `notes` vault (iCloud, so the phone has it), one folder per project or area,
 # `log/` for what is done. Obsidian's Bases draw the views (tracker/tracker.base);
