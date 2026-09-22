@@ -22,11 +22,12 @@ dense feature-flagged one and the normal one), so four patches total:
      overflow hidden a zero-height box occupies zero terminal rows, so mode +
      tasks + link chips + hints all vanish visually.
 
-  2. The empty-state placeholder, `return <fn>()?<jsx>(<Text>,{children:" "})
+  2. The empty-state placeholder, `return <cond>?<jsx>(<Text>,{children:" "})
      :null` (the placeholder-line reservation; a `return` again as of CC
      2.1.259, an assignment in 2.1.220–2.1.227), gets its condition overwritten
      in place with a same-length always-false expression, so the idle blank
-     line renders as null.
+     line renders as null. `<cond>` is a bare variable as of 2.1.280 and was a
+     call, `<fn>()`, through 2.1.259 — hence the optional parens.
 
   3. The right-hand CHIP STRIP is a *sibling* row, not part of either box
      above, so collapsing them never touched it: a column stack pinned with
@@ -110,9 +111,12 @@ for m in row.finditer(bytes(data)):
     write(h, b"height:0", "footer row height")
     rows += 1
 
-# 2. The idle placeholder reservation: `return <fn>()?<jsx>(<Text>,
+# 2. The idle placeholder reservation: `return <cond>?<jsx>(<Text>,
 #    {children:" "}):null` (a `return` again as of CC 2.1.259; 2.1.220–2.1.227
-#    wrote it as an assignment, hence the `=` alternative). Overwrite the
+#    wrote it as an assignment, hence the `=` alternative. 2.1.280 made the
+#    condition a bare variable where 2.1.259 called a function, hence the
+#    optional `()` — the prefix and the jsx tail are what pin the site, and
+#    the condition is only the span we overwrite). Overwrite the
 #    condition with a same-length always-false expression so the blank line
 #    renders as null. The `return ` / `=` prefix distinguishes these two footer
 #    placeholders from the custom-statusline container's own
@@ -120,7 +124,7 @@ for m in row.finditer(bytes(data)):
 #    tail is instead preceded by `:` (a ternary else-branch). The jsx call is
 #    bare (`<fn>(`) since 2.1.259 and namespaced (`<ns>.jsx(`) before it.
 reservation = re.compile(
-    rb"(?:=|return )((?:%s)\(\))\?(?:%s\.jsx|%s)\((?:%s),\{children:\" \"\}\):null"
+    rb"(?:=|return )((?:%s)(?:\(\))?)\?(?:%s\.jsx|%s)\((?:%s),\{children:\" \"\}\):null"
     % (ident, ident, ident, ident)
 )
 reservations = 0
