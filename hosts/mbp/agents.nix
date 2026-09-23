@@ -19,7 +19,6 @@ in
   haus.ai = {
     clients = [
       "claude"
-      "opencode"
       "pi"
     ];
 
