@@ -56,11 +56,11 @@
         "trill": "trill"
       },
       "locked": {
-        "lastModified": 1790241200,
-        "narHash": "sha256-IfDHpVoRc8NgT5DzMrldibSKuacAwwS9BjZCMuHqZWU=",
+        "lastModified": 1790241335,
+        "narHash": "sha256-MF0XKz1/IzWvAjt/H3sn1xWlkGGlVf9ZtlGWQMVodec=",
         "owner": "hausfold",
         "repo": "haus",
-        "rev": "c86089858337e0a72d6fa965ed1619b140c42f38",
+        "rev": "18cdb3d2dedad29f4c78751ca2cbe832493d49d4",
         "type": "github"
       },
       "original": {
