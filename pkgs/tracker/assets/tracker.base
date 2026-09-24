@@ -7,7 +7,7 @@ formulas:
   bucket: 'if(when == "now", "now", if(when == "someday", "someday", if(when.isEmpty() || when == "later", "later", "scheduled")))'
   state: 'if(!done.isEmpty(), "done", if(!dropped.isEmpty(), "dropped", "open"))'
   rank: 'if(when == "now", "1 · now", if(when == "someday", "4 · someday", if(when.isEmpty() || when == "later", "3 · later", "2 · scheduled")))'
-  spawn: 'if(!lane.isEmpty(), lane, link("obsidian://tracker?spawn=" + file.path.replace(/ /g, "%20"), "⚡ spawn"))'
+  spawn: 'if(!lane.isEmpty(), lane, link("pounce://run?item=cmd:tracker-spawn&arg=" + file.path.replace(/%/g, "%25").replace(/ /g, "%20").replace(/&/g, "%26").replace(/#/g, "%23").replace(/\+/g, "%2B"), "⚡ spawn"))'
 properties:
   file.name:
     displayName: to-do

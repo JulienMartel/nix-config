@@ -117,8 +117,9 @@ one, `--in` nests it. `--dry-run` / `DRY_RUN=1` on `add`, `spawn`, `archive`,
 
 `tracker.base` is written by `tracker init`, mine to reshape in the app, and
 `--force` restores it. Folder notes embed `![[tracker.base#Project]]` — one base,
-every project, `this` being the embedding note. The `⚡ spawn` column is the plugin's
-`obsidian://tracker?spawn=…` handler calling `tracker spawn`. The phone closes a
+every project, `this` being the embedding note. The `⚡ spawn` column links
+`pounce://run?item=cmd:tracker-spawn&arg=<path>`: pounce confirms, then runs
+`tracker spawn` (desktop only; the phone has no pounce). The phone closes a
 to-do by setting `done` to today; no sweep, nothing to finish. The CLI turns an
 arrived date into `now` on every read, and the Today view catches one the phone
 reached first.

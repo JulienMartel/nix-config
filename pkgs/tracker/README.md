@@ -108,9 +108,11 @@ in `.obsidian/types.json`. Views: **Today** · **Later** (grouped by project) ·
 **Upcoming** (dated) · **Someday** · **Due** · **Inbox** (untriaged) · **Done** ·
 **Project** (the one folder notes embed as `![[tracker.base#Project]]`; `this`
 is the embedding note, so one base serves every project). A `⚡ spawn` column
-links to `obsidian://tracker?spawn=<path>`, which the plugin turns into
-`tracker spawn`. When Obsidian 1.14 (Bases kanban) is public, a **Board** view
-grouped by `when` gives drag-and-drop now ↔ later ↔ someday.
+links to `pounce://run?item=cmd:tracker-spawn&arg=<path>`: pounce confirms it on
+screen and runs `hosts/mbp/pounce/commands/tracker-spawn.sh`, which is
+`tracker spawn "$1"`, so no plugin sits between the click and the lane. When
+Obsidian 1.14 (Bases kanban) is public, a **Board** view grouped by `when`
+gives drag-and-drop now ↔ later ↔ someday.
 
 ## CLI
 
@@ -233,7 +235,8 @@ Bases cannot: commands **Tracker: quick add** (title + when), **done**,
 **drop**, **now / later / someday**, **spawn lane** (desktop: runs `tracker
 spawn`), and the `obsidian://tracker?spawn=<path>` · `?done=<path>` ·
 `?add=<title>[&when=][&in=][&due=][&repeat=][&tags=a,b][&notes=<body>]`
-protocol the ⚡ column, pounce and the phone use. Mobile gets the commands, not
+protocol pounce and the phone use (`?spawn=` stays for a link written before
+the ⚡ column moved to `pounce://`). Mobile gets the commands, not
 spawn. **done** repeats here too — same date math, same bytes as the CLI — so
 a chore closed on the phone comes back without waiting for a Mac.
 

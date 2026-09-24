@@ -27,7 +27,8 @@ in
 
       pouncePluginPkg = pkgs.pounce-commands.override { plugins = pouncePlugins; };
 
-      # The tracker's two palette commands (Add To-do, To-dos) — out-of-store
+      # The tracker's palette commands (Add To-do, To-dos, and Spawn To-do Lane,
+      # the ⚡ column's pounce:// target) — out-of-store
       # symlinks into this repo, the same trick agents.nix plays for skills, so
       # an edit to hosts/mbp/pounce/commands/<name>.sh is on the next ⌘Space
       # with no rebuild. They point at the MAIN checkout (~/.config/nix): from a
@@ -36,6 +37,7 @@ in
       trackerCommands = [
         "todo-add"
         "todos"
+        "tracker-spawn"
       ];
       liveCommand = name: {
         source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.config/nix/hosts/mbp/pounce/commands/${name}.sh";
