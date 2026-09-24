@@ -7,8 +7,9 @@
  * Bases cannot — quick add, done / drop / reopen, when (now · later · someday),
  * spawn a lane (desktop: `tracker spawn <id>`), and the obsidian://tracker
  * protocol (?spawn=<path> · ?done=<path> · ?add=<title>[&when=][&in=][&due=]
- * [&repeat=][&tags=][&notes=]) that the ⚡ column, pounce and the phone's
- * share sheet use.
+ * [&repeat=][&tags=][&notes=]) that pounce and the phone's share sheet use.
+ * The ⚡ column links pounce://run?item=cmd:tracker-spawn now; ?spawn= stays
+ * for links written before it moved.
  *
  * `done` on a `repeat:` to-do writes the next occurrence here too, so a chore
  * closed on the phone comes back without waiting for a Mac.
